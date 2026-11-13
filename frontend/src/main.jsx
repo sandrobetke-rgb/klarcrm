@@ -1,0 +1,83 @@
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { BrowserRouter, Navigate, NavLink, Outlet, Route, Routes } from 'react-router-dom'
+import { AuthProvider, useAuth } from './auth'
+import './styles.css'
+import Login from './pages/Login'
+import Dashboard from './pages/Dashboard'
+import Accounts from './pages/Accounts'
+import AccountDetail from './pages/AccountDetail'
+import Contacts from './pages/Contacts'
+import Pipeline from './pages/Pipeline'
+import Activities from './pages/Activities'
+import Quotes from './pages/Quotes'
+import QuoteEditor from './pages/QuoteEditor'
+import Users from './pages/Users'
+import Profile from './pages/Profile'
+import { ROLES } from './constants'
+
+function Layout() {
+  const { user, logout, isAdmin } = useAuth()
+  if (!user) return <Navigate to="/login" replace />
+  const nav = [
+    ['/', 'Dashboard', '▦'],
+    ['/pipeline', 'Pipeline', '⇶'],
+    ['/firmen', 'Firmen', '▣'],
+    ['/kontakte', 'Kontakte', '☺'],
+    ['/aktivitaeten', 'Aktivitäten', '✓'],
+    ['/angebote', 'Angebote', '€'],
+  ]
+  if (isAdmin) nav.push(['/benutzer', 'Benutzer', '⚙'])
+  return (
+    <div className="app">
+      <aside className="sidebar">
+        <div className="brand"><span className="logo">K</span> KlarCRM</div>
+        <nav>
+          {nav.map(([to, label, icon]) => (
+            <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => (isActive ? 'active' : '')}>
+              <span className="nav-icon" aria-hidden>{icon}</span>{label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="sidebar-foot">
+          <NavLink to="/profil" className="user-chip">
+            <span className="avatar">{user.name.split(' ').map((p) => p[0]).slice(0, 2).join('')}</span>
+            <span>
+              <strong>{user.name}</strong>
+              <small>{ROLES.find((r) => r.value === user.role)?.label}</small>
+            </span>
+          </NavLink>
+          <button className="btn btn-ghost btn-sm logout" onClick={logout}>Abmelden</button>
+        </div>
+      </aside>
+      <main className="content"><Outlet /></main>
+    </div>
+  )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route element={<Layout />}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/pipeline" element={<Pipeline />} />
+            <Route path="/firmen" element={<Accounts />} />
+            <Route path="/firmen/:id" element={<AccountDetail />} />
+            <Route path="/kontakte" element={<Contacts />} />
+            <Route path="/aktivitaeten" element={<Activities />} />
+            <Route path="/angebote" element={<Quotes />} />
+            <Route path="/angebote/:id" element={<QuoteEditor />} />
+            <Route path="/benutzer" element={<Users />} />
+            <Route path="/profil" element={<Profile />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  )
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />)

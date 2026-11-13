@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: crm
+      POSTGRES_USER: crm
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-crm}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crm -d crm"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://crm:${DB_PASSWORD:-crm}@db:5432/crm
+      SECRET_KEY: ${SECRET_KEY:-bitte-in-produktion-aendern}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@firma.de}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      COMPANY_NAME: ${COMPANY_NAME:-Meine Firma GmbH}
+      DEFAULT_TAX_RATE: ${DEFAULT_TAX_RATE:-19}
+      CORS_ORIGINS: http://localhost:8080
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${PORT:-8080}:80"
+
+volumes:
+  pgdata:

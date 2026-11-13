@@ -1,0 +1,25 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker-Images bauen
+        run: docker compose build
+      - name: Stack starten und API prüfen
+        run: |
+          cp .env.example.codespaces .env
+          docker compose up -d
+          for i in $(seq 1 40); do curl -sf http://localhost:8080/api/health && break; sleep 3; done
+          curl -sf http://localhost:8080/api/health
+          curl -sf -X POST http://localhost:8080/api/auth/login -d "username=admin@firma.de&password=admin1234" > /dev/null
+          echo "Login OK"
+      - name: Logs bei Fehler
+        if: failure()
+        run: docker compose logs
