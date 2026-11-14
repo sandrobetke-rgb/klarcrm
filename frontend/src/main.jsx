@@ -19,6 +19,8 @@ import CalculationEditor from './pages/CalculationEditor'
 import MasterData from './pages/MasterData'
 import Utilization from './pages/Utilization'
 import AuditLog from './pages/AuditLog'
+import CompanySettings from './pages/CompanySettings'
+import NotificationBell from './components/NotificationBell'
 import { ROLES } from './constants'
 import Footer from './components/Footer'
 
@@ -37,7 +39,7 @@ function Layout() {
     ['/stammdaten', 'Stammdaten', '≡'],
   ]
   if (isAdmin || user.role === 'gesellschafter' || user.can_approve) nav.push(['/protokoll', 'Protokoll', '⎙'])
-  if (isAdmin) nav.push(['/benutzer', 'Benutzer', '⚙'])
+  if (isAdmin) nav.push(['/benutzer', 'Benutzer', '⚙'], ['/einstellungen', 'Firma & Layout', '✉'])
   return (
     <div className="app">
       <aside className="sidebar">
@@ -49,6 +51,7 @@ function Layout() {
             </NavLink>
           ))}
         </nav>
+        <NotificationBell />
         <div className="sidebar-foot">
           <NavLink to="/profil" className="user-chip">
             <span className="avatar">{user.name.split(' ').map((p) => p[0]).slice(0, 2).join('')}</span>
@@ -88,6 +91,7 @@ function App() {
             <Route path="/stammdaten" element={<MasterData />} />
             <Route path="/auslastung" element={<Utilization />} />
             <Route path="/protokoll" element={<AuditLog />} />
+            <Route path="/einstellungen" element={<CompanySettings />} />
             <Route path="/benutzer" element={<Users />} />
             <Route path="/profil" element={<Profile />} />
           </Route>

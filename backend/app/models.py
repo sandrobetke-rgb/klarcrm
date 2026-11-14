@@ -48,6 +48,7 @@ class User(TimestampMixin, Base):
     role: Mapped[str] = mapped_column(String(20), default="vertrieb")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     can_approve: Mapped[bool | None] = mapped_column(Boolean, default=False)  # darf Kalkulationen freigeben
+    calendar_token: Mapped[str | None] = mapped_column(String(64), index=True)  # Outlook-Kalenderabo
 
 
 class Account(TimestampMixin, Base):
@@ -147,6 +148,7 @@ class Quote(TimestampMixin, Base):
     terms: Mapped[str | None] = mapped_column(Text)
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     calculation_ids: Mapped[list | None] = mapped_column(JSON)  # Herkunft: Kalkulationen (Sammelangebot)
+    language: Mapped[str | None] = mapped_column(String(5), default="de")  # de | en
 
     account = relationship("Account", lazy="joined")
     contact = relationship("Contact", lazy="joined")
@@ -490,3 +492,30 @@ class Notification(Base):
     link: Mapped[str | None] = mapped_column(String(255))
     read: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class Attachment(Base):
+    """Dokument zu einem Datensatz (Zeichnung, 3D-Daten, Anfrage, Lastenheft …)."""
+    __tablename__ = "attachments"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    entity: Mapped[str] = mapped_column(String(40), index=True)   # calculations | accounts | quotes | opportunities | app
+    entity_id: Mapped[int] = mapped_column(Integer, index=True)
+    filename: Mapped[str] = mapped_column(String(255))
+    stored_name: Mapped[str] = mapped_column(String(255))
+    content_type: Mapped[str | None] = mapped_column(String(120))
+    size: Mapped[int] = mapped_column(Integer, default=0)
+    doc_type: Mapped[str | None] = mapped_column(String(40))      # zeichnung | 3d | anfrage | lastenheft | pruefplan | sonstiges | logo
+    revision: Mapped[str | None] = mapped_column(String(40))
+    note: Mapped[str | None] = mapped_column(String(255))
+    deleted: Mapped[bool] = mapped_column(Boolean, default=False)  # nur ausgeblendet (Nachweis bleibt)
+    uploaded_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    uploaded_by = relationship("User", lazy="joined")
+
+
+class AppSettings(Base):
+    """Firmendaten und Angebotslayout (eine Zeile, id=1)."""
+    __tablename__ = "app_settings"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    data: Mapped[dict] = mapped_column(JSON, default=dict)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)

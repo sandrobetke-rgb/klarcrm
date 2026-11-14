@@ -23,7 +23,9 @@ async function request(method, path, body) {
   const token = getToken()
   if (token) headers.Authorization = `Bearer ${token}`
   let payload
-  if (body instanceof URLSearchParams) {
+  if (body instanceof FormData) {
+    payload = body
+  } else if (body instanceof URLSearchParams) {
     payload = body
   } else if (body !== undefined) {
     headers['Content-Type'] = 'application/json'
@@ -54,11 +56,27 @@ export function qs(params = {}) {
   return s ? `?${s}` : ''
 }
 
+/** Datei mit Anmeldung herunterladen und im Browser speichern. */
+export async function downloadFile(path, filename) {
+  const res = await fetch(BASE + path, { headers: { Authorization: `Bearer ${getToken()}` } })
+  if (!res.ok) throw new Error(`Download fehlgeschlagen (${res.status})`)
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 2000)
+}
+
 export const api = {
   get: (p) => request('GET', p),
   post: (p, b) => request('POST', p, b),
   patch: (p, b) => request('PATCH', p, b),
   put: (p, b) => request('PUT', p, b),
+  upload: (p, formData) => request('POST', p, formData),
   del: (p) => request('DELETE', p),
   login: (email, password) =>
     request('POST', '/auth/login', new URLSearchParams({ username: email, password })),

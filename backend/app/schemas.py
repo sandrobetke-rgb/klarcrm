@@ -30,6 +30,7 @@ class ContactRef(ORM):
     salutation: str | None = None
     first_name: str
     last_name: str
+    email: str | None = None
 
 
 class OpportunityRef(ORM):
@@ -222,6 +223,7 @@ class QuoteItemOut(ORM, QuoteItemIn):
 
 class QuoteBase(BaseModel):
     title: str = Field(min_length=1)
+    language: Literal["de", "en"] | None = None
     account_id: int | None = None
     contact_id: int | None = None
     opportunity_id: int | None = None
@@ -255,6 +257,7 @@ class QuoteOut(ORM, QuoteBase):
     gross_total: float
     calculation_ids: list[int] | None = None
     calculations: list[dict] = []
+    language: str | None = "de"
     account: AccountRef | None = None
     contact: ContactRef | None = None
     opportunity: OpportunityRef | None = None

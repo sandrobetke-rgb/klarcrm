@@ -10,7 +10,7 @@ from .models import AuditLog, Material, MaterialPrice, User
 
 SKIP_TABLES = {"audit_log"}
 SKIP_FIELDS = {"updated_at", "created_at"}
-MASK_FIELDS = {"password_hash"}
+MASK_FIELDS = {"password_hash", "calendar_token"}
 SUMMARY_JSON = {"inputs", "results", "analysis_results", "actuals"}  # große Strukturen nur als „geändert“ vermerken
 ENTITY_LABELS = {
     "accounts": "Firma", "contacts": "Kontakt", "opportunities": "Verkaufschance", "activities": "Aktivität",

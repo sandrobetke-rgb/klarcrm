@@ -1,4 +1,4 @@
-import { api } from '../api'
+import { api, downloadFile } from '../api'
 import { useAuth } from '../auth'
 import ListPage from '../components/ListPage'
 import { ACTIVITY_TYPES, activityType, contactName, fmtDateTime } from '../constants'
@@ -33,6 +33,8 @@ export default function Activities() {
         { key: 'due_at', label: 'Fällig', sort: 'due_at', render: (r) => <span className={isOverdue(r) ? 'text-critical' : ''}>{isOverdue(r) && '⚠ '}{fmtDateTime(r.due_at)}</span> },
         { key: 'account', label: 'Firma / Kontakt', render: (r) => <>{r.account?.name || '–'}{r.contact && <><br /><small className="muted">{contactName(r.contact)}</small></>}</> },
         { key: 'owner', label: 'Zuständig', render: (r) => r.owner?.name || '–' },
+        { key: 'ics', label: '', render: (r) => r.due_at && r.type !== 'notiz' ? (
+          <button className="icon-btn" title="In Outlook übernehmen (.ics)" onClick={(e) => { e.stopPropagation(); downloadFile(`/activities/${r.id}/ics`, `termin-${r.id}.ics`) }}>📅</button>) : null },
       ]}
     />
   )

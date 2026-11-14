@@ -66,6 +66,24 @@ npm run dev                               # http://localhost:5173 (leitet /api a
 
 Die komplette API ist unter **http://localhost:8000/docs** (Swagger) dokumentiert und testbar.
 
+## Betrieb auf dem internen Server (F&R)
+
+1. Server im Firmennetz (Linux-VM, Docker installiert), DNS-Name z. B. `crm.firma.local`.
+2. `.env` aus `.env.example` anlegen und ausfüllen – mindestens `DB_PASSWORD`, `SECRET_KEY`, `ADMIN_PASSWORD`,
+   `APP_URL=https://crm.firma.local`; für E-Mail-Hinweise den internen Mailserver unter `SMTP_*` eintragen.
+3. `docker compose up -d --build` – Datenbank und hochgeladene Dokumente liegen in Docker-Volumes (`pgdata`, `uploads`).
+4. HTTPS über den vorhandenen Reverse Proxy / ein internes Zertifikat vor Port 8080.
+5. Nach dem ersten Login: **Firma & Layout** (Logo, Briefkopf, Bank, AGB-Text), **Stammdaten** (Maschinen,
+   Materialien, Parameter), **Benutzer** (Rollen, Freigabeberechtigung).
+6. Outlook: jeder Benutzer findet unter „Mein Profil“ seine Kalender-Adresse („Kalender hinzufügen → Aus dem Internet“).
+
+**Backup (Pflicht):** täglich Datenbank **und** Dokumente sichern und die Wiederherstellung regelmäßig testen:
+```bash
+docker compose exec -T db pg_dump -U crm crm | gzip > /backup/klarcrm_db_$(date +%F).sql.gz
+docker run --rm -v klarcrm_uploads:/data -v /backup:/backup alpine tar czf /backup/klarcrm_docs_$(date +%F).tgz -C /data .
+```
+(Volume-Name ggf. mit `docker volume ls` prüfen.)
+
 ## Betrieb im Unternehmen
 
 - **Server:** Eine kleine VM (2 vCPU, 4 GB RAM) reicht für 12 Nutzer locker; z. B. intern im Netz oder bei einem deutschen Hoster.

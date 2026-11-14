@@ -12,6 +12,7 @@ import ArticleAnalysis from './ArticleAnalysis'
 import LifecycleTab from './LifecycleTab'
 import ApprovalBar from '../components/Approval'
 import AuditTable from '../components/AuditTable'
+import Attachments from '../components/Attachments'
 import CallPanel, { LastCall } from '../components/CallPanel'
 import { BigBadge } from '../components/BigProject'
 
@@ -38,7 +39,7 @@ export const calcMetaFields = [
   { name: 'remark', label: 'Bemerkung', type: 'textarea', span: true, rows: 3 },
 ]
 
-const TABS = [['calc', 'Kalkulation'], ['analysis', 'Artikelanalyse'], ['lifecycle', 'Lebensweg'], ['calls', 'Anrufe'], ['meta', 'Anfrage & Status'], ['versions', 'Versionen'], ['post', 'Nachkalkulation'], ['audit', 'Protokoll']]
+const TABS = [['calc', 'Kalkulation'], ['analysis', 'Artikelanalyse'], ['lifecycle', 'Lebensweg'], ['docs', 'Dokumente'], ['calls', 'Anrufe'], ['meta', 'Anfrage & Status'], ['versions', 'Versionen'], ['post', 'Nachkalkulation'], ['audit', 'Protokoll']]
 
 export default function CalculationEditor() {
   const { id } = useParams()
@@ -115,6 +116,7 @@ export default function CalculationEditor() {
       {tab === 'calls' && <CallPanel calc={calc} onChange={setCalc} />}
       {tab === 'analysis' && <ArticleAnalysis calc={calc} setCalc={setCalc} />}
       {tab === 'lifecycle' && <LifecycleTab calc={calc} setCalc={setCalc} />}
+      {tab === 'docs' && <div style={{ maxWidth: 1100 }}><Attachments entity="calculations" entityId={calc.id} title="Dokumente zur Kalkulation (Zeichnung, 3D, Anfrage, Lastenheft …)" /></div>}
       {tab === 'audit' && <CalcAudit calc={calc} />}
       {tab === 'versions' && <VersionsTab calc={calc} />}
       {tab === 'post' && <PostCalcTab calc={calc} setCalc={setCalc} />}
@@ -181,6 +183,7 @@ function HeaderActions({ calc, setCalc, onDelete, onCall }) {
   const { isAdmin } = useAuth()
   const nav = useNavigate()
   const [err, setErr] = useState(null)
+  const [lang, setLang] = useState('de')
   return (
     <div className="toolbar no-print">
       <button className="btn btn-ghost" onClick={onCall}>☎ Anruf dokumentieren</button>
@@ -198,8 +201,9 @@ function HeaderActions({ calc, setCalc, onDelete, onCall }) {
       <button className="btn btn-ghost" onClick={() => window.print()}>Drucken</button>
       <button className="btn btn-ghost" onClick={async () => {
         setErr(null)
-        try { const r = await api.post(`/calculations/${calc.id}/quote`); nav(`/angebote/${r.quote_id}`) } catch (e) { setErr(e) }
+        try { const r = await api.post(`/calculations/${calc.id}/quote?lang=${lang}`); nav(`/angebote/${r.quote_id}`) } catch (e) { setErr(e) }
       }}>→ Angebot erstellen</button>
+      <select className="lang-select" value={lang} onChange={(e) => setLang(e.target.value)} title="Sprache des Angebots"><option value="de">DE</option><option value="en">EN</option></select>
       {isAdmin && <button className="btn btn-danger-ghost" onClick={onDelete}>Löschen</button>}
       <ErrorBox error={err} />
     </div>

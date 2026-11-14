@@ -420,3 +420,50 @@ h1 .big-badge { font-size: 12.5px; margin-top: 0; }
 .lc-summary { display: flex; flex-direction: column; gap: 12px; }
 .lc-summary > div { display: flex; flex-direction: column; }
 .lc-check { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+
+/* ---------- Dokumente / Hinweise ---------- */
+.dropzone { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; border: 2px dashed var(--border-strong); border-radius: 10px; padding: 10px; margin-bottom: 10px; }
+.dropzone.drag-over { border-color: var(--brand); background: var(--brand-50); }
+.dropzone select, .dropzone input:not([type=file]) { width: auto; min-width: 140px; padding: 6px 8px; }
+.linklike { border: none; background: none; padding: 0; color: var(--brand); cursor: pointer; font: inherit; text-align: left; }
+.linklike:hover { text-decoration: underline; }
+.bell-wrap { position: relative; padding: 0 10px 8px; }
+.bell { width: 100%; text-align: left; border: 1px solid #2c3a52; background: #172033; color: #e5e7eb; border-radius: 8px; padding: 8px 10px; cursor: pointer; font: inherit; display: flex; align-items: center; gap: 8px; }
+.bell-count { margin-left: auto; background: #d22d33; color: #fff; border-radius: 999px; font-size: 11px; font-weight: 700; padding: 1px 7px; }
+.bell-panel { position: absolute; left: 10px; bottom: 44px; width: 360px; max-height: 70vh; overflow-y: auto; background: var(--surface); color: var(--text); border-radius: 12px; box-shadow: 0 16px 40px rgba(0,0,0,.3); z-index: 60; padding: 8px; }
+.bell-head { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px 10px; }
+.bell-item { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; border: none; background: none; padding: 8px 10px; border-radius: 8px; cursor: pointer; font: inherit; border-left: 3px solid var(--info); margin-bottom: 4px; }
+.bell-item:hover { background: var(--surface-2); }
+.bell-item.read { opacity: .6; }
+.bell-item.sev-critical { border-left-color: var(--critical); }
+.bell-item.sev-warning { border-left-color: #e8b100; }
+.bell-title { font-weight: 600; font-size: 13px; }
+.bell-body { font-size: 12px; color: var(--text-2); }
+.bell-time { font-size: 11px; color: var(--muted); }
+.logo-row { display: flex; gap: 16px; align-items: center; }
+.logo-preview { width: 180px; height: 80px; object-fit: contain; border: 1px solid var(--border); border-radius: 8px; background: #fff; display: grid; place-items: center; }
+.calsub { display: flex; gap: 8px; }
+.calsub input { font-size: 12px; }
+.lang-select { width: auto; }
+@media print {
+  @page { size: A4; margin: 14mm 16mm 14mm; }
+  .print-doc { font-size: 10pt; color: #111; padding-bottom: 26mm; }
+  .pq-head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2.5px solid var(--accent, #1f4b99); padding-bottom: 4mm; margin-bottom: 6mm; }
+  .pq-company { font-size: 9pt; color: #333; }
+  .pq-company strong { font-size: 13pt; color: var(--accent, #1f4b99); }
+  .pq-logo { max-height: 18mm; max-width: 60mm; object-fit: contain; }
+  .pq-sender { font-size: 7pt; color: #666; text-decoration: underline; margin-bottom: 2mm; }
+  .pq-addr-meta { display: flex; justify-content: space-between; margin-bottom: 10mm; min-height: 35mm; }
+  .pq-meta { display: grid; grid-template-columns: auto auto; gap: 1mm 6mm; margin: 0; font-size: 9pt; }
+  .pq-meta dt { color: #555; } .pq-meta dd { margin: 0; }
+  .pq-title { font-size: 13pt; color: var(--accent, #1f4b99); margin: 0 0 4mm; }
+  .pq-table { width: 100%; border-collapse: collapse; margin: 5mm 0; font-size: 9pt; }
+  .pq-table th { border-bottom: 1.5px solid var(--accent, #1f4b99); text-align: left; padding: 2mm; color: var(--accent, #1f4b99); }
+  .pq-table td { border-bottom: 0.5px solid #ccc; padding: 2mm; vertical-align: top; }
+  .pq-table tr { break-inside: avoid; }
+  .pq-totals { margin-left: auto; width: 85mm; display: grid; grid-template-columns: 1fr auto; gap: 1mm 6mm; }
+  .pq-totals dd { margin: 0; text-align: right; } .pq-totals .grand { font-weight: 700; border-top: 1px solid #333; padding-top: 1mm; }
+  .pq-terms { font-size: 8.5pt; color: #333; margin-top: 6mm; }
+  .pq-footer { position: fixed; bottom: 0; left: 0; right: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4mm; font-size: 7pt; color: #555; border-top: 0.5px solid #999; padding-top: 2mm; }
+}
+.bulk-bar .lang-select { padding: 4px 6px; background: #fff; color: var(--text); }

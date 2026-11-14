@@ -6,6 +6,7 @@ import { Badge, confirmDelete, EntityForm, ErrorBox, Modal, useFetch } from '../
 import { ACCOUNT_TYPES, activityType, calcStatus, contactName, eur, eur4, fmtDate, fmtDateTime, QUOTE_STATUS, reasonLabel, stageLabel } from '../constants'
 import { accountFields, activityFields, contactFields, opportunityFields } from '../forms'
 import { DoneToggle, isOverdue } from './Activities'
+import Attachments from '../components/Attachments'
 import { typeTone } from './Accounts'
 
 export default function AccountDetail() {
@@ -121,6 +122,8 @@ export default function AccountDetail() {
               </Link>
             ))}
           </Section>
+
+          <Attachments entity="accounts" entityId={a.id} title="Dokumente zur Firma (Verträge, QSV, Rahmenvereinbarungen …)" compact />
 
           <Section title="Aktivitäten & Verlauf" count={acts.data?.total} onAdd={canWrite && (() => open('activity', { type: 'aufgabe', done: false }))}>
             {acts.data?.items.map((t) => (

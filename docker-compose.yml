@@ -26,7 +26,18 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
       COMPANY_NAME: ${COMPANY_NAME:-Meine Firma GmbH}
       DEFAULT_TAX_RATE: ${DEFAULT_TAX_RATE:-19}
-      CORS_ORIGINS: http://localhost:8080
+      CORS_ORIGINS: ${APP_URL:-http://localhost:8080}
+      APP_URL: ${APP_URL:-}
+      UPLOAD_DIR: /data/uploads
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-50}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-25}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
+      SMTP_FROM: ${SMTP_FROM:-klarcrm@firma.local}
+    volumes:
+      - uploads:/data/uploads
 
   frontend:
     build: ./frontend
@@ -38,3 +49,4 @@ services:
 
 volumes:
   pgdata:
+  uploads:

@@ -6,12 +6,95 @@ import { Badge, confirmDelete, ErrorBox, RefSelect } from '../components/ui'
 import { contactName, eur, fmtDate, QUOTE_STATUS } from '../constants'
 import { quoteTone } from './Quotes'
 import { BigBadge } from '../components/BigProject'
+import Attachments from '../components/Attachments'
 
 const emptyItem = () => ({ description: '', quantity: 1, unit: 'Stk', unit_price: 0, discount_pct: 0 })
-const greeting = (c) => {
+const greeting = (c, lang = 'de') => {
+  if (lang === 'en') {
+    if (c?.salutation === 'Frau') return `Dear Ms ${c.last_name},`
+    if (c?.salutation === 'Herr') return `Dear Mr ${c.last_name},`
+    return 'Dear Sir or Madam,'
+  }
   if (c?.salutation === 'Frau') return `Sehr geehrte Frau ${c.last_name},`
   if (c?.salutation === 'Herr') return `Sehr geehrter Herr ${c.last_name},`
   return 'Sehr geehrte Damen und Herren,'
+}
+
+const T = {
+  de: { quote: 'Angebot', no: 'Angebots-Nr.', date: 'Datum', valid: 'Gültig bis', contact: 'Ihr Ansprechpartner', pos: 'Pos.',
+    desc: 'Beschreibung', qty: 'Menge', price: 'Einzelpreis', disc: 'Rabatt', total: 'Gesamt', net: 'Summe netto', vat: 'zzgl. MwSt.',
+    gross: 'Gesamtbetrag', page: 'Seite', cust: 'Kunden-Nr.', yourRef: 'Ihr Zeichen' },
+  en: { quote: 'Quotation', no: 'Quotation no.', date: 'Date', valid: 'Valid until', contact: 'Your contact', pos: 'Item',
+    desc: 'Description', qty: 'Quantity', price: 'Unit price', disc: 'Discount', total: 'Total', net: 'Net total', vat: 'plus VAT',
+    gross: 'Total amount', page: 'Page', cust: 'Customer no.', yourRef: 'Your reference' },
+}
+const fmtD = (d, lang) => (d ? new Date(d).toLocaleDateString(lang === 'en' ? 'en-GB' : 'de-DE') : '–')
+const money = (v, lang) => new Intl.NumberFormat(lang === 'en' ? 'en-GB' : 'de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(Number(v || 0))
+
+function mailto(q, account, app) {
+  const en = q.language === 'en'
+  const to = q.contact?.email || account?.email || ''
+  const subj = `${en ? 'Quotation' : 'Angebot'} ${q.number} – ${q.title}`
+  const body = `${greeting(q.contact, q.language)}\n\n${en ? 'please find attached our quotation' : 'anbei erhalten Sie unser Angebot'} ${q.number} (${q.title}).\n\n${(en ? app?.closing_en : app?.closing_de) || ''}\n${q.owner?.name || ''}\n${app?.company_name || ''}`
+  return `mailto:${to}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`
+}
+
+function PrintQuote({ q, account, app, net, taxSum, tax }) {
+  const lang = q.language === 'en' ? 'en' : 'de'
+  const t = T[lang]
+  const a = app || {}
+  const accent = a.accent_color || '#1f4b99'
+  return (
+    <div className="print-only print-doc" style={{ '--accent': accent }}>
+      <div className="pq-head">
+        <div className="pq-company"><strong>{a.company_name}</strong><br />{a.street}<br />{a.zip_city}{a.country && a.country !== 'Deutschland' ? `, ${a.country}` : ''}</div>
+        {a.logo_attachment_id && <img className="pq-logo" src="/api/public/logo" alt="" />}
+      </div>
+      <div className="pq-sender">{[a.company_name, a.street, a.zip_city].filter(Boolean).join(' · ')}</div>
+      <div className="pq-addr-meta">
+        <div className="pq-address">
+          <strong>{account?.name}</strong><br />
+          {q.contact && <>{q.contact.salutation ? `${q.contact.salutation} ` : ''}{q.contact.first_name} {q.contact.last_name}<br /></>}
+          {account?.street && <>{account.street}<br /></>}
+          {[account?.zip, account?.city].filter(Boolean).join(' ')}{account?.country && account.country !== 'Deutschland' && <><br />{account.country}</>}
+        </div>
+        <dl className="pq-meta">
+          <dt>{t.no}</dt><dd>{q.number}</dd>
+          <dt>{t.date}</dt><dd>{fmtD(q.quote_date, lang)}</dd>
+          <dt>{t.valid}</dt><dd>{fmtD(q.valid_until, lang)}</dd>
+          <dt>{t.contact}</dt><dd>{q.owner?.name}</dd>
+          {a.phone && <><dt>Tel.</dt><dd>{a.phone}</dd></>}
+          {a.email && <><dt>E-Mail</dt><dd>{a.email}</dd></>}
+        </dl>
+      </div>
+      <h2 className="pq-title">{t.quote} {q.number}: {q.title}</h2>
+      <p>{greeting(q.contact, lang)}</p>
+      <p className="pre">{q.intro_text || (lang === 'en' ? a.intro_en : a.intro_de)}</p>
+      <table className="pq-table">
+        <thead><tr><th>{t.pos}</th><th>{t.desc}</th><th className="num">{t.qty}</th><th className="num">{t.price}</th><th className="num">{t.disc}</th><th className="num">{t.total}</th></tr></thead>
+        <tbody>{q.items.map((it, i) => (
+          <tr key={i}><td>{i + 1}</td><td className="pre">{it.description}</td>
+            <td className="num">{Number(it.quantity).toLocaleString(lang === 'en' ? 'en-GB' : 'de-DE')} {it.unit}</td>
+            <td className="num">{money(it.unit_price, lang)}</td>
+            <td className="num">{Number(it.discount_pct) ? `${it.discount_pct} %` : ''}</td>
+            <td className="num">{money(lineTotal(it), lang)}</td></tr>
+        ))}</tbody>
+      </table>
+      <dl className="pq-totals">
+        <dt>{t.net}</dt><dd>{money(net, lang)}</dd>
+        <dt>{t.vat} {tax} %</dt><dd>{money(taxSum, lang)}</dd>
+        <dt className="grand">{t.gross}</dt><dd className="grand">{money(net + taxSum, lang)}</dd>
+      </dl>
+      <p className="pre pq-terms">{q.terms || (lang === 'en' ? a.terms_en : a.terms_de)}</p>
+      <p>{(lang === 'en' ? a.closing_en : a.closing_de) || ''}<br />{q.owner?.name}<br />{a.company_name}</p>
+      <div className="pq-footer">
+        <div>{a.company_name}<br />{a.street}<br />{a.zip_city}</div>
+        <div>{a.phone && <>Tel. {a.phone}<br /></>}{a.email}<br />{a.website}</div>
+        <div>{a.register}<br />{a.vat_id && <>USt-IdNr. {a.vat_id}<br /></>}{a.managing_directors && <>{lang === 'en' ? 'Managing directors' : 'Geschäftsführung'}: {a.managing_directors}</>}</div>
+        <div>{a.bank_name}<br />{a.iban && <>IBAN {a.iban}<br /></>}{a.bic && <>BIC {a.bic}</>}</div>
+      </div>
+    </div>
+  )
 }
 const lineTotal = (i) => Number(i.quantity || 0) * Number(i.unit_price || 0) * (1 - Number(i.discount_pct || 0) / 100)
 
@@ -27,8 +110,10 @@ export default function QuoteEditor() {
   const [error, setError] = useState(null)
   const [saved, setSaved] = useState(false)
 
+  const [app, setApp] = useState(null)
   useEffect(() => {
     api.get('/quotes/settings').then(setCfg)
+    api.get('/app-settings').then(setApp).catch(() => {})
     if (isNew) {
       const accId = search.get('account_id')
       setQ({
@@ -66,7 +151,7 @@ export default function QuoteEditor() {
   async function save() {
     setError(null)
     const body = {
-      title: q.title, status: q.status, account_id: q.account_id, contact_id: q.contact_id,
+      title: q.title, status: q.status, account_id: q.account_id, contact_id: q.contact_id, language: q.language || 'de',
       opportunity_id: q.opportunity_id, valid_until: q.valid_until || null, quote_date: q.quote_date || null,
       tax_rate: q.tax_rate === '' ? null : q.tax_rate, intro_text: q.intro_text, terms: q.terms,
       items: q.items.filter((i) => i.description.trim()).map((i) => ({
@@ -105,7 +190,16 @@ export default function QuoteEditor() {
             </p>
           </div>
           <div className="toolbar">
+            {!isNew && <select className="lang-select" value={q.language || 'de'} disabled={!canWrite} title="Sprache des Angebots" onChange={(e) => {
+              const to = e.target.value, from = to === 'en' ? 'de' : 'en'
+              setQ((x) => ({ ...x, language: to,
+                intro_text: !x.intro_text || (app && x.intro_text === app[`intro_${from}`]) ? app?.[`intro_${to}`] ?? x.intro_text : x.intro_text,
+                terms: !x.terms || (app && x.terms === app[`terms_${from}`]) ? app?.[`terms_${to}`] ?? x.terms : x.terms }))
+              setSaved(false)
+            }}>
+              <option value="de">Deutsch</option><option value="en">English</option></select>}
             {!isNew && <button className="btn btn-ghost" onClick={() => window.print()}>Drucken / PDF</button>}
+            {!isNew && <a className="btn btn-ghost" href={mailto(q, account, app)} title="E-Mail in Outlook öffnen – PDF vorher über „Drucken / PDF“ speichern und anhängen">✉ E-Mail</a>}
             {!isNew && canWrite && <button className="btn btn-ghost" onClick={duplicate}>Duplizieren</button>}
             {!isNew && canWrite && q.status === 'entwurf' && <button className="btn btn-danger-ghost" onClick={remove}>Löschen</button>}
             {canWrite && <button className="btn btn-primary" onClick={save}>{saved ? '✓ Gespeichert' : 'Speichern'}</button>}
@@ -168,47 +262,12 @@ export default function QuoteEditor() {
         </div>
       </div>
 
-      {/* Druckansicht */}
-      <div className="print-only print-doc">
-        <div className="print-sender">{cfg.company_name}</div>
-        <div className="print-head">
-          <div className="print-address">
-            <strong>{account?.name}</strong><br />
-            {q.contact && <>{contactName(q.contact)}<br /></>}
-            {account?.street && <>{account.street}<br /></>}
-            {[account?.zip, account?.city].filter(Boolean).join(' ')}<br />
-            {account?.country !== 'Deutschland' && account?.country}
-          </div>
-          <dl className="print-meta">
-            <dt>Angebot Nr.</dt><dd>{q.number}</dd>
-            <dt>Datum</dt><dd>{fmtDate(q.quote_date)}</dd>
-            <dt>Gültig bis</dt><dd>{fmtDate(q.valid_until)}</dd>
-            <dt>Ansprechpartner</dt><dd>{q.owner?.name}</dd>
-          </dl>
-        </div>
-        <h2>Angebot: {q.title}</h2>
-        <p>{greeting(q.contact)}</p>
-        <p className="pre">{q.intro_text}</p>
-        <table className="print-table">
-          <thead><tr><th>Pos</th><th>Beschreibung</th><th className="num">Menge</th><th className="num">Einzelpreis</th><th className="num">Rabatt</th><th className="num">Gesamt</th></tr></thead>
-          <tbody>
-            {q.items.map((it, i) => (
-              <tr key={i}><td>{i + 1}</td><td className="pre">{it.description}</td>
-                <td className="num">{Number(it.quantity).toLocaleString('de-DE')} {it.unit}</td>
-                <td className="num">{eur(it.unit_price, true)}</td>
-                <td className="num">{Number(it.discount_pct) ? `${it.discount_pct} %` : ''}</td>
-                <td className="num">{eur(lineTotal(it), true)}</td></tr>
-            ))}
-          </tbody>
-        </table>
-        <dl className="totals print-totals">
-          <dt>Summe netto</dt><dd>{eur(net, true)}</dd>
-          <dt>zzgl. MwSt. {tax} %</dt><dd>{eur(taxSum, true)}</dd>
-          <dt className="grand">Gesamtbetrag</dt><dd className="grand">{eur(net + taxSum, true)}</dd>
-        </dl>
-        <p className="pre">{q.terms}</p>
-        <p>Mit freundlichen Grüßen<br />{q.owner?.name}<br />{cfg.company_name}</p>
+      <div className="no-print" style={{ marginTop: 18 }}>
+        {!isNew && <Attachments entity="quotes" entityId={q.id} title="Dokumente zum Angebot (Kundenanfrage, Bestellung, Zeichnungen …)" compact />}
       </div>
+
+      {/* Druckansicht im Firmenlayout */}
+      <PrintQuote q={q} account={account} app={app} net={net} taxSum={taxSum} tax={tax} />
     </div>
   )
 }

@@ -84,6 +84,7 @@ export default function Calculations() {
   const [callFor, setCallFor] = useState(null)
   const [accountFilter, setAccountFilter] = useState(null)
   const [bulkErr, setBulkErr] = useState(null)
+  const [bulkLang, setBulkLang] = useState('de')
   const t = useThresholds()
   const [tick, setTick] = useState(0)
   return (
@@ -116,10 +117,11 @@ export default function Calculations() {
             <span className="spacer" />
             {accs.length === 1 && !accountFilter && <button className="btn btn-ghost btn-sm" onClick={() => setAccountFilter(accs[0])}>Nur {accs[0].name} anzeigen</button>}
             <button className="btn btn-ghost btn-sm" onClick={() => { clear(); setBulkErr(null) }}>Auswahl aufheben</button>
+            <select className="lang-select bulk-lang" value={bulkLang} onChange={(e) => setBulkLang(e.target.value)} title="Sprache des Angebots"><option value="de">DE</option><option value="en">EN</option></select>
             <button className="btn btn-primary btn-sm" disabled={!ok} onClick={async () => {
               setBulkErr(null)
               try {
-                const res = await api.post('/calculations-bulk/quote', { ids: rows.map((r) => r.id) })
+                const res = await api.post('/calculations-bulk/quote', { ids: rows.map((r) => r.id), lang: bulkLang })
                 nav(`/angebote/${res.quote_id}`)
               } catch (e) { setBulkErr(e.message) }
             }}>→ Sammelangebot erstellen ({rows.length})</button>

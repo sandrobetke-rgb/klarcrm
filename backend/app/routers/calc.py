@@ -377,7 +377,27 @@ def _de(v, d=2):
     return f"{v:,.{d}f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def build_quote(db: Session, pairs: list, user: User) -> Quote:
+L = {
+    "de": {"your_no": "Ihre Art.-Nr.", "material": "Material", "calc": "Kalkulation", "per1000": "Preis je 1.000 Stk",
+           "lot": "Losgröße", "pcs": "Stk", "clause": "Preisgleitklausel: Materialbasis", "as_of": "Stand", "index": "Index",
+           "adjust": "Anpassung bei Änderung um mehr als ±", "amort": "Inkl. Werkzeugamortisation", "per1000s": "je 1.000 Stk",
+           "over": "über", "vol": "Preise je 1.000 Stk nach Jahresmenge", "peryear": "Stk/Jahr", "tiers": "Staffelpreise je 1.000 Stk",
+           "lotw": "Los", "pack": "Verpackung", "perunit": "Stk je VE", "delivery": "Lieferbedingung", "exw": "ab Werk",
+           "dap": "frei Haus", "lifecycle": "Lebensweg", "recycled": "Rezyklatanteil", "marking": "Werkstoffkennzeichnung",
+           "mono": "Monomaterial", "co2": "CO₂-Fußabdruck (Cradle-to-Gate)", "of_which": "davon Scope 1+2",
+           "once": "einmalig", "bulk": "Sammelangebot", "articles": "Artikel"},
+    "en": {"your_no": "Your part no.", "material": "Material", "calc": "Costing", "per1000": "Price per 1,000 pcs",
+           "lot": "Lot size", "pcs": "pcs", "clause": "Price adjustment clause: material basis", "as_of": "as of", "index": "index",
+           "adjust": "adjustment if changed by more than ±", "amort": "Incl. tool amortisation", "per1000s": "per 1,000 pcs",
+           "over": "over", "vol": "Prices per 1,000 pcs by annual volume", "peryear": "pcs/year", "tiers": "Lot-size prices per 1,000 pcs",
+           "lotw": "Lot", "pack": "Packaging", "perunit": "pcs per unit", "delivery": "Delivery terms", "exw": "ex works",
+           "dap": "delivered", "lifecycle": "Life cycle", "recycled": "recycled content", "marking": "material marking",
+           "mono": "mono-material", "co2": "Carbon footprint (cradle-to-gate)", "of_which": "thereof scope 1+2",
+           "once": "one-off", "bulk": "Combined quotation", "articles": "items"},
+}
+
+
+def build_quote(db: Session, pairs: list, user: User, lang: str = "de") -> Quote:
     """Angebot aus einer oder mehreren Kalkulationen (je mit Version). Serienteile zuerst, danach Einmalkosten."""
     calcs = [c for c, _ in pairs]
     missing = [f"{c.number} ({', '.join(c.approval_reasons)})" for c in calcs if c.approval_reasons and not c.is_approved]
@@ -386,66 +406,71 @@ def build_quote(db: Session, pairs: list, user: User) -> Quote:
     first = calcs[0]
     single = len(calcs) == 1
     opp_ids = {c.opportunity_id for c in calcs}
+    lang = "en" if lang == "en" else "de"
+    t = L[lang]
+    nf = _de if lang == "de" else (lambda v, d=2: f"{v:,.{d}f}")  # Zahlenformat je Sprache
+    from .workflow import DEFAULT_APP  # noqa: PLC0415 (Standardtexte aus Firmeneinstellungen)
+    from ..models import AppSettings
+    app_st = {**DEFAULT_APP, **((db.get(AppSettings, 1).data or {}) if db.get(AppSettings, 1) else {})}
     title = first.article_name if single else \
-        f"Sammelangebot {len(calcs)} Artikel" + (f" – {first.account.name}" if first.account else "")
+        f"{t['bulk']} {len(calcs)} {t['articles']}" + (f" – {first.account.name}" if first.account else "")
     quote = Quote(number=next_quote_number(db), title=title, account_id=first.account_id,
                   contact_id=first.contact_id, opportunity_id=opp_ids.pop() if len(opp_ids) == 1 else None,
                   owner_id=user.id, status="entwurf", quote_date=date.today(),
                   valid_until=date.today() + timedelta(days=30), tax_rate=19,
-                  intro_text="vielen Dank für Ihre Anfrage. Gerne bieten wir Ihnen an:",
-                  terms="Preise netto ab Werk, zzgl. gesetzl. MwSt. Werkzeugkosten zahlbar 50 % bei Bestellung, "
-                        "50 % bei Freigabe Erstmuster. Zahlungsbedingungen Serienteile: 30 Tage netto.",
+                  intro_text=app_st[f"intro_{lang}"], terms=app_st[f"terms_{lang}"], language=lang,
                   calculation_ids=[c.id for c in calcs])
     items, one_time = [], []
     for calc, ver in pairs:
         r, inp = ver.results, ver.inputs
-        art = calc.article_name + (f"\nIhre Art.-Nr.: {calc.customer_article_no}" if calc.customer_article_no else "")
+        art = calc.article_name + (f"\n{t['your_no']}: {calc.customer_article_no}" if calc.customer_article_no else "")
         mats = [inp.get('material_name') or '–'] + [c.get("material_name") or c.get("label") or "" for c in inp.get("components") or []]
-        art += f"\nMaterial: {' + '.join(m for m in mats if m)}" + (f" ({len(mats)}K)" if len(mats) > 1 else "") + \
-            f" · Kalkulation {calc.number} V{ver.version_no}"
-        art += f"\nPreis je 1.000 Stk: {_de(r['price_per_1000'])} € · Losgröße {_de(float(inp.get('lot_size') or 0), 0)} Stk"
+        art += f"\n{t['material']}: {' + '.join(m for m in mats if m)}" + (f" ({len(mats)}K)" if len(mats) > 1 else "") + \
+            f" · {t['calc']} {calc.number} V{ver.version_no}"
+        art += f"\n{t['per1000']}: {nf(r['price_per_1000'])} € · {t['lot']} {nf(float(inp.get('lot_size') or 0), 0)} {t['pcs']}"
         if float(inp.get("material_price_kg") or 0) > 0:
             st_ = get_settings(db)
             mat = db.get(Material, inp.get("material_id")) if inp.get("material_id") else None
-            stand = mat.price_valid_from.strftime("%d.%m.%Y") if mat and mat.price_valid_from else ver.created_at.strftime("%d.%m.%Y")
-            art += (f"\nPreisgleitklausel: Materialbasis {_de(float(inp['material_price_kg']))} €/kg (Stand {stand}"
-                    + (f", Index {mat.price_index}" if mat and mat.price_index else "")
-                    + f"); Anpassung bei Änderung um mehr als ± {_de(st_['escalation_threshold_pct'], 0)} %")
+            same = mat and mat.price_valid_from and abs(float(mat.price_per_kg) - float(inp["material_price_kg"])) < 1e-9
+            stand = (mat.price_valid_from if same else ver.created_at.date()).strftime("%d.%m.%Y" if lang == "de" else "%d/%m/%Y")
+            art += (f"\n{t['clause']} {nf(float(inp['material_price_kg']))} €/kg ({t['as_of']} {stand}"
+                    + (f", {t['index']} {mat.price_index}" if mat and mat.price_index else "")
+                    + f"); {t['adjust']} {nf(st_['escalation_threshold_pct'], 0)} %")
         if r.get("amortization_per_piece"):
-            art += (f"\nInkl. Werkzeugamortisation {_de(r['amortization_per_piece'] * 1000)} € je 1.000 Stk "
-                    f"(über {_de(r['amortization_quantity'], 0)} Stk)")
+            art += (f"\n{t['amort']} {nf(r['amortization_per_piece'] * 1000)} € {t['per1000s']} "
+                    f"({t['over']} {nf(r['amortization_quantity'], 0)} {t['pcs']})")
         if r.get("volume_tiers"):
-            art += "\nPreise je 1.000 Stk nach Jahresmenge: " + " · ".join(
-                f"{_de(t['annual_volume'], 0)} Stk/Jahr: {_de(t['price_per_1000'])} €" for t in r["volume_tiers"])
+            art += f"\n{t['vol']}: " + " · ".join(
+                f"{nf(v['annual_volume'], 0)} {t['peryear']}: {nf(v['price_per_1000'])} €" for v in r["volume_tiers"])
         if r.get("lot_tiers"):
-            art += "\nStaffelpreise je 1.000 Stk: " + " · ".join(
-                f"Los {_de(t['lot_size'], 0)}: {_de(t['price_per_1000'])} €" for t in r["lot_tiers"])
+            art += f"\n{t['tiers']}: " + " · ".join(
+                f"{t['lotw']} {nf(v['lot_size'], 0)}: {nf(v['price_per_1000'])} €" for v in r["lot_tiers"])
         if inp.get("pack_type") or inp.get("pack_parts_per_unit"):
-            art += f"\nVerpackung: {inp.get('pack_type') or '–'}" + \
-                (f", {_de(float(inp['pack_parts_per_unit']), 0)} Stk je VE" if inp.get("pack_parts_per_unit") else "")
+            art += f"\n{t['pack']}: {inp.get('pack_type') or '–'}" + \
+                (f", {nf(float(inp['pack_parts_per_unit']), 0)} {t['perunit']}" if inp.get("pack_parts_per_unit") else "")
         if inp.get("incoterm") or (inp.get("transport_mode") or "keine") != "keine":
-            art += "\nLieferbedingung: " + (inp.get("incoterm") or ("frei Haus" if inp.get("transport_mode") != "keine" else "ab Werk"))
+            art += f"\n{t['delivery']}: " + (inp.get("incoterm") or (t["dap"] if inp.get("transport_mode") != "keine" else t["exw"]))
         lc = calc.lifecycle or {}
         if lc.get("on_quote"):
             bits = []
             if lc.get("recycled_pct"):
-                bits.append(f"Rezyklatanteil {_de(float(lc['recycled_pct']), 0)} %")
+                bits.append(f"{t['recycled']} {nf(float(lc['recycled_pct']), 0)} %")
             if lc.get("marking"):
-                bits.append(f"Werkstoffkennzeichnung {lc['marking']}")
+                bits.append(f"{t['marking']} {lc['marking']}")
             if lc.get("eol_route"):
                 bits.append({"stofflich": "stofflich verwertbar", "thermisch": "thermische Verwertung"}.get(lc["eol_route"], lc["eol_route"]))
             if not inp.get("components"):
-                bits.append("Monomaterial")
+                bits.append(t["mono"])
             if bits:
-                art += "\nLebensweg: " + " · ".join(bits)
+                art += f"\n{t['lifecycle']}: " + " · ".join(bits)
         co2 = r.get("co2") or {}
         if co2.get("active") and inp.get("co2_on_quote", True):
-            art += (f"\nCO₂-Fußabdruck (Cradle-to-Gate): {_de(co2['cradle_to_gate'] * 1000, 1)} g CO₂e/Stk · "
-                    f"{_de(co2['cradle_to_gate'] * 1000, 2)} kg je 1.000 Stk · davon Scope 1+2 {_de(co2['scope12'] * 1000, 1)} g/Stk")
+            art += (f"\n{t['co2']}: {nf(co2['cradle_to_gate'] * 1000, 1)} g CO₂e/{t['pcs']} · "
+                    f"{nf(co2['cradle_to_gate'] * 1000, 2)} kg {t['per1000s']} · {t['of_which']} {nf(co2['scope12'] * 1000, 1)} g/{t['pcs']}")
         items.append(dict(description=art, quantity=r["annual_volume"], unit="Stk", unit_price=r["unit_price"]))
         for o in [o for o in r["one_time"] if o["price"]]:
             label = o["label"] if single else f"{o['label']} – {calc.article_name}"
-            one_time.append(dict(description=f"{label} (einmalig)", quantity=1, unit="psch", unit_price=o["price"]))
+            one_time.append(dict(description=f"{label} ({t['once']})", quantity=1, unit="psch", unit_price=o["price"]))
     quote.items = [QuoteItem(position=n, **it) for n, it in enumerate(items + one_time, start=1)]
     db.add(quote)
     for calc in calcs:
@@ -459,7 +484,7 @@ def build_quote(db: Session, pairs: list, user: User) -> Quote:
 
 
 @calcs.post("/{calc_id}/quote")
-def create_quote(calc_id: int, version_no: int | None = None, db: Session = Depends(get_db),
+def create_quote(calc_id: int, version_no: int | None = None, lang: str = "de", db: Session = Depends(get_db),
                  user: User = Depends(can_write)):
     calc = db.get(Calculation, calc_id)
     if not calc:
@@ -467,7 +492,7 @@ def create_quote(calc_id: int, version_no: int | None = None, db: Session = Depe
     ver = next((v for v in calc.versions if v.version_no == (version_no or calc.current_version)), None)
     if not ver:
         raise HTTPException(404, "Version nicht gefunden")
-    quote = build_quote(db, [(calc, ver)], user)
+    quote = build_quote(db, [(calc, ver)], user, lang)
     db.commit()
     return {"quote_id": quote.id, "number": quote.number}
 
@@ -493,7 +518,7 @@ def create_bulk_quote(data: dict, db: Session = Depends(get_db), user: User = De
         raise HTTPException(400, f"Verlorene bzw. nicht angebotene Kalkulationen ausnehmen: {', '.join(closed)}")
     calcs.sort(key=lambda c: c.number)
     pairs = [(c, next(v for v in c.versions if v.version_no == c.current_version)) for c in calcs]
-    quote = build_quote(db, pairs, user)
+    quote = build_quote(db, pairs, user, (data or {}).get("lang", "de"))
     db.commit()
     return {"quote_id": quote.id, "number": quote.number, "count": len(calcs)}
 

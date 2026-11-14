@@ -4,9 +4,9 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.10 |
+| **Dokumentversion** | 1.11 |
 | **Stand** | 14.11.2026 |
-| **Status** | Testphase (GitHub Codespaces) |
+| **Status** | Testphase (GitHub Codespaces); Zielbetrieb: interner Server F&R |
 
 > Dieses Lastenheft wird bei **jeder** Änderung am System mitgezogen. Neue Anforderungen, geänderte Regeln und
 > umgesetzte Punkte werden in der Änderungshistorie (Kapitel 12) dokumentiert. Anforderungen tragen eine feste ID
@@ -389,11 +389,45 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 Hinweis: Die Software unterstützt die Nachweisführung. Ob die Prozesse normkonform sind, bewertet das Audit;
 Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind im Managementsystem zu regeln.
 
+## 7b. Arbeitsabläufe
+
+### 7b.1 Dokumente
+- DOK-1: Dokumente an **Kalkulation** (eigener Reiter), **Firma** und **Angebot**: hochladen per Auswahl oder Drag & Drop,
+  mehrere Dateien gleichzeitig; Art (Zeichnung, 3D-Daten, Kundenanfrage, Lastenheft Kunde, Prüfplan/Messkonzept,
+  Musterbericht/EMPB, Sonstiges), Revision/Index, Notiz; Anzeige mit Datum, Person, Größe; Download.
+- DOK-2: Größenlimit (Standard 50 MB), ausführbare Dateien (.exe, .bat, .js …) gesperrt.
+- DOK-3: „Entfernen“ blendet nur aus – die Datei bleibt als Nachweis gespeichert; nur hochladende Person oder
+  Administrator; jede Aktion im Änderungsprotokoll. Ablage im Volume `uploads` auf dem internen Server.
+
+### 7b.2 Benachrichtigungen
+- BEN-1: Glocke in der Seitenleiste mit Zähler; Inhalte: gespeicherte Nachrichten (Freigabe angefragt / entschieden),
+  laufende Hinweise (heute fällige und überfällige Aufgaben, Angebote mit Ablauf in ≤ 7 Tagen, offene Freigaben für
+  Freigabeberechtigte); Klick führt zum Datensatz; „alle gelesen“; Aktualisierung jede Minute.
+- BEN-2: Optional E-Mail-Versand der Nachrichten über den internen Mailserver (SMTP), wenn konfiguriert.
+
+### 7b.3 Outlook
+- OUT-1: **Kalenderabo** je Benutzer (iCalendar-Adresse mit persönlichem Schlüssel, erneuerbar): Termine, Anrufe,
+  Aufgaben und Wiedervorlagen erscheinen in Outlook (inkl. Erinnerung 15 min); Abruf aus dem internen Netz.
+- OUT-2: Einzelne Aktivität als .ics-Datei für Outlook.
+- OUT-3: Angebot per E-Mail: öffnet Outlook mit Empfänger (Ansprechpartner), Betreff und Text in der Angebotssprache;
+  das PDF wird über „Drucken / PDF“ gespeichert und angehängt.
+
+### 7b.4 Angebots-PDF im Firmenlayout
+- PDF-1: Firmeneinstellungen (Administrator): Firmenname, Adresse, Kontakt, Handelsregister, USt-IdNr.,
+  Geschäftsführung, Bank/IBAN/BIC, Akzentfarbe, **Logo**, Standardtexte Einleitung/Bedingungen/Grußformel je Sprache.
+- PDF-2: Druckansicht DIN A4: Kopf mit Logo und Firmenname, Absenderzeile, Anschriftfeld, Angebotsdaten,
+  Positionstabelle, Summen, Bedingungen, Grußformel, **Fußzeile** mit Firmen-, Register- und Bankdaten.
+- PDF-3: **Sprache Deutsch/Englisch** je Angebot: Beschriftungen, Datums- und Zahlenformat, Anrede, Standardtexte;
+  Sprache bereits beim Erzeugen aus Kalkulation/Sammelangebot wählbar – dann werden auch die Positionstexte
+  (Material, Staffeln, Preisgleitklausel, Verpackung, Lieferbedingung, CO₂, Lebensweg) in der Sprache erzeugt.
+  Beim Umschalten werden unveränderte Standardtexte mitgetauscht.
+
 ## 8. Nicht-funktionale Anforderungen
 - NFA-1: Web-Anwendung (Desktop und Tablet), deutschsprachig, Zahlen im deutschen Format.
-- NFA-2: Selbst gehostet (Docker), keine Lizenzkosten je Nutzer; Daten bleiben auf eigenem Server (DSGVO).
+- NFA-2: Selbst gehostet (Docker) auf dem **internen Server von F&R**, keine Lizenzkosten je Nutzer; Daten und Dokumente
+  bleiben im eigenen Netz (DSGVO). Keine Fremdwährung (nur Euro), Oberfläche Deutsch (Angebote zusätzlich Englisch).
 - NFA-3: Anmeldung per E-Mail/Passwort, Passwörter mit bcrypt gehasht, Sitzungen per Token (12 h).
-- NFA-4: Betrieb hinter HTTPS-Reverse-Proxy; tägliches Datenbank-Backup.
+- NFA-4: Betrieb hinter HTTPS-Reverse-Proxy; tägliches Backup von Datenbank **und** Dokumenten mit Wiederherstellungstest.
 - NFA-5: Automatischer Build- und Starttest bei jedem Push (GitHub Actions).
 - NFA-6: API vollständig dokumentiert (Swagger unter /docs).
 - NFA-8: Datenbank-Erweiterungen werden beim Start automatisch ergänzt (neue Tabellen, neue Spalten, Verbreitern von
@@ -409,9 +443,9 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 - Testumgebung: GitHub Codespaces (Demo-Daten, Logins siehe README).
 
 ## 10. Abgrenzung / noch nicht umgesetzt
-- Kein E-Mail-Versand von Angeboten aus dem System.
+- Kein direkter E-Mail-Versand von Angeboten aus dem Server (Outlook-Entwurf über E-Mail-Link, PDF manuell anhängen).
 - Kein Import aus ERP/BDE; Ist-Werte der Nachkalkulation werden manuell erfasst.
-- Keine Mehrwährung; Euro.
+- Keine Mehrwährung (Euro) und keine tschechische Oberfläche – bewusst nicht benötigt.
 - Keine vollwertigen Datenbank-Migrationen (Alembic) – nur additive automatische Ergänzung (NFA-8).
 
 ## 11. Offene Punkte / Ideen für die finale Version
@@ -442,3 +476,4 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.8 | 14.11.2026 | Verpackung wahlweise **pauschal in % auf HK** oder detailliert; Transport pauschal in % weiterhin wählbar; Standardsätze Verpackung 1,5 % / Transport 2,0 % in den Parametern (KAL-29a). |
 | 1.9 | 14.11.2026 | **Etappe 1 Profi-Kalkulation**: Mehrkomponenten 2K/3K (KAL-28b), Familienwerkzeug (KAL-28c), Werkzeugamortisation (KAL-28d), Staffeln nach Jahresmenge (KAL-28a), Kopieren und Vorlagen (KAL-28e), Preisgleitklausel im Angebot (KAL-28f), Herleitung Maschinenstundensatz inkl. Umlage Kostenstelle (STM-15), Rohstoffpreis-Historie und Preisgleitung (STM-16/17), Rechentests im Build (NFA-9). Angebotspositionen ohne Längenbegrenzung. |
 | 1.10 | 14.11.2026 | **Etappe 2 Nachweisführung**: Freigabe-Workflow mit Vier-Augen-Prinzip (FRG-1 … 5, ROL-6), Änderungsprotokoll für alle Daten (PRT-1 … 4), Löschschutz (LSH-1 … 3), Lebenswegbetrachtung nach ISO 14001 6.1.2 (LWB-1 … 3), Zuordnung zu IATF 16949 / ISO 14001 (Kap. 7a.5). |
+| 1.11 | 14.11.2026 | **Etappe 3 Arbeitsabläufe**: Dokumente an Kalkulation/Firma/Angebot (DOK-1 … 3), Benachrichtigungen mit optionalem SMTP (BEN-1/2), Outlook-Kalenderabo, .ics und E-Mail-Entwurf (OUT-1 … 3), Angebots-PDF im Firmenlayout mit Logo, Fußzeile, Deutsch/Englisch (PDF-1 … 3); Betrieb auf internem Server inkl. Backup von Dokumenten (NFA-2/4). |
