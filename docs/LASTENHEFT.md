@@ -4,7 +4,7 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.11 |
+| **Dokumentversion** | 1.12 |
 | **Stand** | 14.11.2026 |
 | **Status** | Testphase (GitHub Codespaces); Zielbetrieb: interner Server F&R |
 
@@ -92,10 +92,22 @@ von Standardwerten werden markiert; jede Änderung an einer Kalkulation erzeugt 
   Preisbasis der Version vs. aktuellem Preis, Δ Material %, €/Stk alt → neu, Wirkung p. a.; Markierung über Schwelle;
   „Neue Versionen anlegen“ erzeugt je Kalkulation eine Version mit aktuellem Preis und automatischer Änderungsnotiz.
 - STM-3: Inaktive Maschinen sind in neuen Kalkulationen nicht auswählbar; bestehende Kalkulationen bleiben unverändert.
+- STM-18: **Maschinenart** je Anlage: Spritzgießmaschine, Montagelinie/Montageplatz, Nachbearbeitung (Schweißen,
+  Drucken, Entgraten …), Prüfstation, sonstige Anlage. Alle Arten haben dieselben Kostenfelder (Stundensatz,
+  Instandhaltung, Produktivität, Bedienfaktor, kW, verfügbare Stunden, Grundauslastung) und erscheinen in der Auslastung.
+  Als Hauptmaschine der Kalkulation werden nur Spritzgießmaschinen angeboten; alle Arten sind als Arbeitsgang wählbar.
 
 ### 5.2 Materialien
 - STM-4: Je Material: Bezeichnung, Werkstoffgruppe, Lieferant, **Preis €/kg**, Dichte, aktiv/inaktiv.
 - STM-5: Bei Auswahl wird der Materialpreis übernommen (überschreibbar).
+
+### 5.2a Zukaufteile
+- STM-19: Je Zukaufteil: interne Artikel-Nr., Bezeichnung, Lieferant, Lieferanten-Artikel-Nr., **Preis je
+  Preiseinheit** (1 oder 1.000 Stück), Mengeneinheit, Mindestbestellmenge, Wiederbeschaffungszeit (Tage),
+  **CO₂ kg CO₂e je Einheit**, Preis gültig ab, Notizen, aktiv/inaktiv.
+- STM-20: Bei Auswahl in der Kalkulation werden Preis je Einheit (= Preis ÷ Preiseinheit) und CO₂-Wert übernommen
+  und sind überschreibbar; die Werte werden mit der Version gespeichert (spätere Preisänderungen ändern keine
+  gespeicherte Version).
 
 ### 5.3 Parameter (Standardwerte)
 - STM-6: Lohnsätze Bediener, Einrichter, Montage (€/h).
@@ -146,10 +158,10 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | Bereich | Felder |
 |---|---|
 | Mengen | Jahresmenge, Losgröße, Projektlaufzeit (Jahre) |
-| Material | Material (Stammdaten), Preis €/kg, Teilgewicht g, Anguss je Schuss g, Mahlgut-Rückführung %, Masterbatch-Anteil % und -Preis, Zukaufteile €/Stk; **weitere Komponenten (2K/3K …)** je mit Material, €/kg, Teilgewicht, Anguss, Mahlgut, CO₂-Faktor |
+| Material | Material (Stammdaten), Preis €/kg, Teilgewicht g, Anguss je Schuss g, Mahlgut-Rückführung %, Masterbatch-Anteil % und -Preis, **Zukaufteile-Liste** (1 … N Teile aus Stammdaten mit Menge je Artikel, € und CO₂ je Einheit) plus Zukaufteile pauschal €/Stk; **weitere Komponenten (2K/3K …)** je mit Material, €/kg, Teilgewicht, Anguss, Mahlgut, CO₂-Faktor |
 | Maschine & Fertigung | Maschine (Stammdaten), Maschinenstundensatz €/h, Instandhaltung €/h, **Zykluszeit s**, **Fachzahl**, **Produktivität %**, Bedienfaktor, Lohnsatz Bediener; **Familienwerkzeug**: Werkzeuggruppe und Anteil dieses Artikels an Maschinenzeit/Rüsten % |
 | Rüsten | Rüstzeit je Los h, Einrichter, Lohnsatz Einrichter, Anfahrausschuss je Los Stk |
-| Montage | Montagezeit je Stück s, Personen, Lohnsatz, Produktivität Montage % |
+| Montage & weitere Arbeitsgänge | Handmontage je Stück s, Personen, Lohnsatz, Produktivität Montage %; **weitere Arbeitsgänge 1 … N** je mit Anlage (Stammdaten), Bezeichnung, Taktzeit s, Teile je Takt, Stundensatz Anlage, Instandhaltung, Personen, Lohnsatz, Produktivität %, Rüstzeit je Los, kW |
 | Zuschläge | MGK, FGK, Ausschuss, Verwaltung, Vertrieb, Projektmanagement, **Qualität**, **Werkzeugbau**, Gewinn, Skonto, Rabatt (%); für Qualität und Werkzeugbau ist die **Basis wählbar**: FEK oder HK |
 | **Verpackung** | Auswahl **pauschal in % auf HK** (wenn Details unbekannt; Standard aus Parametern) **oder detailliert**: Verpackungsart (Vorschläge KLT, Karton, Gitterbox, Sonderladungsträger …), Teile je Verpackungseinheit (VE), Kosten je VE bzw. bei Mehrweg je Umlauf (Reinigung, Miete), Packzeit je VE, VE je Palette |
 | **Transport** | Lieferbedingung (Incoterm, frei wählbar), Art: keine (ab Werk) · € je Palette · € je Lieferung (mit Lieferungen p. a.) · **pauschal in % auf Herstellkosten** (Standard aus Parametern) |
@@ -162,14 +174,15 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | Schritt | Formel |
 |---|---|
 | Ausbringung | Stück/h = 3600 / Zykluszeit × Fachzahl × Produktivität |
-| Material (MEK) | (Teilgewicht + Anguss/Fachzahl × (1 − Mahlgut %)) / 1000 × Mischpreis €/kg + Σ weitere Komponenten (gleiche Formel je Komponente) + Zukaufteile; Mischpreis = Materialpreis × (1 − MB %) + MB-Preis × MB % |
+| Material (MEK) | (Teilgewicht + Anguss/Fachzahl × (1 − Mahlgut %)) / 1000 × Mischpreis €/kg + Σ weitere Komponenten (gleiche Formel je Komponente) + Zukaufteile; Mischpreis = Materialpreis × (1 − MB %) + MB-Preis × MB %; Zukaufteile = Σ (Menge × € je Einheit) der Liste + Pauschale |
 | MGK | MEK × MGK % |
 | Maschine | Maschinenstundensatz / Stück/h × Familienanteil (Instandhaltung, Personal, Rüsten ebenso) |
 | Instandhaltung | Instandhaltung €/h / Stück/h |
 | Personal | Lohnsatz × Bedienfaktor / Stück/h |
 | Rüsten | [Rüstzeit × (Maschinensatz + Instandhaltung + Lohnsatz Einrichter × Einrichter) + Anfahrausschuss × (Material + Maschine + Instandhaltung + Personal je Stück)] / Losgröße |
 | Montage | Montagezeit/3600 × Lohnsatz × Personen / Produktivität Montage |
-| FEK | Maschine + Instandhaltung + Personal + Rüsten + Montage |
+| Arbeitsgang n | Lauf: (Satz Anlage + Instandhaltung + Lohnsatz × Personen) / Stück je h, Stück je h = 3600 / Takt × Teile je Takt × Produktivität; Rüsten: Rüstzeit × (Satz Anlage + Instandhaltung + Lohnsatz × 1 Einrichter) / Losgröße |
+| FEK | Maschine + Instandhaltung + Personal + Rüsten + Montage + Σ Arbeitsgänge |
 | FGK | FEK × FGK % |
 | Qualität / Werkzeugbau (Basis FEK) | FEK × Qualität % bzw. FEK × Werkzeugbau % – Teil der Herstellkosten (vor Ausschuss) |
 | SEK Fertigung | Zusatzpositionen „Fertigung“ |
@@ -198,6 +211,12 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
   Ältere Versionen ohne diese Angaben rechnen unverändert (Verpackung bisher über Zusatzpositionen).
 - KAL-28a: **Staffelpreise nach Jahresmenge** (bis zu 3): gleiche Abrufhäufigkeit, d. h. Lose pro Jahr bleiben
   gleich und die Losgröße wächst mit der Menge; Ausweis Losgröße, €/Stk, €/1.000, Umsatz p. a., Δ %; im Angebot.
+- KAL-28g: **Weitere Arbeitsgänge (1 … N Anlagen)**: Montagelinie, Ultraschallschweißen, Tampondruck, Prüfstation
+  u. a. je Artikel; Werte aus den Stammdaten vorbelegt und überschreibbar; je Arbeitsgang Ausweis €/Stk, Stück je h
+  und Stunden p. a. sowie eigene Zeile „Arbeitsgang: …“ im Kalkulationsschema. FGK, Ausschuss und alle folgenden
+  Zuschläge wirken wie bei der Spritzgießmaschine. Stunden fließen in die Auslastung der jeweiligen Anlage (AUS-6).
+- KAL-28h: **Zukaufteile-Liste**: beliebig viele Zukaufteile je Artikel mit Menge; Zeile „Zukaufteile (n Pos.)“ im
+  Schema, MGK wirkt darauf; CO₂ der Zukaufteile fließt in den Fußabdruck (Kap. 6.8).
 - KAL-28b: **Mehrkomponenten**: Material, CO₂, Gewicht und Schussgewicht aller Komponenten; im Angebot „A + B (2K)“.
 - KAL-28c: **Familienwerkzeug**: Maschinen-, Instandhaltungs-, Personal- und Rüstkosten, Maschinenstunden
   (Auslastung) und Energie-CO₂ anteilig; Summe der Anteile aller Artikel der Gruppe = 100 % (Hinweis).
@@ -301,6 +320,9 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 - AUS-4: Stunden je Kalkulation = Maschinenstunden p. a. inkl. Rüsten der aktuellen Version, ab SOP (sonst ab heute
   bzw. 1. Januar Folgejahr) über die Projektlaufzeit, anteilig im Start- und Endjahr. Nicht berücksichtigt:
   verloren, kein Angebot, zurückgestellt. Kalkulationen ohne Maschine erscheinen als „ohne Maschinenzuordnung“.
+- AUS-6: Auslastung umfasst alle Anlagenarten (STM-18): Stunden weiterer Arbeitsgänge (KAL-28g) werden der gewählten
+  Anlage zugerechnet (Stunden p. a. = Jahresmenge / Stück je h + Lose p. a. × Rüstzeit); im Aufklappen mit Name des
+  Arbeitsgangs. Arbeitsgänge ohne Anlage erscheinen unter „ohne Maschinenzuordnung“.
 - AUS-5: Farbstufen < 60 %, 60–85 %, 85–100 %, ≥ 100 % (mit Warnsymbol); Aufklappen je Maschine zeigt die
   beteiligten Kalkulationen mit Stunden je Jahr; Gesamtzeile; KPI „Auslastung Folgejahr“ im Dashboard.
 
@@ -312,9 +334,9 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
   | Quelle | Formel | Scope |
   |---|---|---|
   | Material | kg je Teil inkl. Angussanteil × Faktor (Mischung Masterbatch) / (1 − Ausschuss) + Anfahrausschuss je Los | 3 vorgelagert |
-  | Strom | (kW / Stück je h / (1 − Ausschuss) + Rüstzeit × kW / Losgröße) × kg CO₂e/kWh | 2 |
+  | Strom | (kW / Stück je h / (1 − Ausschuss) + Rüstzeit × kW / Losgröße + Σ Arbeitsgänge kW × (1 / Stück je h + Rüstzeit / Losgröße)) × kg CO₂e/kWh | 2 |
   | Werksemissionen | Maschinenstunden je Teil × kg CO₂e je Maschinenstunde | 1 |
-  | Zukaufteile | Wert je Stück | 3 vorgelagert |
+  | Zukaufteile | Pauschalwert je Stück + Σ (Menge × kg CO₂e je Einheit) der Zukaufteile-Liste | 3 vorgelagert |
   | Verpackung | kg CO₂e je VE / Teile je VE | 3 vorgelagert |
   | Transport | Teilgewicht t × km × kg CO₂e/tkm (0 bei ab Werk) | 3 nachgelagert |
 - CO2-3: Ausgaben: **je Stück (g), je 1.000 Stück (kg), je Los (kg), Jahresmenge (t)**, je Lieferung, je kg Teil,
@@ -477,3 +499,4 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.9 | 14.11.2026 | **Etappe 1 Profi-Kalkulation**: Mehrkomponenten 2K/3K (KAL-28b), Familienwerkzeug (KAL-28c), Werkzeugamortisation (KAL-28d), Staffeln nach Jahresmenge (KAL-28a), Kopieren und Vorlagen (KAL-28e), Preisgleitklausel im Angebot (KAL-28f), Herleitung Maschinenstundensatz inkl. Umlage Kostenstelle (STM-15), Rohstoffpreis-Historie und Preisgleitung (STM-16/17), Rechentests im Build (NFA-9). Angebotspositionen ohne Längenbegrenzung. |
 | 1.10 | 14.11.2026 | **Etappe 2 Nachweisführung**: Freigabe-Workflow mit Vier-Augen-Prinzip (FRG-1 … 5, ROL-6), Änderungsprotokoll für alle Daten (PRT-1 … 4), Löschschutz (LSH-1 … 3), Lebenswegbetrachtung nach ISO 14001 6.1.2 (LWB-1 … 3), Zuordnung zu IATF 16949 / ISO 14001 (Kap. 7a.5). |
 | 1.11 | 14.11.2026 | **Etappe 3 Arbeitsabläufe**: Dokumente an Kalkulation/Firma/Angebot (DOK-1 … 3), Benachrichtigungen mit optionalem SMTP (BEN-1/2), Outlook-Kalenderabo, .ics und E-Mail-Entwurf (OUT-1 … 3), Angebots-PDF im Firmenlayout mit Logo, Fußzeile, Deutsch/Englisch (PDF-1 … 3); Betrieb auf internem Server inkl. Backup von Dokumenten (NFA-2/4). |
+| 1.12 | 14.11.2026 | **Montagelinie & weitere Arbeitsgänge** (KAL-28g, AUS-6): 1 … N Anlagen je Artikel mit eigenem Stundensatz, Takt, Personal, Rüsten und kW; Maschinenart in den Stammdaten (STM-18). **Zukaufteile-Stammdaten** (STM-19/20) und Zukaufteile-Liste je Kalkulation mit Menge und CO₂ (KAL-28h). Neue Tabelle `purchased_parts` und Spalte `machines.kind` werden automatisch angelegt; gespeicherte Versionen rechnen unverändert. Rechentests ergänzt. |

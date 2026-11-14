@@ -48,11 +48,12 @@ export default function CalculationEditor() {
   const [calc, setCalc] = useState(null)
   const [error, setError] = useState(null)
   const [tab, setTab] = useState('calc')
-  const [master, setMaster] = useState({ machines: [], materials: [], settings: {} })
+  const [master, setMaster] = useState({ machines: [], materials: [], parts: [], settings: {} })
 
   useEffect(() => {
-    Promise.all([api.get('/machines?limit=500&active=true'), api.get('/materials?limit=500&active=true'), api.get('/calc/settings')])
-      .then(([m, mat, st]) => setMaster({ machines: m.items, materials: mat.items, settings: st }))
+    Promise.all([api.get('/machines?limit=500&active=true'), api.get('/materials?limit=500&active=true'), api.get('/calc/settings'),
+      api.get('/purchased-parts?limit=500&active=true')])
+      .then(([m, mat, st, pp]) => setMaster({ machines: m.items, materials: mat.items, settings: st, parts: pp.items }))
   }, [])
   useEffect(() => {
     if (id === 'neu') return
@@ -351,8 +352,9 @@ function CalcTab({ calc, setCalc, master }) {
             {F({ k: 'regrind_pct', label: 'Mahlgut-Rückführung Anguss', unit: '%' })}
             {F({ k: 'masterbatch_pct', label: 'Masterbatch-Anteil', unit: '%', step: 0.5 })}
             {F({ k: 'masterbatch_price_kg', label: 'Masterbatch-Preis', unit: '€/kg', step: 0.1 })}
-            {F({ k: 'purchased_parts', label: 'Zukaufteile je Stück', unit: '€', step: 0.01, hint: 'z. B. Einlegeteile, Buchsen' })}
             <ComponentsEditor rows={inputs.components || []} materials={master.materials} onChange={(v) => set('components', v)} result={r} />
+            <PurchasedEditor rows={inputs.purchased_items || []} parts={master.parts} onChange={(v) => set('purchased_items', v)} result={r} />
+            {F({ k: 'purchased_parts', label: 'Sonstige Zukaufteile pauschal je Stück', unit: '€', step: 0.01, hint: 'zusätzlich zur Liste, z. B. Kleinteile ohne Stammdaten' })}
             <Info>Gewicht je Stück inkl. Angussanteil: <b>{num(r.kg_per_piece * 1000, 2)} g</b> · Schussgewicht {num(r.shot_weight_g, 1)} g · Material p. a. {num(r.material_kg_year)} kg</Info>
           </Section>
 
@@ -360,7 +362,8 @@ function CalcTab({ calc, setCalc, master }) {
             <div className="field span-2"><label>Maschine (Stammdaten)</label>
               <select value={inputs.machine_id ?? ''} onChange={(e) => pickMachine(e.target.value)}>
                 <option value="">– frei / manuell –</option>
-                {master.machines.map((m) => <option key={m.id} value={m.id}>{m.number} · {m.name} · {num2(m.hourly_rate)} €/h</option>)}
+                {master.machines.filter((m) => (m.kind || 'spritzguss') === 'spritzguss' || m.id === inputs.machine_id)
+                  .map((m) => <option key={m.id} value={m.id}>{m.number} · {m.name} · {num2(m.hourly_rate)} €/h</option>)}
               </select></div>
             {F({ k: 'machine_rate_h', label: 'Maschinenstundensatz', unit: '€/h', hint: 'ohne Personal' })}
             {F({ k: 'maintenance_rate_h', label: 'Instandhaltung', unit: '€/h' })}
@@ -384,11 +387,12 @@ function CalcTab({ calc, setCalc, master }) {
             <Info>Rüstkosten je Los: <b>{eur(r.setup_cost_per_lot)}</b> · {num(r.lots_per_year, 1)} Lose p. a.</Info>
           </Section>
 
-          <Section title="Montage">
-            {F({ k: 'assembly_time_s', label: 'Montagezeit je Stück', unit: 's', step: 0.5 })}
+          <Section title="Montage & weitere Arbeitsgänge">
+            {F({ k: 'assembly_time_s', label: 'Handmontage je Stück', unit: 's', step: 0.5, hint: 'ohne Anlage; Anlagen unten als Arbeitsgang' })}
             {F({ k: 'assembly_persons', label: 'Personen', unit: 'Pers.', step: 0.5 })}
             {F({ k: 'assembly_rate_h', label: 'Lohnsatz Montage', unit: '€/h' })}
             {F({ k: 'assembly_productivity_pct', label: 'Produktivität Montage', unit: '%' })}
+            <OperationsEditor rows={inputs.operations || []} machines={master.machines} labor={inputs.labor_rate_h} onChange={(v) => set('operations', v)} result={r} />
           </Section>
 
           <Section title="Verpackung & Transport">
@@ -555,6 +559,87 @@ function ListSection({ title, hint, rows, onChange, cols, empty, children }) {
         </table>
       ) : <div className="empty small">Keine Positionen</div>}
       {children}
+    </div>
+  )
+}
+
+function OperationsEditor({ rows, machines, labor, onChange, result }) {
+  const upd = (i, patch) => onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)))
+  const fromMachine = (m) => ({ machine_id: m.id, name: m.name, kind: m.kind, rate_h: m.hourly_rate, maintenance_h: m.maintenance_rate || 0,
+    productivity_pct: m.productivity_pct ?? 100, operator_factor: m.operator_factor ?? 1, power_kw: m.power_kw || 0 })
+  const pick = (i, id) => {
+    const m = machines.find((x) => x.id === Number(id))
+    upd(i, m ? fromMachine(m) : { machine_id: null })
+  }
+  const others = machines.filter((m) => (m.kind || 'spritzguss') !== 'spritzguss')
+  const add = () => {
+    const m = others[0]
+    onChange([...rows, { name: 'Arbeitsgang', rate_h: 0, maintenance_h: 0, cycle_s: 10, parts_per_cycle: 1, productivity_pct: 90,
+      operator_factor: 1, labor_rate_h: labor ?? 38, setup_h: 0, setup_persons: 1, power_kw: 0, ...(m ? fromMachine(m) : {}) }])
+  }
+  const cols = [['cycle_s', 'Takt s'], ['parts_per_cycle', 'Teile/Takt'], ['rate_h', '€/h Anlage'], ['maintenance_h', 'IH €/h'],
+    ['operator_factor', 'Pers.'], ['labor_rate_h', 'Lohn €/h'], ['productivity_pct', 'Prod. %'], ['setup_h', 'Rüsten h/Los'], ['power_kw', 'kW']]
+  return (
+    <div className="field span-3">
+      <div className="section-head"><label>Weitere Arbeitsgänge (Montagelinie, Schweißen, Bedrucken, Prüfung …)</label>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={add}>+ Arbeitsgang</button></div>
+      {rows.length > 0 ? (
+        <table className="table items-table comp-table ops-table">
+          <thead><tr><th>Anlage (Stammdaten)</th><th>Bezeichnung</th><th className="num">€/Stk</th><th className="num">Stk/h</th><th className="num">h p. a.</th>{cols.map(([k, l]) => <th key={k} className="num">{l}</th>)}<th /></tr></thead>
+          <tbody>{rows.map((o, i) => {
+            const res = result?.operations?.[i]
+            return (
+              <tr key={i}>
+                <td><select value={o.machine_id ?? ''} onChange={(e) => pick(i, e.target.value)}>
+                  <option value="">– frei –</option>
+                  {others.length > 0 && <optgroup label="Montage / Nachbearbeitung / Prüfung">{others.map((m) => <option key={m.id} value={m.id}>{m.number} · {m.name}</option>)}</optgroup>}
+                  <optgroup label="Spritzgießmaschinen">{machines.filter((m) => (m.kind || 'spritzguss') === 'spritzguss').map((m) => <option key={m.id} value={m.id}>{m.number} · {m.name}</option>)}</optgroup>
+                </select></td>
+                <td><input value={o.name || ''} onChange={(e) => upd(i, { name: e.target.value })} /></td>
+                <td className="num"><b>{fix4(res?.cost)}</b></td>
+                <td className="num">{num(res?.pieces_per_hour, 0)}</td>
+                <td className="num">{num(res?.hours_year, 0)}</td>
+                {cols.map(([k]) => (
+                  <td key={k}><input type="number" step="any" className="num" value={o[k] ?? ''} onChange={(e) => upd(i, { [k]: e.target.value === '' ? '' : Number(e.target.value) })} /></td>
+                ))}
+                <td><button type="button" className="icon-btn" title="Entfernen" onClick={() => onChange(rows.filter((_, j) => j !== i))}>×</button></td>
+              </tr>)
+          })}</tbody>
+        </table>
+      ) : <small className="hint">1 … N Anlagen je Artikel: Satz, Instandhaltung, Produktivität und Leistung werden aus den Stammdaten vorbelegt und sind überschreibbar. Stunden fließen in die Auslastung der Anlage.</small>}
+      {rows.length > 0 && <small className="hint">Summe Arbeitsgänge: <b>{fix4(result?.operations_cost)} €/Stk</b> (vor Zuschlägen; FGK, Ausschuss usw. wirken wie bei der Spritzgießmaschine).</small>}
+    </div>
+  )
+}
+
+function PurchasedEditor({ rows, parts, onChange, result }) {
+  const upd = (i, patch) => onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)))
+  const fromPart = (p) => ({ part_id: p.id, part_no: p.part_no, name: p.name, price_per_piece: Number((p.price / (p.price_basis || 1)).toFixed(6)),
+    co2_kg_per_piece: p.co2_kg_per_piece ?? 0 })
+  const pick = (i, id) => {
+    const p = parts.find((x) => x.id === Number(id))
+    upd(i, p ? fromPart(p) : { part_id: null })
+  }
+  return (
+    <div className="field span-3">
+      <div className="section-head"><label>Zukaufteile (Stammdaten)</label>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => onChange([...rows, { qty: 1, price_per_piece: 0, co2_kg_per_piece: 0, ...(parts[0] ? fromPart(parts[0]) : { name: 'Zukaufteil' }) }])}>+ Zukaufteil</button></div>
+      {rows.length > 0 ? (
+        <table className="table items-table comp-table">
+          <thead><tr><th>Zukaufteil</th><th>Bezeichnung</th><th className="num">Menge je Artikel</th><th className="num">€ je Einheit</th><th className="num">kg CO₂e je Einheit</th><th className="num">€/Stk</th><th /></tr></thead>
+          <tbody>{rows.map((p, i) => (
+            <tr key={i}>
+              <td><select value={p.part_id ?? ''} onChange={(e) => pick(i, e.target.value)}>
+                <option value="">– frei –</option>{parts.map((x) => <option key={x.id} value={x.id}>{x.part_no ? `${x.part_no} · ` : ''}{x.name}</option>)}</select></td>
+              <td><input value={p.name || ''} onChange={(e) => upd(i, { name: e.target.value })} /></td>
+              {['qty', 'price_per_piece', 'co2_kg_per_piece'].map((k) => (
+                <td key={k}><input type="number" step="any" className="num" value={p[k] ?? ''} onChange={(e) => upd(i, { [k]: e.target.value === '' ? '' : Number(e.target.value) })} /></td>
+              ))}
+              <td className="num"><b>{fix4(result?.purchased_items?.[i]?.cost)}</b></td>
+              <td><button type="button" className="icon-btn" title="Entfernen" onClick={() => onChange(rows.filter((_, j) => j !== i))}>×</button></td>
+            </tr>))}</tbody>
+        </table>
+      ) : <small className="hint">Einlegeteile, Buchsen, Dichtungen, Clips, Schrauben, Etiketten … aus den Stammdaten wählen; Preis je Einheit wird aus Preis ÷ Preiseinheit vorbelegt. MGK wirkt auf die Zukaufteile.</small>}
     </div>
   )
 }
@@ -741,7 +826,13 @@ function VersionsTab({ calc }) {
   const changed = Object.keys({ ...A.inputs, ...B.inputs })
     .filter((k) => !k.endsWith('_id') && JSON.stringify(A.inputs[k]) !== JSON.stringify(B.inputs[k]))
   const show = (k, v) => {
-    if (Array.isArray(v)) return v.map((x) => (typeof x === 'object' && x ? `${x.label}: ${num(x.amount ?? x.price ?? 0, 2)}` : num(x))).join('; ') || '–'
+    if (Array.isArray(v)) return v.map((x) => {
+      if (!x || typeof x !== 'object') return num(x)
+      if (k === 'operations') return `${x.name}: ${num(x.cycle_s, 1)} s, ${num(x.rate_h, 2)} €/h`
+      if (k === 'purchased_items') return `${num(x.qty, 2)} × ${x.name} à ${num(x.price_per_piece, 4)} €`
+      if (k === 'components') return `${x.label}: ${x.material_name || ''} ${num(x.part_weight_g, 1)} g`
+      return `${x.label}: ${num(x.amount ?? x.price ?? x.cost ?? 0, 2)}`
+    }).join('; ') || '–'
     if (v === null || v === '' || v === undefined) return '–'
     return typeof v === 'number' ? num(v, 4) : String(v)
   }

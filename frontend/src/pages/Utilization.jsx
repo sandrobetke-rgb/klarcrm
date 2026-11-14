@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ErrorBox, useFetch } from '../components/ui'
-import { calcStatus, num } from '../constants'
+import { calcStatus, machineKindLabel, num } from '../constants'
 
 const MODES = [
   ['pct_fixed', 'Fest', 'Bestand + gewonnene Kalkulationen'],
@@ -59,19 +59,19 @@ export default function Utilization() {
       </div>
       <div className="card card-flush">
         <table className="table ut-table">
-          <thead><tr><th>Maschine</th><th className="num">Kapazität h/Jahr</th>{data.years.map((y) => <th key={y} className="num">{y}</th>)}</tr></thead>
+          <thead><tr><th>Maschine / Anlage</th><th className="num">Kapazität h/Jahr</th>{data.years.map((y) => <th key={y} className="num">{y}</th>)}</tr></thead>
           <tbody>
             {data.machines.map((m) => (
               <Fragment key={m.machine.id ?? 'none'}>
                 <tr className="row-click" onClick={() => setOpen(open === m.machine.id ? undefined : m.machine.id)}>
                   <td><strong>{m.machine.number ? `${m.machine.number} · ` : ''}{m.machine.name}</strong>
-                    <br /><small className="muted">{m.items.length} Kalkulation(en) {open === m.machine.id ? '▲' : '▼'}</small></td>
+                    <br /><small className="muted">{m.machine.kind && m.machine.kind !== 'spritzguss' ? `${machineKindLabel(m.machine.kind)} · ` : ''}{m.items.length} Kalkulation(en) {open === m.machine.id ? '▲' : '▼'}</small></td>
                   <td className="num">{m.capacity_h ? num(m.capacity_h) : '–'}</td>
                   {m.years.map((y) => <Cell key={y.year} y={{ ...y, capacity_h: m.capacity_h }} mode={mode} />)}
                 </tr>
                 {open === m.machine.id && m.items.map((it) => (
-                  <tr key={it.id} className="ut-sub">
-                    <td colSpan={2}>↳ <Link to={`/kalkulationen/${it.id}`}>{it.number} {it.article_name}</Link>
+                  <tr key={`${it.id}-${it.operation || ''}`} className="ut-sub">
+                    <td colSpan={2}>↳ <Link to={`/kalkulationen/${it.id}`}>{it.number} {it.article_name}</Link>{it.operation && <> · <em>{it.operation}</em></>}
                       <small className="muted"> · {calcStatus(it.status).label} · {it.probability} % · ab {new Date(it.start).toLocaleDateString('de-DE', { month: '2-digit', year: 'numeric' })} · {num(it.project_years, 1)} J.</small></td>
                     {data.years.map((y) => <td key={y} className="num small">{it.years[y] ? `${num(it.years[y])} h` : ''}</td>)}
                   </tr>

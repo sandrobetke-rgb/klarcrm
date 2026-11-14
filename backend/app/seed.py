@@ -135,6 +135,20 @@ MATERIALS = [  # Name, Familie, €/kg, Dichte, kg CO₂e/kg (Richtwert)
     ("PA6 GF30 schwarz", "PA6", 3.40, 1.36, 6.5), ("PA66 GF30 schwarz", "PA66", 4.20, 1.37, 7.0),
     ("POM natur", "POM", 2.95, 1.41, 2.8), ("PBT GF30 schwarz", "PBT", 3.70, 1.53, 4.3), ("TPE 60 Shore A", "TPE", 4.90, 1.10, 3.5),
 ]
+# Weitere Anlagen (Arbeitsgänge): Nr, Name, Art, €/h, IH €/h, Prod %, Bedienfaktor, kW, h/Jahr, Grundlast %
+EXTRA_MACHINES = [
+    ("MON-01", "Montagelinie Gehäuse (3 Stationen)", "montage", 28, 2, 90, 2.0, 6, 4000, 45),
+    ("US-01", "Ultraschall-Schweißanlage 20 kHz", "nachbearbeitung", 18, 1.5, 92, 0.5, 3, 4000, 30),
+    ("TD-01", "Tampondruck 2-farbig", "nachbearbeitung", 15, 1, 90, 0.5, 1.5, 4000, 25),
+    ("PR-01", "Dichtheitsprüfstand", "pruefung", 22, 1.5, 95, 0.25, 2, 4000, 20),
+]
+PURCHASED_PARTS = [  # Art.-Nr., Bezeichnung, Lieferant, Lief.-Nr., Preis, Preiseinheit, MOQ, Lieferzeit, kg CO₂e/Stk
+    ("ZK-1001", "Gewindebuchse Messing M4 (Einlegeteil)", "Metallwaren Schulte", "GB-M4-6", 45.0, 1000, 10000, 21, 0.004),
+    ("ZK-1002", "O-Ring 22×2 NBR", "Dichtungstechnik Lippe", "OR-22x2", 18.0, 1000, 5000, 14, 0.001),
+    ("ZK-1003", "Federstahl-Clip verzinkt", "Stanztechnik Detmold", "FC-118", 0.032, 1, 20000, 28, 0.006),
+    ("ZK-1004", "Schraube PT K30×8 Torx", "Verbindungselemente Weser", "PT30x8", 9.5, 1000, 10000, 10, 0.002),
+    ("ZK-1005", "Typenschild-Etikett PET", "Etiketten Paderborn", "TS-40x20", 12.0, 1000, 5000, 7, 0.0005),
+]
 MACHINE_POWER = {"M01": 9, "M02": 14, "M03": 22, "M04": 28, "M05": 42, "M06": 60}
 # Herleitung Stundensatz: Wiederbeschaffungswert, m², Instandhaltung €/Jahr, sonstige Fixkosten €/Jahr
 MACHINE_COST = {"M01": (120000, 18, 18000, 2500), "M02": (190000, 24, 24000, 3500), "M03": (420000, 36, 33000, 6000),
@@ -143,7 +157,7 @@ MACHINE_COST = {"M01": (120000, 18, 18000, 2500), "M02": (190000, 24, 24000, 350
 
 def seed_calc(db):
     from .calc_engine import compute, normalize, post_calculate
-    from .models import Calculation, CalculationVersion, Machine, Material, PostCalculation
+    from .models import Calculation, CalculationVersion, Machine, Material, PostCalculation, PurchasedPart
     from .routers.calc import STATUS_PROBABILITY, default_inputs, get_settings, sync_opportunity
 
     if db.scalar(select(func.count()).select_from(Machine)):
@@ -159,8 +173,18 @@ def seed_calc(db):
     materials = [Material(name=nm, family=fam, price_per_kg=pr, density=d, supplier="Rahmenvertrag", co2_kg_per_kg=c,
                           notes="CO₂-Faktor ist ein Richtwert – durch Lieferanten-PCF ersetzen")
                  for nm, fam, pr, d, c in MATERIALS]
-    db.add_all(machines + materials)
+    extra = [Machine(number=n, name=nm, kind=k, hourly_rate=r, maintenance_rate=ih, productivity_pct=p, operator_factor=bf,
+                     power_kw=kw, available_hours_year=h, base_load_pct=bl, base_load_decline_pct=5, location="Werk 1",
+                     useful_life_years=8, interest_pct=6)
+             for n, nm, k, r, ih, p, bf, kw, h, bl in EXTRA_MACHINES]
+    parts = [PurchasedPart(part_no=n, name=nm, supplier=sup, supplier_part_no=sn, price=pr, price_basis=pb, moq=moq,
+                           lead_time_days=lt, co2_kg_per_piece=co2, price_valid_from=date(date.today().year, 1, 1),
+                           notes="CO₂-Wert: Lieferantenangabe/Richtwert")
+             for n, nm, sup, sn, pr, pb, moq, lt, co2 in PURCHASED_PARTS]
+    db.add_all(machines + materials + extra + parts)
     db.flush()
+    for m in machines:
+        m.kind = "spritzguss"
     # Umlage so ansetzen, dass der hergeleitete Satz nahe am eingetragenen liegt (Demo)
     from .calc_engine import DEFAULT_SETTINGS, machine_rate
     for m in machines:
@@ -226,8 +250,18 @@ def seed_calc(db):
         if art == "Clip-Halter Kabelbaum":
             inp["volume_tiers"] = [600000, 1200000, 2500000]
         if art.startswith("Gehäuse Sensor"):
-            inp["assembly_time_s"] = 6
-            inp["purchased_parts"] = 0.12
+            def op(mach, name, cyc, setup_h):
+                return {"machine_id": mach.id, "name": name, "kind": mach.kind, "rate_h": mach.hourly_rate,
+                        "maintenance_h": mach.maintenance_rate, "cycle_s": cyc, "parts_per_cycle": 1,
+                        "productivity_pct": mach.productivity_pct, "operator_factor": mach.operator_factor,
+                        "labor_rate_h": inp.get("labor_rate_h", 38), "setup_h": setup_h, "setup_persons": 1,
+                        "power_kw": mach.power_kw or 0}
+            inp["operations"] = [op(extra[0], "Montage Buchsen + Clip", 14, 0.5), op(extra[3], "Dichtheitsprüfung 100 %", 9, 0.25)]
+
+            def pi(part, qty):
+                return {"part_id": part.id, "part_no": part.part_no, "name": part.name, "qty": qty,
+                        "price_per_piece": part.price / (part.price_basis or 1), "co2_kg_per_piece": part.co2_kg_per_piece or 0}
+            inp["purchased_items"] = [pi(parts[0], 2), pi(parts[2], 1), pi(parts[4], 1)]
             inp["extras"].append({"label": "Bedrucken Tampondruck", "amount": 0.035, "basis": "stueck", "category": "fertigung"})
         inp = normalize(inp)
         owner = users[idx % len(users)]

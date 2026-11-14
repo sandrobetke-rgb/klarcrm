@@ -226,6 +226,7 @@ class Machine(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     number: Mapped[str | None] = mapped_column(String(40))
     name: Mapped[str] = mapped_column(String(120))
+    kind: Mapped[str | None] = mapped_column(String(30), default="spritzguss")  # spritzguss | montage | nachbearbeitung | pruefung | sonstige
     clamping_force_t: Mapped[float | None] = mapped_column(Float)
     hourly_rate: Mapped[float] = mapped_column(Float, default=0)        # Maschinenstundensatz €/h (ohne Personal)
     maintenance_rate: Mapped[float] = mapped_column(Float, default=0)   # Instandhaltung €/h
@@ -519,3 +520,22 @@ class AppSettings(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     data: Mapped[dict] = mapped_column(JSON, default=dict)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+
+
+class PurchasedPart(TimestampMixin, Base):
+    """Zukaufteil (Einlegeteile, Buchsen, Dichtungen, Schrauben, Etiketten …)."""
+    __tablename__ = "purchased_parts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    part_no: Mapped[str | None] = mapped_column(String(60), index=True)
+    name: Mapped[str] = mapped_column(String(200))
+    supplier: Mapped[str | None] = mapped_column(String(150))
+    supplier_part_no: Mapped[str | None] = mapped_column(String(80))
+    price: Mapped[float] = mapped_column(Float, default=0)          # Preis je Preiseinheit
+    price_basis: Mapped[int] = mapped_column(Integer, default=1)    # Preiseinheit: 1 oder 1000 Stück
+    unit: Mapped[str | None] = mapped_column(String(20), default="Stk")
+    moq: Mapped[float | None] = mapped_column(Float)                # Mindestbestellmenge
+    lead_time_days: Mapped[int | None] = mapped_column(Integer)
+    co2_kg_per_piece: Mapped[float | None] = mapped_column(Float)   # kg CO₂e je Stück (Lieferantenangabe)
+    price_valid_from: Mapped[date | None] = mapped_column(Date)
+    notes: Mapped[str | None] = mapped_column(Text)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)

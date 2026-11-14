@@ -285,6 +285,7 @@ CloseReason = Literal["artikelpreis_zu_hoch", "werkzeug_zu_teuer", "investition_
 class MachineBase(BaseModel):
     number: str | None = None
     name: str = Field(min_length=1)
+    kind: Literal["spritzguss", "montage", "nachbearbeitung", "pruefung", "sonstige"] | None = "spritzguss"
     clamping_force_t: float | None = None
     hourly_rate: float = 0
     maintenance_rate: float = 0
@@ -462,3 +463,28 @@ class CalcDetail(CalcOut):
     calls: list[CallOut]
     versions: list[CalcVersionOut]
     post_calcs: list[PostCalcOut]
+
+
+
+class PurchasedPartBase(BaseModel):
+    part_no: str | None = None
+    name: str = Field(min_length=1)
+    supplier: str | None = None
+    supplier_part_no: str | None = None
+    price: float = 0
+    price_basis: int = 1
+    unit: str | None = "Stk"
+    moq: float | None = None
+    lead_time_days: int | None = None
+    co2_kg_per_piece: float | None = None
+    price_valid_from: date | None = None
+    notes: str | None = None
+    active: bool = True
+
+
+class PurchasedPartUpdate(PurchasedPartBase):
+    name: str | None = None
+
+
+class PurchasedPartOut(ORM, PurchasedPartBase):
+    id: int

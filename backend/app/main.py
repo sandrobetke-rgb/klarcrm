@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 import jwt
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 
 from .auth import hash_password
 from .config import settings
@@ -18,6 +18,9 @@ def init_db():
     Base.metadata.create_all(bind=engine)
     ensure_columns()
     with SessionLocal() as db:
+        # Bestandsmaschinen ohne Art (vor v1.12) sind Spritzgießmaschinen
+        db.execute(text("UPDATE machines SET kind = 'spritzguss' WHERE kind IS NULL"))
+        db.commit()
         if not db.scalar(select(func.count()).select_from(User)):
             db.add(User(
                 email=settings.ADMIN_EMAIL.lower(), name="Administrator",
@@ -67,6 +70,7 @@ app.include_router(audit.router, prefix="/api/audit", tags=["Protokoll"])
 app.include_router(workflow.router, prefix="/api", tags=["Arbeitsabläufe"])
 app.include_router(calc.machines, prefix="/api/machines", tags=["Stammdaten"])
 app.include_router(calc.materials, prefix="/api/materials", tags=["Stammdaten"])
+app.include_router(calc.purchased_parts, prefix="/api/purchased-parts", tags=["Stammdaten"])
 app.include_router(calc.router, prefix="/api/calc", tags=["Kalkulation"])
 app.include_router(calc.quote_bulk, prefix="/api/calculations-bulk", tags=["Kalkulation"])
 app.include_router(calc.calcs, prefix="/api/calculations", tags=["Kalkulation"])

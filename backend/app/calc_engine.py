@@ -97,6 +97,11 @@ DEFAULT_INPUTS = {
     "components": [],  # [{label, material_id, material_name, price_kg, part_weight_g, sprue_weight_g, regrind_pct, co2_kg_kg}]
     # Familienwerkzeug: Anteil dieses Artikels an Maschinenzeit/Rüsten (100 % = eigenes Werkzeug)
     "family_share_pct": 100.0, "family_group": "",
+    # Weitere Arbeitsgänge (Montagelinie, Nachbearbeitung, Prüfung …), je mit eigener Maschine/Anlage
+    "operations": [],  # [{machine_id, name, kind, rate_h, maintenance_h, cycle_s, parts_per_cycle, productivity_pct,
+                       #   operator_factor, labor_rate_h, setup_h, setup_persons, power_kw}]
+    # Zukaufteile aus Stammdaten: [{part_id, part_no, name, qty, price_per_piece, co2_kg_per_piece}]
+    "purchased_items": [],
     # Werkzeugamortisation: Einmalkosten mit amortize=true werden über diese Stückzahl umgelegt (0 = Jahresmenge × Laufzeit)
     "amort_quantity": 0,
     # Verpackung (Vorgabe leer = 0, damit ältere Versionen unverändert rechnen)
@@ -133,6 +138,8 @@ def normalize(inputs: dict) -> dict:
     out["extras"] = [e for e in (out.get("extras") or []) if isinstance(e, dict)]
     out["one_time"] = [e for e in (out.get("one_time") or []) if isinstance(e, dict)]
     out["components"] = [e for e in (out.get("components") or []) if isinstance(e, dict)]
+    out["operations"] = [e for e in (out.get("operations") or []) if isinstance(e, dict)]
+    out["purchased_items"] = [e for e in (out.get("purchased_items") or []) if isinstance(e, dict)]
     return out
 
 
@@ -205,7 +212,15 @@ def _compute(raw: dict) -> dict:
                       "material_name": c.get("material_name") or "", "part_weight_g": _f(c.get("part_weight_g"))})
     mek_components = sum(c["cost"] for c in comps)
     kg_total = kg_piece + sum(c["kg"] for c in comps)
-    purchased = _f(i["purchased_parts"])
+    pitems = []
+    for p_ in i.get("purchased_items") or []:
+        if not isinstance(p_, dict):
+            continue
+        qty, pr = _f(p_.get("qty"), 1), _f(p_.get("price_per_piece"))
+        pitems.append({"name": p_.get("name") or p_.get("part_no") or "Zukaufteil", "part_no": p_.get("part_no") or "",
+                       "qty": qty, "price_per_piece": pr, "cost": qty * pr,
+                       "co2": qty * _f(p_.get("co2_kg_per_piece"))})
+    purchased = _f(i["purchased_parts"]) + sum(x["cost"] for x in pitems)
     mek = mek_material + mek_components + purchased
     mgk = mek * _f(i["mgk_pct"]) / 100
 
@@ -223,7 +238,28 @@ def _compute(raw: dict) -> dict:
     setup = setup_lot / lot if lot > 0 else 0.0
     ap = _f(i["assembly_productivity_pct"], 100) / 100
     assembly = (_f(i["assembly_time_s"]) / 3600 * _f(i["assembly_rate_h"]) * _f(i["assembly_persons"]) / ap) if ap > 0 else 0.0
-    fek = run_cost_piece + setup + assembly
+    # --- Weitere Arbeitsgänge (1 … N Maschinen/Anlagen)
+    ops = []
+    for o in i.get("operations") or []:
+        if not isinstance(o, dict):
+            continue
+        cyc, ppc = _f(o.get("cycle_s")), max(_f(o.get("parts_per_cycle"), 1), 0)
+        oprod = _f(o.get("productivity_pct"), 100) / 100
+        opph = 3600 / cyc * ppc * oprod if cyc > 0 else 0
+        rate = _f(o.get("rate_h")) + _f(o.get("maintenance_h")) + _f(o.get("labor_rate_h")) * _f(o.get("operator_factor"))
+        run = rate / opph if opph > 0 else 0.0
+        osetup_lot = _f(o.get("setup_h")) * (_f(o.get("rate_h")) + _f(o.get("maintenance_h"))
+                                              + _f(o.get("labor_rate_h")) * _f(o.get("setup_persons"), 1))
+        osetup = osetup_lot / lot if lot > 0 else 0.0
+        if cyc <= 0:
+            warnings.append(f"Arbeitsgang „{o.get('name') or 'ohne Name'}“: Taktzeit fehlt.")
+        ops.append({"name": o.get("name") or "Arbeitsgang", "machine_id": o.get("machine_id"), "kind": o.get("kind") or "",
+                    "pieces_per_hour": opph, "run": run, "setup": osetup, "cost": run + osetup,
+                    "hours_year": (annual / opph if opph > 0 else 0) + (annual / lot if lot > 0 else 0) * _f(o.get("setup_h")),
+                    "power_kw": _f(o.get("power_kw")),
+                    "hours_piece": (1 / opph if opph > 0 else 0) + (_f(o.get("setup_h")) / lot if lot > 0 else 0)})
+    operations = sum(x["cost"] for x in ops)
+    fek = run_cost_piece + setup + assembly + operations
     fgk = fek * _f(i["fgk_pct"]) / 100
     q_base = "fek" if i.get("quality_base") == "fek" else "hk"
     t_base = "hk" if i.get("toolshop_base") == "hk" else "fek"
@@ -319,13 +355,14 @@ def _compute(raw: dict) -> dict:
         ("mek_material", "Material" + (" Komponente A" if comps else "") + " (inkl. Angussanteil)", "material", mek_material),
         ("mek_components", "Material weitere Komponenten (" + ", ".join(c["label"] for c in comps) + ")" if comps else
          "Material weitere Komponenten", "material", mek_components),
-        ("purchased", "Zukaufteile", "material", purchased),
+        ("purchased", "Zukaufteile" + (f" ({len(pitems)} Pos.)" if pitems else ""), "material", purchased),
         ("mgk", f"Materialgemeinkosten {_p(i['mgk_pct'])} %", "material", mgk),
         ("machine", "Maschine", "fertigung", machine),
         ("maintenance", "Instandhaltung", "fertigung", maintenance),
         ("labor", "Personal Maschine", "fertigung", labor),
         ("setup", "Rüsten (je Los umgelegt)", "fertigung", setup),
-        ("assembly", "Montage", "fertigung", assembly),
+        ("assembly", "Montage (Handarbeit)", "fertigung", assembly),
+        *[(f"op_{n}", f"Arbeitsgang: {x['name']}", "fertigung", x["cost"]) for n, x in enumerate(ops)],
         ("fgk", f"Fertigungsgemeinkosten {_p(i['fgk_pct'])} %", "fertigung", fgk),
         ("quality_f", f"Qualität {_p(i['quality_pct'])} % auf FEK", "fertigung", quality_f),
         ("toolshop_f", f"Werkzeugbau {_p(i['toolshop_pct'])} % auf FEK", "fertigung", toolshop_f),
@@ -349,7 +386,7 @@ def _compute(raw: dict) -> dict:
         ("discounts", "Skonto / Rabatt", "ergebnis", discounts),
         ("price", "Verkaufspreis", "summe", price),
     ]
-    co2 = _co2(i, kg_piece, pph, scrap_rate, lot, annual, ppu, comps, share)
+    co2 = _co2(i, kg_piece, pph, scrap_rate, lot, annual, ppu, comps, share, ops, pitems)
     rnd = lambda v: round(v, 6)  # noqa: E731
     lots_year = annual / lot if lot > 0 else 0
     machine_hours = ((annual / pph if pph > 0 else 0) + lots_year * _f(i["setup_time_h"])) * share
@@ -371,6 +408,11 @@ def _compute(raw: dict) -> dict:
         "shot_weight_g": round((_f(i["part_weight_g"]) + sum(c["part_weight_g"] for c in comps)) * cavities
                                + _f(i["sprue_weight_g"]), 2),
         "family_share_pct": round(share * 100, 2),
+        "operations": [{**x, "pieces_per_hour": round(x["pieces_per_hour"], 1), "run": round(x["run"], 6),
+                        "setup": round(x["setup"], 6), "cost": round(x["cost"], 6), "hours_year": round(x["hours_year"], 1),
+                        "hours_piece": round(x["hours_piece"], 8)} for x in ops],
+        "operations_cost": round(operations, 6),
+        "purchased_items": [{k: (round(v, 6) if isinstance(v, float) else v) for k, v in x.items()} for x in pitems],
         "amortization_per_piece": round(amortization, 6),
         "amortization_total": round(amort_total, 2),
         "amortization_quantity": round(amort_qty, 0),
@@ -402,7 +444,7 @@ def _compute(raw: dict) -> dict:
 
 
 def _co2(i: dict, kg_piece: float, pph: float, scrap_rate: float, lot: float, annual: float, ppu: float,
-         comps: list | None = None, share: float = 1.0) -> dict:
+         comps: list | None = None, share: float = 1.0, ops: list | None = None, pitems: list | None = None) -> dict:
     """CO₂-Fußabdruck je Gutteil (Cradle-to-Gate + optional Transport zum Kunden), in kg CO₂e.
 
     Material:   Gewicht je Teil inkl. Angussanteil × Emissionsfaktor (Mischung mit Masterbatch) / (1 − Ausschuss)
@@ -420,10 +462,10 @@ def _co2(i: dict, kg_piece: float, pph: float, scrap_rate: float, lot: float, an
     mat_co2 = kg_piece * factor + sum(c["kg"] * c["co2_kg_kg"] for c in comps)
     material = mat_co2 / good + mat_co2 * startup
     hours_piece = ((1 / pph / good if pph > 0 else 0) + (_f(i["setup_time_h"]) / lot if lot > 0 else 0)) * share
-    kwh = _f(i["machine_power_kw"]) * hours_piece
+    kwh = _f(i["machine_power_kw"]) * hours_piece + sum(o["power_kw"] * o["hours_piece"] for o in ops or [])
     energy = kwh * _f(i["co2_grid_kg_kwh"])
     scope1 = hours_piece * _f(i["co2_scope1_kg_h"])
-    purchased = _f(i["co2_purchased_parts"])
+    purchased = _f(i["co2_purchased_parts"]) + sum(x["co2"] for x in pitems or [])
     packaging = _f(i["co2_pack_per_unit"]) / ppu if ppu > 0 else 0.0
     weight_g = _f(i["part_weight_g"]) + sum(c["part_weight_g"] for c in comps)
     transport = weight_g / 1e6 * _f(i["transport_km"]) * _f(i["co2_transport_kg_tkm"])
@@ -444,7 +486,8 @@ def _co2(i: dict, kg_piece: float, pph: float, scrap_rate: float, lot: float, an
         "per_delivery_kg": round(total * annual / deliveries, 2) if deliveries > 0 else None,
         "per_kg_part": round(total / (weight_g / 1000), 3) if weight_g > 0 else None,
         "material_factor": round(factor, 3),
-        "active": bool(factor or _f(i["machine_power_kw"]) or any(c["co2_kg_kg"] for c in comps)),
+        "active": bool(factor or _f(i["machine_power_kw"]) or any(c["co2_kg_kg"] for c in comps)
+                       or any(x["co2"] for x in pitems or [])),
     }
 
 

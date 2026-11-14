@@ -135,3 +135,27 @@ def test_artikelanalyse_schliesskraft():
     a = 0.12
     cool = 2.5 ** 2 / (math.pi ** 2 * a) * math.log(8 / math.pi ** 2 * (270 - 80) / (160 - 80))
     assert r["cooling_time_s"] == pytest.approx(cool, abs=0.1)
+
+
+def test_weitere_arbeitsgaenge_montagelinie():
+    op = {"name": "Montagelinie", "rate_h": 25, "maintenance_h": 2, "cycle_s": 12, "parts_per_cycle": 1,
+          "productivity_pct": 90, "operator_factor": 2, "labor_rate_h": 34, "setup_h": 0.5, "setup_persons": 1, "power_kw": 6}
+    base = compute(BASE)
+    r = compute({**BASE, "operations": [op, {**op, "name": "Prüfung", "cycle_s": 6}]})
+    pph = 3600 / 12 * 0.9
+    hand = (25 + 2 + 34 * 2) / pph + 0.5 * (27 + 34) / BASE["lot_size"]
+    assert r["operations"][0]["cost"] == pytest.approx(hand, abs=2e-6)
+    assert r["operations"][0]["hours_year"] == pytest.approx(BASE["annual_volume"] / pph + BASE["annual_volume"] / BASE["lot_size"] * 0.5, abs=0.1)
+    assert r["operations_cost"] == pytest.approx(r["operations"][0]["cost"] + r["operations"][1]["cost"], abs=2e-6)
+    assert r["unit_price"] > base["unit_price"]
+    assert sum(1 for l in r["lines"] if l["key"].startswith("op_")) == 2
+
+
+def test_zukaufteile_liste_mit_co2():
+    items = [{"name": "Buchse M4", "qty": 2, "price_per_piece": 0.045, "co2_kg_per_piece": 0.004},
+             {"name": "Clip", "qty": 1, "price_per_piece": 0.032, "co2_kg_per_piece": 0.006}]
+    r = compute({**BASE, "purchased_parts": 0.01, "purchased_items": items})
+    assert r["values"]["purchased"] == pytest.approx(0.09 + 0.032 + 0.01, abs=2e-6)
+    r0 = compute({**BASE, "purchased_parts": 0.01})
+    assert r["co2"]["purchased"] - r0["co2"]["purchased"] == pytest.approx(0.014, abs=1e-6)
+    assert r["co2"]["active"]

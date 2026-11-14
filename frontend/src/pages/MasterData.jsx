@@ -5,11 +5,12 @@ import { Escalation, MachineRates, Templates } from './MasterExtras'
 import { useAuth } from '../auth'
 import ListPage from '../components/ListPage'
 import { Badge, ErrorBox } from '../components/ui'
-import { num, num2 } from '../constants'
+import { MACHINE_KINDS, machineKindLabel, num, num2 } from '../constants'
 
 const machineFields = [
   { name: 'number', label: 'Maschinen-Nr.' },
   { name: 'name', label: 'Bezeichnung', required: true },
+  { name: 'kind', label: 'Art', type: 'select', required: true, options: MACHINE_KINDS, hint: 'Montagelinien, Prüfstationen u. a. werden in der Kalkulation als weitere Arbeitsgänge gewählt' },
   { name: 'clamping_force_t', label: 'Schließkraft (t)', type: 'number', step: 'any' },
   { name: 'location', label: 'Standort / Halle' },
   { name: 'hourly_rate', label: 'Maschinenstundensatz €/h (ohne Personal)', type: 'number', step: 'any', required: true },
@@ -42,6 +43,21 @@ const materialFields = [
   { name: 'active', label: 'Aktiv', type: 'checkbox' },
   { name: 'notes', label: 'Notizen', type: 'textarea', span: true },
 ]
+const partFields = [
+  { name: 'part_no', label: 'Artikel-Nr. (intern)' },
+  { name: 'name', label: 'Bezeichnung', required: true },
+  { name: 'supplier', label: 'Lieferant' },
+  { name: 'supplier_part_no', label: 'Artikel-Nr. Lieferant' },
+  { name: 'price', label: 'Preis €', type: 'number', step: 'any', required: true },
+  { name: 'price_basis', label: 'Preiseinheit (Stück)', type: 'number', step: '1', hint: 'z. B. 1 oder 1000 – Preis gilt je Preiseinheit' },
+  { name: 'unit', label: 'Mengeneinheit', hint: 'Stk, m, g …' },
+  { name: 'moq', label: 'Mindestbestellmenge', type: 'number', step: 'any' },
+  { name: 'lead_time_days', label: 'Wiederbeschaffungszeit (Tage)', type: 'number', step: '1' },
+  { name: 'co2_kg_per_piece', label: 'CO₂ kg CO₂e je Einheit', type: 'number', step: 'any', hint: 'Lieferanten-PCF bzw. Richtwert' },
+  { name: 'price_valid_from', label: 'Preis gültig ab', type: 'date' },
+  { name: 'active', label: 'Aktiv (in Kalkulation auswählbar)', type: 'checkbox' },
+  { name: 'notes', label: 'Notizen', type: 'textarea', span: true },
+]
 const PARAMS = [
   ['Lohnsätze', [['labor_rate_h', 'Lohnsatz Maschinenbediener', '€/h'], ['setup_rate_h', 'Lohnsatz Einrichter', '€/h'], ['assembly_rate_h', 'Lohnsatz Montage', '€/h']]],
   ['Zuschläge', [['mgk_pct', 'Materialgemeinkosten', '%'], ['fgk_pct', 'Fertigungsgemeinkosten', '%'], ['scrap_pct', 'Ausschuss', '%'],
@@ -61,13 +77,28 @@ const PARAMS = [
 export default function MasterData() {
   const [tab, setTab] = useState('machines')
   const tabs = <div className="seg">
-    {[['machines', 'Maschinen'], ['rates', 'Stundensätze'], ['materials', 'Materialien'], ['prices', 'Preisgleitung'], ['templates', 'Vorlagen'], ['params', 'Parameter']].map(([k, l]) =>
+    {[['machines', 'Maschinen & Anlagen'], ['rates', 'Stundensätze'], ['materials', 'Materialien'], ['parts', 'Zukaufteile'], ['prices', 'Preisgleitung'], ['templates', 'Vorlagen'], ['params', 'Parameter']].map(([k, l]) =>
       <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}
   </div>
   if (tab === 'params') return <Params tabs={tabs} />
   if (tab === 'rates') return <MachineRates tabs={tabs} />
   if (tab === 'prices') return <Escalation tabs={tabs} />
   if (tab === 'templates') return <Templates tabs={tabs} />
+  if (tab === 'parts') {
+    return <ListPage key="parts" title="Stammdaten · Zukaufteile" subtitle="Einlegeteile, Buchsen, Dichtungen, Clips, Schrauben, Etiketten – in der Kalkulation je Artikel mit Menge auswählbar"
+      path="/purchased-parts" entityLabel="Zukaufteil" fields={partFields} defaultSort="name" newDefaults={{ active: true, price_basis: 1, unit: 'Stk' }} extraActions={tabs}
+      columns={[
+        { key: 'part_no', label: 'Art.-Nr.', sort: 'part_no' },
+        { key: 'name', label: 'Bezeichnung', sort: 'name', render: (r) => <strong>{r.name}</strong> },
+        { key: 'supplier', label: 'Lieferant', sort: 'supplier', render: (r) => <>{r.supplier || '–'}{r.supplier_part_no && <><br /><small className="muted">{r.supplier_part_no}</small></>}</> },
+        { key: 'price', label: 'Preis', sort: 'price', className: 'num', render: (r) => <>{num(r.price, 4)} € / {num(r.price_basis || 1)} {r.unit || 'Stk'}{r.price_valid_from && <><br /><small className="muted">ab {new Date(r.price_valid_from).toLocaleDateString('de-DE')}</small></>}</> },
+        { key: 'per_piece', label: '€ je Einheit', className: 'num', render: (r) => num(r.price / (r.price_basis || 1), 4) },
+        { key: 'moq', label: 'MOQ', className: 'num', render: (r) => (r.moq ? num(r.moq) : '–') },
+        { key: 'lead_time_days', label: 'WBZ', className: 'num', render: (r) => (r.lead_time_days ? `${r.lead_time_days} T.` : '–') },
+        { key: 'co2_kg_per_piece', label: 'kg CO₂e', className: 'num', render: (r) => (r.co2_kg_per_piece != null ? num(r.co2_kg_per_piece, 4) : '–') },
+        { key: 'active', label: 'Status', render: (r) => (r.active ? <Badge tone="good">aktiv</Badge> : <Badge>inaktiv</Badge>) },
+      ]} />
+  }
   if (tab === 'materials') {
     return <ListPage key="mat" title="Stammdaten · Materialien" subtitle="Preise werden in der Kalkulation vorbelegt und sind dort überschreibbar"
       path="/materials" entityLabel="Material" fields={materialFields} defaultSort="name" newDefaults={{ active: true }} extraActions={tabs}
@@ -81,12 +112,13 @@ export default function MasterData() {
         { key: 'active', label: 'Status', render: (r) => (r.active ? <Badge tone="good">aktiv</Badge> : <Badge>inaktiv</Badge>) },
       ]} />
   }
-  return <ListPage key="mach" title="Stammdaten · Maschinen" subtitle="Standard-Stundensätze, Instandhaltung und Produktivität je Maschine"
+  return <ListPage key="mach" title="Stammdaten · Maschinen & Anlagen" subtitle="Spritzgießmaschinen, Montagelinien, Nachbearbeitung und Prüfstationen – Stundensätze, Instandhaltung, Produktivität"
     path="/machines" entityLabel="Maschine" fields={machineFields} defaultSort="number"
-    newDefaults={{ active: true, productivity_pct: 85, operator_factor: 0.3, available_hours_year: 6000, base_load_pct: 0, base_load_decline_pct: 0 }} extraActions={tabs}
+    filters={[{ name: 'kind', label: 'Art', options: MACHINE_KINDS.map((k) => ({ ...k, label: machineKindLabel(k.value) })) }]}
+    newDefaults={{ active: true, kind: 'spritzguss', productivity_pct: 85, operator_factor: 0.3, available_hours_year: 6000, base_load_pct: 0, base_load_decline_pct: 0 }} extraActions={tabs}
     columns={[
       { key: 'number', label: 'Nr.', sort: 'number' },
-      { key: 'name', label: 'Maschine', sort: 'name', render: (r) => <strong>{r.name}</strong> },
+      { key: 'name', label: 'Maschine / Anlage', sort: 'name', render: (r) => <><strong>{r.name}</strong><br /><small className="muted">{machineKindLabel(r.kind)}</small></> },
       { key: 'clamping_force_t', label: 'Schließkraft', sort: 'clamping_force_t', className: 'num', render: (r) => (r.clamping_force_t ? `${num(r.clamping_force_t)} t` : '–') },
       { key: 'hourly_rate', label: '€/h Maschine', sort: 'hourly_rate', className: 'num', render: (r) => num2(r.hourly_rate) },
       { key: 'maintenance_rate', label: '€/h Instandh.', className: 'num', render: (r) => num2(r.maintenance_rate) },

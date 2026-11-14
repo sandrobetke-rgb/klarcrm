@@ -107,7 +107,7 @@ export const INPUT_LABELS = {
   quality_pct: ['Qualität', '%'], quality_base: ['Basis Qualität', ''], toolshop_pct: ['Werkzeugbau', '%'], toolshop_base: ['Basis Werkzeugbau', ''],
   profit_pct: ['Gewinn', '%'], cash_discount_pct: ['Skonto', '%'], rebate_pct: ['Rabatt', '%'], price_override: ['Verkaufspreis manuell', '€/Stk'],
   lot_tiers: ['Staffel-Losgrößen', 'Stk'], volume_tiers: ['Staffel-Jahresmengen', 'Stk'],
-  components: ['Weitere Komponenten', ''], family_share_pct: ['Anteil Familienwerkzeug', '%'], family_group: ['Familienwerkzeug', ''],
+  components: ['Weitere Komponenten', ''], operations: ['Weitere Arbeitsgänge', ''], purchased_items: ['Zukaufteile (Liste)', ''], family_share_pct: ['Anteil Familienwerkzeug', '%'], family_group: ['Familienwerkzeug', ''],
   amort_quantity: ['Amortisation über', 'Stk'],
   pack_mode: ['Verpackung – Art der Eingabe', ''], pack_pct: ['Verpackung pauschal', '% auf HK'],
   pack_type: ['Verpackungsart', ''], pack_parts_per_unit: ['Teile je VE', 'Stk'], pack_cost_per_unit: ['Kosten je VE', '€'],
@@ -158,3 +158,12 @@ export const NO_BID_REASONS = [
 ]
 export const noBidLabel = (v) => NO_BID_REASONS.find((r) => r.value === v)?.label || v || ''
 export const CLOSED_STATUS = ['gewonnen', 'verloren', 'kein_angebot', 'zurueckgestellt']
+
+export const MACHINE_KINDS = [
+  { value: 'spritzguss', label: 'Spritzgießmaschine' },
+  { value: 'montage', label: 'Montagelinie / Montageplatz' },
+  { value: 'nachbearbeitung', label: 'Nachbearbeitung (Schweißen, Drucken, Entgraten …)' },
+  { value: 'pruefung', label: 'Prüfstation' },
+  { value: 'sonstige', label: 'Sonstige Anlage' },
+]
+export const machineKindLabel = (k) => (MACHINE_KINDS.find((x) => x.value === k)?.label || 'Spritzgießmaschine').split(' (')[0]

@@ -13,7 +13,7 @@ export default function LifecycleTab({ calc, setCalc }) {
   const { canWrite } = useAuth()
   const ver = calc.versions.find((v) => v.version_no === calc.current_version)
   const r = ver.results, inp = ver.inputs, co2 = r.co2 || {}
-  const mono = !(inp.components || []).length && !Number(inp.purchased_parts)
+  const mono = !(inp.components || []).length && !Number(inp.purchased_parts) && !(inp.purchased_items || []).length
   const [lc, setLc] = useState(() => ({ use_relevance: 'gering', recyclability: mono ? 'gut' : 'eingeschraenkt', eol_route: 'stofflich', ...(calc.lifecycle || {}) }))
   const [err, setErr] = useState(null)
   const [saved, setSaved] = useState(false)

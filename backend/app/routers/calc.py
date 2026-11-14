@@ -14,13 +14,18 @@ from ..database import get_db
 from ..models import (
     STAGE_PROBABILITY, Activity, CalcSettings, CalcTemplate, Calculation, CalculationCall, CalculationVersion, Machine,
     Material, MaterialPrice,
-    Opportunity, PostCalculation, Quote, QuoteItem, User,
+    Opportunity, PostCalculation, PurchasedPart, Quote, QuoteItem, User,
 )
 from .quotes import next_number as next_quote_number
 
 machines = make_crud_router(
     model=Machine, create_schema=s.MachineBase, update_schema=s.MachineUpdate, out_schema=s.MachineOut,
-    search_fields=["name", "number", "location"], filter_fields=["active"], default_sort="name",
+    search_fields=["name", "number", "location"], filter_fields=["active", "kind"], default_sort="name",
+)
+purchased_parts = make_crud_router(
+    model=PurchasedPart, create_schema=s.PurchasedPartBase, update_schema=s.PurchasedPartUpdate,
+    out_schema=s.PurchasedPartOut, search_fields=["name", "part_no", "supplier", "supplier_part_no"],
+    filter_fields=["active", "supplier"], default_sort="name",
 )
 materials = make_crud_router(
     model=Material, create_schema=s.MaterialBase, update_schema=s.MaterialUpdate, out_schema=s.MaterialOut,
@@ -659,7 +664,7 @@ def utilization(years: int = Query(5, ge=1, le=10), db: Session = Depends(get_db
     year_list = [today.year + n for n in range(years)]
     machines = {m.id: m for m in db.scalars(select(Machine))}
     rows = {mid: {"machine": {"id": m.id, "name": m.name, "number": m.number,
-                              "clamping_force_t": m.clamping_force_t},
+                              "clamping_force_t": m.clamping_force_t, "kind": m.kind},
                   "capacity_h": float(m.available_hours_year or 6000),
                   "years": {y: {"base": float(m.available_hours_year or 6000) * float(m.base_load_pct or 0) / 100
                                 * (1 - float(m.base_load_decline_pct or 0) / 100) ** n,
@@ -672,32 +677,36 @@ def utilization(years: int = Query(5, ge=1, le=10), db: Session = Depends(get_db
         ver = next((v for v in c.versions if v.version_no == c.current_version), None)
         if not ver:
             continue
-        hours = float(ver.results.get("machine_hours_year") or 0)
-        if hours <= 0:
+        loads = [(ver.inputs.get("machine_id"), float(ver.results.get("machine_hours_year") or 0), None)]
+        loads += [(o.get("machine_id"), float(o.get("hours_year") or 0), o.get("name"))
+                  for o in ver.results.get("operations") or [] if isinstance(o, dict)]
+        loads = [x for x in loads if x[1] > 0]
+        if not loads:
             continue
         start = c.sop_date or (today if c.status == "gewonnen" else date(today.year + 1, 1, 1))
         duration = max(float(ver.inputs.get("project_years") or 1), 0.25)
         end_year_frac = start.year + (start.month - 1) / 12 + duration
-        row = rows.get(ver.inputs.get("machine_id")) or none_row
         won = c.status == "gewonnen"
-        item = {"id": c.id, "number": c.number, "article_name": c.article_name, "status": c.status,
-                "probability": c.probability, "hours_year": round(hours, 1), "start": start.isoformat(),
-                "project_years": duration, "years": {}}
-        for y in year_list:
-            # Anteil des Jahres, in dem das Projekt läuft
-            overlap = max(0.0, min(y + 1, end_year_frac) - max(y, start.year + (start.month - 1) / 12))
-            h = hours * overlap
-            if h <= 0:
-                continue
-            item["years"][y] = round(h, 1)
-            cell = row["years"][y]
-            if won:
-                cell["fixed"] += h
-            else:
-                cell["weighted"] += h * c.probability / 100
-                cell["potential"] += h
-        if item["years"]:
-            row["items"].append(item)
+        for mid, hours, op_name in loads:
+            row = rows.get(mid) or none_row
+            item = {"id": c.id, "number": c.number, "article_name": c.article_name, "status": c.status,
+                    "operation": op_name, "probability": c.probability, "hours_year": round(hours, 1),
+                    "start": start.isoformat(), "project_years": duration, "years": {}}
+            for y in year_list:
+                # Anteil des Jahres, in dem das Projekt läuft
+                overlap = max(0.0, min(y + 1, end_year_frac) - max(y, start.year + (start.month - 1) / 12))
+                h = hours * overlap
+                if h <= 0:
+                    continue
+                item["years"][y] = round(h, 1)
+                cell = row["years"][y]
+                if won:
+                    cell["fixed"] += h
+                else:
+                    cell["weighted"] += h * c.probability / 100
+                    cell["potential"] += h
+            if item["years"]:
+                row["items"].append(item)
     out = []
     for row in list(rows.values()) + ([none_row] if none_row["items"] else []):
         cap = row["capacity_h"]
