@@ -4,7 +4,7 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.7 |
+| **Dokumentversion** | 1.8 |
 | **Stand** | 14.11.2026 |
 | **Status** | Testphase (GitHub Codespaces) |
 
@@ -79,7 +79,7 @@ von Standardwerten werden markiert; jede Änderung an einer Kalkulation erzeugt 
 - STM-14: CO₂-Stammdaten: je Material **Emissionsfaktor kg CO₂e/kg** (Cradle-to-Gate, Ziel: Lieferanten-PCF);
   je Maschine **Leistungsaufnahme kW inkl. Peripherie** und optional **Strom-Emissionsfaktor des Standorts**
   (z. B. Werk Krupka); Parameter: Strom-Emissionsfaktor (Standard 0,30 kg CO₂e/kWh), Werksemissionen Scope 1 je
-  Maschinenstunde, Masterbatch, Lkw-Transport (Standard 0,10 kg CO₂e/tkm). Alle Standardwerte sind Richtwerte.
+  Maschinenstunde, Masterbatch, Lkw-Transport (Standard 0,10 kg CO₂e/tkm). Alle Standardwerte sind Richtwerte. CO₂ der Verpackung nur, wenn Teile je VE angegeben sind.
 - STM-3: Inaktive Maschinen sind in neuen Kalkulationen nicht auswählbar; bestehende Kalkulationen bleiben unverändert.
 
 ### 5.2 Materialien
@@ -140,8 +140,8 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | Rüsten | Rüstzeit je Los h, Einrichter, Lohnsatz Einrichter, Anfahrausschuss je Los Stk |
 | Montage | Montagezeit je Stück s, Personen, Lohnsatz, Produktivität Montage % |
 | Zuschläge | MGK, FGK, Ausschuss, Verwaltung, Vertrieb, Projektmanagement, **Qualität**, **Werkzeugbau**, Gewinn, Skonto, Rabatt (%); für Qualität und Werkzeugbau ist die **Basis wählbar**: FEK oder HK |
-| **Verpackung** | Verpackungsart (Vorschläge KLT, Karton, Gitterbox, Sonderladungsträger …), Teile je Verpackungseinheit (VE), Kosten je VE bzw. bei Mehrweg je Umlauf (Reinigung, Miete), Packzeit je VE, VE je Palette – **echte Beträge, keine Prozente** |
-| **Transport** | Lieferbedingung (Incoterm, frei wählbar), Art: keine (ab Werk) · € je Palette · € je Lieferung (mit Lieferungen p. a.) · % auf Herstellkosten |
+| **Verpackung** | Auswahl **pauschal in % auf HK** (wenn Details unbekannt; Standard aus Parametern) **oder detailliert**: Verpackungsart (Vorschläge KLT, Karton, Gitterbox, Sonderladungsträger …), Teile je Verpackungseinheit (VE), Kosten je VE bzw. bei Mehrweg je Umlauf (Reinigung, Miete), Packzeit je VE, VE je Palette |
+| **Transport** | Lieferbedingung (Incoterm, frei wählbar), Art: keine (ab Werk) · € je Palette · € je Lieferung (mit Lieferungen p. a.) · **pauschal in % auf Herstellkosten** (Standard aus Parametern) |
 | Zusatzpositionen | frei: Bezeichnung, Betrag, Bezug (je Stück / je 1.000 / je Los / je Jahr), Art (Fertigung oder Vertrieb) – z. B. Peripherie, Nacharbeit, Bedrucken, Sonderkosten |
 | Einmalkosten | frei: Bezeichnung, Kosten, Preis an Kunde – z. B. Werkzeug, Erstbemusterung, Prüfmittel |
 | Verkaufspreis | optional manuell festgelegt (Gewinn ergibt sich dann als Rest) |
@@ -167,7 +167,7 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | Herstellkosten | HK vor Ausschuss + Ausschuss |
 | Verwaltung / Vertrieb / PM | je HK × % |
 | Qualität / Werkzeugbau (Basis HK) | HK × Qualität % bzw. HK × Werkzeugbau % |
-| Verpackung | Kosten je VE / Teile je VE + Packzeit je VE / 3600 × Lohnsatz Bediener / Teile je VE |
+| Verpackung | pauschal: HK × Verpackung % · detailliert: Kosten je VE / Teile je VE + Packzeit je VE / 3600 × Lohnsatz Bediener / Teile je VE |
 | Transport | je Palette: Fracht je Palette / (Teile je VE × VE je Palette) · je Lieferung: Kosten je Lieferung × Lieferungen p. a. / Jahresmenge · Prozent: HK × % · ab Werk: 0 |
 | SEK Vertrieb | Zusatzpositionen „Vertrieb“ |
 | Selbstkosten | HK + Verwaltung + Vertrieb + PM + Qualität/Werkzeugbau (Basis HK) + Verpackung + Transport + SEK Vertrieb |
@@ -178,6 +178,9 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
   Je Staffel: Rüstkosten je Stück, Preis je Stück und je 1.000, Δ % zum kalkulierten Preis der Basis-Losgröße.
   Staffeln werden immer kalkuliert (ein manuell festgelegter Preis gilt nur für die Basis-Losgröße). Staffelpreise
   werden in die Artikelposition des Angebots übernommen.
+- KAL-29a: Pauschale Standardsätze in den Parametern: Verpackung 1,5 % und Transport 2,0 % auf HK (änderbar).
+  Neue Kalkulationen starten mit Verpackung pauschal; Transport startet mit „ab Werk“, der %-Satz ist vorbelegt.
+  Teile je VE und VE je Palette bleiben auch im Pauschalmodus optional (für Paletten, Lieferungen, CO₂).
 - KAL-29: Ausgaben Verpackung/Transport: Kosten je Stück und p. a., VE p. a., Stück je Palette, Paletten p. a.
   Verpackungsart, Teile je VE und Lieferbedingung werden in die Artikelposition des Angebots übernommen.
   Ältere Versionen ohne diese Angaben rechnen unverändert (Verpackung bisher über Zusatzpositionen).
@@ -357,3 +360,4 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | 1.5 | 14.11.2026 | **Sammelangebot** aus mehreren Kalkulationen (KAL-43 bis KAL-45): Mehrfachauswahl in der Kalkulationsliste, Prüfung gleicher Kunde, ein Angebot mit allen Serienteilen und Einmalkosten; **Herkunft** Angebot ↔ Kalkulation in beide Richtungen sichtbar (KAL-46). Neue Spalte `quotes.calculation_ids` (automatisch ergänzt). Angebotspositionen zeigen mehrzeilige Texte vollständig. |
 | 1.6 | 14.11.2026 | Eigener Bereich **Verpackung & Transport** mit echten Beträgen (KAL-29, Rechenweg 6.2): Kosten je VE/Umlauf, Teile je VE, Packzeit, VE je Palette; Transport ab Werk, je Palette, je Lieferung oder % auf HK; Lieferbedingung; Übernahme ins Angebot; Ist-Werte in der Nachkalkulation. |
 | 1.7 | 14.11.2026 | **CO₂-Fußabdruck je Teil** (Kap. 6.8, CO2-1 bis CO2-6, STM-14): Material, Strom (Scope 2), Werksemissionen (Scope 1), Zukaufteile, Verpackung, Transport; je Stück, 1.000, Los, Jahresmenge, Lieferung; Ausweis im Angebot. Neue Stammdatenfelder (Materialfaktor, Maschinenleistung, Standort-Stromfaktor) werden automatisch ergänzt. |
+| 1.8 | 14.11.2026 | Verpackung wahlweise **pauschal in % auf HK** oder detailliert; Transport pauschal in % weiterhin wählbar; Standardsätze Verpackung 1,5 % / Transport 2,0 % in den Parametern (KAL-29a). |

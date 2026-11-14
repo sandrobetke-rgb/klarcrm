@@ -201,6 +201,7 @@ function CalcTab({ calc, setCalc, master }) {
     co2_material_kg_kg: material?.co2_kg_per_kg ?? undefined, machine_power_kw: machine?.power_kw ?? undefined,
     co2_grid_kg_kwh: machine?.grid_factor ?? S.co2_grid_kg_kwh, co2_scope1_kg_h: S.co2_scope1_kg_h,
     co2_masterbatch_kg_kg: S.co2_masterbatch_kg_kg, co2_transport_kg_tkm: S.co2_transport_kg_tkm,
+    pack_pct: S.pack_pct, transport_pct: S.transport_pct,
   }), [machine, material, S])
 
   function pickMachine(mid) {
@@ -321,30 +322,43 @@ function CalcTab({ calc, setCalc, master }) {
           </Section>
 
           <Section title="Verpackung & Transport">
+            <div className="field span-3"><label>Verpackungskosten</label>
+              <div className="seg mode-seg">
+                <button type="button" className={inputs.pack_mode === 'prozent' ? 'on' : ''} onClick={() => setInputs((x) => ({ ...x, pack_mode: 'prozent', pack_pct: x.pack_pct || S.pack_pct }))}>Pauschal in % auf HK</button>
+                <button type="button" className={inputs.pack_mode !== 'prozent' ? 'on' : ''} onClick={() => set('pack_mode', 'detail')}>Detailliert (je Verpackungseinheit)</button>
+              </div></div>
+            {inputs.pack_mode === 'prozent' && F({ k: 'pack_pct', label: 'Verpackung', unit: '% auf HK', step: 0.5, hint: 'wenn die genauen Verpackungskosten nicht bekannt sind' })}
             <div className="field"><label htmlFor="in-pack_type">Verpackungsart</label>
               <input id="in-pack_type" list="pack-types" value={inputs.pack_type || ''} placeholder="z. B. KLT 6280" onChange={(e) => set('pack_type', e.target.value)} />
               <datalist id="pack-types">{['KLT 4280 Mehrweg', 'KLT 6280 Mehrweg', 'Karton Einweg', 'Gitterbox mit Zwischenlagen', 'Sonderladungsträger Kunde', 'Beutel + Karton'].map((t) => <option key={t} value={t} />)}</datalist></div>
-            {F({ k: 'pack_parts_per_unit', label: 'Teile je Verpackungseinheit (VE)', unit: 'Stk', step: 1 })}
-            {F({ k: 'pack_cost_per_unit', label: inputs.pack_reusable ? 'Kosten je Umlauf (Reinigung, Miete)' : 'Kosten je VE (inkl. Zwischenlagen)', unit: '€', step: 0.05 })}
-            <div className="field field-check"><label htmlFor="in-pack_reusable">Mehrweg-Verpackung</label>
-              <input id="in-pack_reusable" type="checkbox" checked={!!inputs.pack_reusable} onChange={(e) => set('pack_reusable', e.target.checked)} /></div>
-            {F({ k: 'pack_time_s', label: 'Packzeit je VE', unit: 's', step: 5, hint: 'bewertet mit Lohnsatz Bediener' })}
+            {F({ k: 'pack_parts_per_unit', label: 'Teile je Verpackungseinheit (VE)', unit: 'Stk', step: 1, hint: inputs.pack_mode === 'prozent' ? 'optional – für Paletten, Lieferung und CO₂' : undefined })}
+            {inputs.pack_mode !== 'prozent' && <>
+              {F({ k: 'pack_cost_per_unit', label: inputs.pack_reusable ? 'Kosten je Umlauf (Reinigung, Miete)' : 'Kosten je VE (inkl. Zwischenlagen)', unit: '€', step: 0.05 })}
+              <div className="field field-check"><label htmlFor="in-pack_reusable">Mehrweg-Verpackung</label>
+                <input id="in-pack_reusable" type="checkbox" checked={!!inputs.pack_reusable} onChange={(e) => set('pack_reusable', e.target.checked)} /></div>
+              {F({ k: 'pack_time_s', label: 'Packzeit je VE', unit: 's', step: 5, hint: 'bewertet mit Lohnsatz Bediener' })}
+            </>}
             {F({ k: 'pack_units_per_pallet', label: 'VE je Palette', unit: 'VE', step: 1 })}
-            <Info>Verpackung: <b>{fix4(r.values?.packaging)} €/Stk</b> · {num(r.packaging_units_year)} VE p. a. · {num(r.pieces_per_pallet)} Stk/Palette · {num(r.pallets_year, 1)} Paletten p. a. · {eur(r.packaging_cost_year)} p. a.</Info>
+            <Info>Verpackung{inputs.pack_mode === 'prozent' ? ' (pauschal)' : ''}: <b>{fix4(r.values?.packaging)} €/Stk</b> · {eur(r.packaging_cost_year)} p. a.
+              {r.packaging_units_year > 0 && <> · {num(r.packaging_units_year)} VE p. a.</>}
+              {r.pieces_per_pallet > 0 && <> · {num(r.pieces_per_pallet)} Stk/Palette · {num(r.pallets_year, 1)} Paletten p. a.</>}</Info>
             <div className="field"><label htmlFor="in-incoterm">Lieferbedingung (Incoterm)</label>
               <input id="in-incoterm" list="incoterms" value={inputs.incoterm || ''} placeholder="z. B. FCA Werk, DAP Kunde" onChange={(e) => set('incoterm', e.target.value)} />
               <datalist id="incoterms">{['EXW ab Werk', 'FCA Werk', 'DAP Kunde', 'DDP Kunde', 'CPT', 'frei Haus'].map((t) => <option key={t} value={t} />)}</datalist></div>
             <div className="field"><label htmlFor="in-transport_mode">Transportkosten</label>
-              <select id="in-transport_mode" value={inputs.transport_mode || 'keine'} onChange={(e) => set('transport_mode', e.target.value)}>
+              <select id="in-transport_mode" value={inputs.transport_mode || 'keine'} onChange={(e) => {
+                const v = e.target.value
+                setInputs((x) => ({ ...x, transport_mode: v, transport_pct: v === 'prozent' && !x.transport_pct ? S.transport_pct : x.transport_pct }))
+              }}>
                 <option value="keine">keine (ab Werk / Kunde holt ab)</option>
                 <option value="palette">€ je Palette</option>
                 <option value="lieferung">€ je Lieferung</option>
-                <option value="prozent">% auf Herstellkosten</option>
+                <option value="prozent">pauschal in % auf Herstellkosten</option>
               </select></div>
             {inputs.transport_mode === 'palette' && F({ k: 'transport_cost_per_pallet', label: 'Frachtkosten je Palette', unit: '€', step: 1, hint: 'Teile je VE × VE je Palette werden genutzt' })}
             {inputs.transport_mode === 'lieferung' && F({ k: 'transport_cost_per_delivery', label: 'Kosten je Lieferung', unit: '€', step: 5 })}
             {inputs.transport_mode === 'lieferung' && F({ k: 'transport_deliveries_per_year', label: 'Lieferungen pro Jahr', unit: '', step: 1 })}
-            {inputs.transport_mode === 'prozent' && F({ k: 'transport_pct', label: 'Transport', unit: '% auf HK', step: 0.5 })}
+            {inputs.transport_mode === 'prozent' && F({ k: 'transport_pct', label: 'Transport', unit: '% auf HK', step: 0.5, hint: 'wenn Frachtkosten nicht genau bekannt sind' })}
             {(inputs.transport_mode || 'keine') !== 'keine' && <Info>Transport: <b>{fix4(r.values?.transport)} €/Stk</b> · {eur(r.transport_cost_year)} p. a.</Info>}
           </Section>
 

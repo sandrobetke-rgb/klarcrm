@@ -16,8 +16,8 @@ Schema je Stück:
   Ausschuss                    = HK vor Ausschuss / (1 − Ausschuss-%) − HK vor Ausschuss
   Herstellkosten (HK)
   + Verwaltungsgemeinkosten, Vertriebsgemeinkosten, Projektmanagement (je % auf HK)
-  + Verpackung (Kosten je Verpackungseinheit / Teile je VE + Packzeit) und Transport (je Palette, je Lieferung
-    oder % auf HK; „ab Werk“ = 0) als Sondereinzelkosten des Vertriebs
+  + Verpackung (detailliert: Kosten je Verpackungseinheit / Teile je VE + Packzeit; oder pauschal % auf HK) und
+    Transport (je Palette, je Lieferung oder % auf HK; „ab Werk“ = 0) als Sondereinzelkosten des Vertriebs
   + weitere Sondereinzelkosten Vertrieb (Zusatzpositionen)
   = Selbstkosten (SK)
   + Gewinn (% auf SK)          = Barverkaufspreis
@@ -56,6 +56,8 @@ DEFAULT_SETTINGS = {
     "co2_scope1_kg_h": 0.0,         # sonstige Werksemissionen (Heizung/Gas) kg CO₂e je Maschinenstunde
     "co2_masterbatch_kg_kg": 3.0,   # Masterbatch kg CO₂e/kg
     "co2_transport_kg_tkm": 0.10,   # Lkw kg CO₂e je Tonnenkilometer
+    "pack_pct": 1.5,                # Verpackung pauschal % auf HK (wenn Details unbekannt)
+    "transport_pct": 2.0,           # Transport pauschal % auf HK (wenn Details unbekannt)
     "big_revenue_threshold": 500000.0,  # Großprojekt: Jahresumsatz ab … €
     "big_invest_threshold": 500000.0,   # Großprojekt: Invest (Einmalkosten Werkzeug etc.) ab … €
 }
@@ -87,6 +89,8 @@ DEFAULT_INPUTS = {
     "one_time": [],   # [{label, cost, price}]
     "lot_tiers": [],  # Staffelpreise: weitere Losgrößen, z. B. [2000, 5000, 20000]
     # Verpackung (Vorgabe leer = 0, damit ältere Versionen unverändert rechnen)
+    "pack_mode": "detail",  # detail | prozent
+    "pack_pct": 0.0,
     "pack_type": "", "pack_parts_per_unit": 0, "pack_cost_per_unit": 0.0, "pack_reusable": False,
     "pack_time_s": 0.0, "pack_units_per_pallet": 0,
     # CO₂-Fußabdruck (Vorgabe 0 = nicht berechnet; neue Kalkulationen erhalten Werte aus Stammdaten/Parametern)
@@ -219,10 +223,14 @@ def _compute(raw: dict) -> dict:
     toolshop_h = hk * _f(i["toolshop_pct"]) / 100 if t_base == "hk" else 0.0
     # --- Verpackung & Transport (Sondereinzelkosten Vertrieb)
     ppu = _f(i["pack_parts_per_unit"])
-    pack_material = _f(i["pack_cost_per_unit"]) / ppu if ppu > 0 else 0.0
-    pack_labor = _f(i["pack_time_s"]) / 3600 * _f(i["labor_rate_h"]) / ppu if ppu > 0 else 0.0
-    packaging = pack_material + pack_labor
-    if (_f(i["pack_cost_per_unit"]) or _f(i["pack_time_s"])) and ppu <= 0:
+    pack_pct_mode = i.get("pack_mode") == "prozent"
+    if pack_pct_mode:
+        packaging = hk * _f(i["pack_pct"]) / 100
+    else:
+        pack_material = _f(i["pack_cost_per_unit"]) / ppu if ppu > 0 else 0.0
+        pack_labor = _f(i["pack_time_s"]) / 3600 * _f(i["labor_rate_h"]) / ppu if ppu > 0 else 0.0
+        packaging = pack_material + pack_labor
+    if not pack_pct_mode and (_f(i["pack_cost_per_unit"]) or _f(i["pack_time_s"])) and ppu <= 0:
         warnings.append("Verpackung: Teile je Verpackungseinheit fehlen – Verpackungskosten nicht umgelegt.")
     units_year = annual / ppu if ppu > 0 else 0
     upp = _f(i["pack_units_per_pallet"])
@@ -285,7 +293,8 @@ def _compute(raw: dict) -> dict:
         ("pm", f"Projektmanagement {_p(i['pm_pct'])} %", "gemeinkosten", pm),
         ("quality_h", f"Qualität {_p(i['quality_pct'])} % auf HK", "gemeinkosten", quality_h),
         ("toolshop_h", f"Werkzeugbau {_p(i['toolshop_pct'])} % auf HK", "gemeinkosten", toolshop_h),
-        ("packaging", "Verpackung" + (f" ({i.get('pack_type')})" if i.get("pack_type") else ""), "gemeinkosten", packaging),
+        ("packaging", (f"Verpackung {_p(i['pack_pct'])} % auf HK" if pack_pct_mode else
+                       "Verpackung" + (f" ({i.get('pack_type')})" if i.get("pack_type") else "")), "gemeinkosten", packaging),
         ("transport", {"palette": "Transport je Palette", "lieferung": "Transport je Lieferung",
                        "prozent": f"Transport {_p(i['transport_pct'])} % auf HK"}.get(mode, "Transport"), "gemeinkosten", transport),
         ("sek_v", "Sondereinzelkosten Vertrieb", "gemeinkosten", sek_v),
@@ -388,7 +397,7 @@ ACTUAL_FIELDS = (
     "sprue_weight_g", "setup_time_h", "lot_size", "assembly_time_s", "labor_rate_h", "operator_factor",
     "machine_rate_h", "maintenance_rate_h", "purchased_parts",
     "pack_cost_per_unit", "pack_parts_per_unit", "transport_cost_per_pallet", "transport_cost_per_delivery",
-    "transport_deliveries_per_year",
+    "transport_deliveries_per_year", "pack_pct", "transport_pct",
 )
 
 

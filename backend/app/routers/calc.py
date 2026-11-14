@@ -88,6 +88,8 @@ def default_inputs(db: Session) -> dict:
               "co2_grid_kg_kwh", "co2_scope1_kg_h", "co2_masterbatch_kg_kg", "co2_transport_kg_tkm"):
         inp[k] = st[k]
     inp["extras"], inp["one_time"] = [], [{"label": "Spritzgießwerkzeug", "cost": 0, "price": 0}]
+    # Neue Kalkulationen: Verpackung pauschal mit Standard-%, bis Details bekannt sind; Transport-% vorbelegt
+    inp["pack_mode"], inp["pack_pct"], inp["transport_pct"] = "prozent", st["pack_pct"], st["transport_pct"]
     return inp
 
 

@@ -107,6 +107,7 @@ export const INPUT_LABELS = {
   quality_pct: ['Qualität', '%'], quality_base: ['Basis Qualität', ''], toolshop_pct: ['Werkzeugbau', '%'], toolshop_base: ['Basis Werkzeugbau', ''],
   profit_pct: ['Gewinn', '%'], cash_discount_pct: ['Skonto', '%'], rebate_pct: ['Rabatt', '%'], price_override: ['Verkaufspreis manuell', '€/Stk'],
   lot_tiers: ['Staffel-Losgrößen', 'Stk'],
+  pack_mode: ['Verpackung – Art der Eingabe', ''], pack_pct: ['Verpackung pauschal', '% auf HK'],
   pack_type: ['Verpackungsart', ''], pack_parts_per_unit: ['Teile je VE', 'Stk'], pack_cost_per_unit: ['Kosten je VE', '€'],
   pack_reusable: ['Mehrweg', ''], pack_time_s: ['Packzeit je VE', 's'], pack_units_per_pallet: ['VE je Palette', ''],
   co2_material_kg_kg: ['CO₂ Material', 'kg CO₂e/kg'], co2_masterbatch_kg_kg: ['CO₂ Masterbatch', 'kg CO₂e/kg'],

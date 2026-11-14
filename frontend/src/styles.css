@@ -395,3 +395,5 @@ h1 .big-badge { font-size: 12.5px; margin-top: 0; }
 .co2-big { font-size: 26px; font-weight: 750; color: #1a7a45; font-variant-numeric: tabular-nums; }
 .co2-share { display: inline-block; width: 50px; height: 6px; background: #eceef2; border-radius: 3px; margin-right: 6px; vertical-align: middle; overflow: hidden; }
 .co2-share span { display: block; height: 100%; background: #2f9e62; }
+
+.mode-seg { align-self: flex-start; }
