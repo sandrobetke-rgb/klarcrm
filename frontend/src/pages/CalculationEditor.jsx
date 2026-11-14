@@ -1,0 +1,511 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { api } from '../api'
+import { useAuth } from '../auth'
+import { Badge, confirmDelete, EntityForm, ErrorBox, Modal } from '../components/ui'
+import {
+  CALC_STATUS, calcStatus, CLOSE_REASONS, eur, eur4, fix4, fmtDate, fmtDateTime, INPUT_LABELS, num, num2, reasonLabel,
+} from '../constants'
+import { Light } from './Calculations'
+import PostCalcTab from './PostCalcTab'
+
+export const calcMetaFields = [
+  { name: 'article_name', label: 'Artikelbezeichnung', required: true, span: true },
+  { name: 'customer_article_no', label: 'Artikelnummer Kunde' },
+  { name: 'own_article_no', label: 'Eigene Artikelnummer' },
+  { name: 'account_id', label: 'Kunde', type: 'account' },
+  { name: 'contact_id', label: 'Ansprechpartner Kunde', type: 'contact', dependsOn: 'account_id' },
+  { name: 'opportunity_id', label: 'Verkaufschance (Projekt)', type: 'opportunity', dependsOn: 'account_id' },
+  { name: 'owner_id', label: 'Verantwortlich', type: 'user' },
+  { name: 'status', label: 'Status', type: 'select', required: true, options: CALC_STATUS },
+  { name: 'probability', label: 'Wahrscheinlichkeit Auftrag %', type: 'number', min: 0, max: 100, hint: 'Wird beim Statuswechsel vorgeschlagen, frei änderbar' },
+  { name: 'close_reason', label: 'Grund bei Verlust', type: 'select', options: CLOSE_REASONS },
+  { name: 'inquiry_date', label: 'Anfrage vom', type: 'date' },
+  { name: 'due_date', label: 'Angebotsabgabe bis', type: 'date' },
+  { name: 'sop_date', label: 'Serienstart (SOP)', type: 'date' },
+  { name: 'last_call_at', label: 'Zuletzt angerufen', type: 'datetime' },
+  { name: 'sync_opportunity', label: 'Umsatz automatisch in Verkaufschance übernehmen', type: 'checkbox', span: true },
+  { name: 'remark', label: 'Bemerkung', type: 'textarea', span: true, rows: 3 },
+]
+
+const TABS = [['calc', 'Kalkulation'], ['meta', 'Anfrage & Status'], ['versions', 'Versionen'], ['post', 'Nachkalkulation']]
+
+export default function CalculationEditor() {
+  const { id } = useParams()
+  const nav = useNavigate()
+  const { canWrite } = useAuth()
+  const [calc, setCalc] = useState(null)
+  const [error, setError] = useState(null)
+  const [tab, setTab] = useState('calc')
+  const [master, setMaster] = useState({ machines: [], materials: [], settings: {} })
+
+  useEffect(() => {
+    Promise.all([api.get('/machines?limit=500&active=true'), api.get('/materials?limit=500&active=true'), api.get('/calc/settings')])
+      .then(([m, mat, st]) => setMaster({ machines: m.items, materials: mat.items, settings: st }))
+  }, [])
+  useEffect(() => {
+    if (id === 'neu') return
+    api.get(`/calculations/${id}`).then(setCalc).catch(setError)
+  }, [id])
+
+  if (id === 'neu') {
+    return (
+      <div className="page page-narrow">
+        <Link to="/kalkulationen" className="back">‹ Alle Kalkulationen</Link>
+        <h1>Neue Anfrage / Kalkulation</h1>
+        <p className="muted">Kalkulationsnummer wird automatisch vergeben. Danach öffnet sich das Kalkulationsschema.</p>
+        <div className="card card-flush">
+          <EntityForm fields={calcMetaFields.filter((f) => !['close_reason', 'last_call_at'].includes(f.name))}
+            initial={{ status: 'anfrage', sync_opportunity: true, inquiry_date: new Date().toISOString().slice(0, 10) }}
+            submitLabel="Anlegen und kalkulieren"
+            onSubmit={async (v) => { const c = await api.post('/calculations', v); nav(`/kalkulationen/${c.id}`, { replace: true }) }}
+            onCancel={() => nav('/kalkulationen')} />
+        </div>
+      </div>
+    )
+  }
+  if (error) return <ErrorBox error={error} />
+  if (!calc) return <div className="loading">Lade Kalkulation…</div>
+
+  const st = calcStatus(calc.status)
+  async function remove() {
+    if (await confirmDelete(`Kalkulation ${calc.number} mit allen Versionen`, () => api.del(`/calculations/${calc.id}`))) nav('/kalkulationen')
+  }
+  return (
+    <div className="page page-wide">
+      <Link to="/kalkulationen" className="back no-print">‹ Alle Kalkulationen</Link>
+      <header className="page-head">
+        <div>
+          <h1>{calc.number} · {calc.article_name} <Badge tone={st.tone}>{st.label}</Badge>
+            {calc.last_traffic_light && <Light value={calc.last_traffic_light} />}</h1>
+          <p className="muted">
+            {calc.account ? <Link to={`/firmen/${calc.account.id}`}>{calc.account.name}</Link> : 'kein Kunde'}
+            {calc.customer_article_no && ` · Kd.-Art.-Nr. ${calc.customer_article_no}`}
+            {` · Version ${calc.current_version} · ${calc.probability} % Wahrscheinlichkeit`}
+            {calc.close_reason && ` · ${reasonLabel(calc.close_reason)}`}
+            {calc.opportunity && <> · Chance: <Link to="/pipeline">{calc.opportunity.name}</Link></>}
+          </p>
+        </div>
+        {canWrite && <HeaderActions calc={calc} setCalc={setCalc} onDelete={remove} />}
+      </header>
+      <div className="tabs no-print">
+        {TABS.map(([k, l]) => (
+          <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>
+            {l}{k === 'versions' && <span className="count">{calc.versions.length}</span>}
+            {k === 'post' && <span className="count">{calc.post_calcs.length}</span>}
+          </button>
+        ))}
+      </div>
+      {tab === 'calc' && <CalcTab calc={calc} setCalc={setCalc} master={master} />}
+      {tab === 'meta' && (
+        <div className="card card-flush" style={{ maxWidth: 820 }}>
+          <EntityForm fields={calcMetaFields} initial={calc} submitLabel="Speichern"
+            onSubmit={async (v) => { setCalc(await api.patch(`/calculations/${calc.id}`, v)); setTab('calc') }}
+            onCancel={() => setTab('calc')} />
+        </div>
+      )}
+      {tab === 'versions' && <VersionsTab calc={calc} />}
+      {tab === 'post' && <PostCalcTab calc={calc} setCalc={setCalc} />}
+    </div>
+  )
+}
+
+function HeaderActions({ calc, setCalc, onDelete }) {
+  const nav = useNavigate()
+  const [callOpen, setCallOpen] = useState(false)
+  const [note, setNote] = useState('')
+  const [err, setErr] = useState(null)
+  return (
+    <div className="toolbar no-print">
+      <button className="btn btn-ghost" onClick={() => setCallOpen(true)}>☎ Anruf dokumentieren</button>
+      {!calc.opportunity_id && <button className="btn btn-ghost" onClick={async () => {
+        try { setCalc(await api.post(`/calculations/${calc.id}/opportunity`)) } catch (e) { setErr(e) }
+      }}>→ Verkaufschance anlegen</button>}
+      <button className="btn btn-ghost" onClick={() => window.print()}>Drucken</button>
+      <button className="btn btn-ghost" onClick={async () => {
+        const r = await api.post(`/calculations/${calc.id}/quote`)
+        nav(`/angebote/${r.quote_id}`)
+      }}>→ Angebot erstellen</button>
+      <button className="btn btn-danger-ghost" onClick={onDelete}>Löschen</button>
+      <ErrorBox error={err} />
+      {callOpen && (
+        <Modal title="Anruf dokumentieren" onClose={() => setCallOpen(false)}>
+          <div className="form">
+            <p className="muted">Setzt „zuletzt angerufen“ auf jetzt und legt eine Aktivität beim Kunden an.</p>
+            <div className="field"><label>Gesprächsnotiz</label><textarea rows={4} value={note} onChange={(e) => setNote(e.target.value)} /></div>
+            <div className="form-actions"><span className="spacer" />
+              <button className="btn btn-ghost" onClick={() => setCallOpen(false)}>Abbrechen</button>
+              <button className="btn btn-primary" onClick={async () => {
+                setCalc(await api.post(`/calculations/${calc.id}/call`, { note }))
+                setNote(''); setCallOpen(false)
+              }}>Speichern</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+// ------------------------------------------------------------------ Kalkulation
+function CalcTab({ calc, setCalc, master }) {
+  const { canWrite } = useAuth()
+  const latest = calc.versions[calc.versions.length - 1]
+  const [baseNo, setBaseNo] = useState(latest.version_no)
+  const base = calc.versions.find((v) => v.version_no === baseNo) || latest
+  const [inputs, setInputs] = useState(() => structuredClone(base.inputs))
+  const [results, setResults] = useState(base.results)
+  const [note, setNote] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+  const dirty = JSON.stringify(inputs) !== JSON.stringify(base.inputs)
+  const timer = useRef()
+
+  useEffect(() => { setInputs(structuredClone(base.inputs)); setResults(base.results) }, [baseNo, calc.current_version])
+  useEffect(() => {
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => api.post('/calc/preview', inputs).then(setResults).catch(setError), 250)
+    return () => clearTimeout(timer.current)
+  }, [inputs])
+
+  const set = (k, v) => setInputs((s) => ({ ...s, [k]: v }))
+  const machine = master.machines.find((m) => m.id === inputs.machine_id)
+  const material = master.materials.find((m) => m.id === inputs.material_id)
+  const S = master.settings
+  // Standardwert je Feld (aus Stammdaten / Parametern) – Abweichungen werden markiert
+  const defaults = useMemo(() => ({
+    machine_rate_h: machine?.hourly_rate, maintenance_rate_h: machine?.maintenance_rate,
+    productivity_pct: machine?.productivity_pct, operator_factor: machine?.operator_factor,
+    material_price_kg: material?.price_per_kg,
+    labor_rate_h: S.labor_rate_h, setup_rate_h: S.setup_rate_h, assembly_rate_h: S.assembly_rate_h,
+    mgk_pct: S.mgk_pct, fgk_pct: S.fgk_pct, scrap_pct: S.scrap_pct, vwgk_pct: S.vwgk_pct, vtgk_pct: S.vtgk_pct,
+    pm_pct: S.pm_pct, profit_pct: S.profit_pct, cash_discount_pct: S.cash_discount_pct, rebate_pct: S.rebate_pct,
+    setup_time_h: S.setup_time_h, setup_persons: S.setup_persons, startup_scrap_pcs: S.startup_scrap_pcs,
+    assembly_productivity_pct: S.assembly_productivity_pct,
+  }), [machine, material, S])
+
+  function pickMachine(mid) {
+    const m = master.machines.find((x) => x.id === Number(mid))
+    if (!m) { set('machine_id', null); return }
+    setInputs((s) => ({ ...s, machine_id: m.id, machine_name: `${m.number ? m.number + ' · ' : ''}${m.name}`,
+      machine_rate_h: m.hourly_rate, maintenance_rate_h: m.maintenance_rate,
+      productivity_pct: m.productivity_pct, operator_factor: m.operator_factor }))
+  }
+  function pickMaterial(mid) {
+    const m = master.materials.find((x) => x.id === Number(mid))
+    if (!m) { set('material_id', null); return }
+    setInputs((s) => ({ ...s, material_id: m.id, material_name: m.name, material_price_kg: m.price_per_kg }))
+  }
+  async function saveVersion() {
+    setSaving(true); setError(null)
+    try {
+      const c = await api.post(`/calculations/${calc.id}/versions`, { inputs, change_note: note || null })
+      setCalc(c); setNote(''); setBaseNo(c.current_version)
+    } catch (e) { setError(e) } finally { setSaving(false) }
+  }
+  const F = (p) => <NumField {...p} value={inputs[p.k]} def={defaults[p.k]} onChange={(v) => set(p.k, v)} />
+  const r = results || base.results
+
+  return (
+    <div className="calc-layout">
+      <div className="calc-inputs">
+        <div className="card version-bar no-print">
+          <label className="inline-label">Basis
+            <select value={baseNo} onChange={(e) => setBaseNo(Number(e.target.value))}>
+              {[...calc.versions].reverse().map((v) => (
+                <option key={v.version_no} value={v.version_no}>V{v.version_no} · {fmtDate(v.created_at)}{v.version_no === latest.version_no ? ' (aktuell)' : ''}</option>
+              ))}
+            </select>
+          </label>
+          {dirty ? <span className="badge badge-info">ungespeicherte Änderungen</span> : <span className="muted small">{base.change_note}</span>}
+          <span className="spacer" />
+          {canWrite && <>
+            <input className="note-input" placeholder="Was wurde geändert? (für Versionshistorie)" value={note} onChange={(e) => setNote(e.target.value)} />
+            <button className="btn btn-primary" disabled={!dirty || saving} onClick={saveVersion}>
+              {saving ? 'Speichert…' : `Als Version ${latest.version_no + 1} speichern`}</button>
+            {dirty && <button className="btn btn-ghost" onClick={() => setInputs(structuredClone(base.inputs))}>Verwerfen</button>}
+          </>}
+        </div>
+        <ErrorBox error={error} />
+        <fieldset disabled={!canWrite} className="calc-fieldset">
+          <Section title="Mengen">
+            {F({ k: 'annual_volume', label: 'Jahresmenge', unit: 'Stk', step: 1000 })}
+            {F({ k: 'lot_size', label: 'Losgröße', unit: 'Stk', step: 500 })}
+            {F({ k: 'project_years', label: 'Projektlaufzeit', unit: 'Jahre', step: 1 })}
+          </Section>
+
+          <Section title="Material">
+            <div className="field span-2"><label>Material (Stammdaten)</label>
+              <select value={inputs.material_id ?? ''} onChange={(e) => pickMaterial(e.target.value)}>
+                <option value="">– frei / manuell –</option>
+                {master.materials.map((m) => <option key={m.id} value={m.id}>{m.name} · {num2(m.price_per_kg)} €/kg</option>)}
+              </select></div>
+            {F({ k: 'material_price_kg', label: 'Materialpreis', unit: '€/kg', step: 0.05 })}
+            {F({ k: 'part_weight_g', label: 'Teilgewicht', unit: 'g', step: 0.1 })}
+            {F({ k: 'sprue_weight_g', label: 'Anguss je Schuss', unit: 'g', step: 0.1, hint: '0 bei Heißkanal' })}
+            {F({ k: 'regrind_pct', label: 'Mahlgut-Rückführung Anguss', unit: '%' })}
+            {F({ k: 'masterbatch_pct', label: 'Masterbatch-Anteil', unit: '%', step: 0.5 })}
+            {F({ k: 'masterbatch_price_kg', label: 'Masterbatch-Preis', unit: '€/kg', step: 0.1 })}
+            {F({ k: 'purchased_parts', label: 'Zukaufteile je Stück', unit: '€', step: 0.01, hint: 'z. B. Einlegeteile, Buchsen' })}
+            <Info>Gewicht je Stück inkl. Angussanteil: <b>{num(r.kg_per_piece * 1000, 2)} g</b> · Schussgewicht {num(r.shot_weight_g, 1)} g · Material p. a. {num(r.material_kg_year)} kg</Info>
+          </Section>
+
+          <Section title="Maschine & Fertigung">
+            <div className="field span-2"><label>Maschine (Stammdaten)</label>
+              <select value={inputs.machine_id ?? ''} onChange={(e) => pickMachine(e.target.value)}>
+                <option value="">– frei / manuell –</option>
+                {master.machines.map((m) => <option key={m.id} value={m.id}>{m.number} · {m.name} · {num2(m.hourly_rate)} €/h</option>)}
+              </select></div>
+            {F({ k: 'machine_rate_h', label: 'Maschinenstundensatz', unit: '€/h', hint: 'ohne Personal' })}
+            {F({ k: 'maintenance_rate_h', label: 'Instandhaltung', unit: '€/h' })}
+            {F({ k: 'cycle_time_s', label: 'Zykluszeit', unit: 's', step: 0.5 })}
+            {F({ k: 'cavities', label: 'Fachzahl', unit: 'Kav.', step: 1 })}
+            {F({ k: 'productivity_pct', label: 'Produktivität / Nutzungsgrad', unit: '%' })}
+            {F({ k: 'operator_factor', label: 'Bedienfaktor', unit: 'Pers./M.', step: 0.05 })}
+            {F({ k: 'labor_rate_h', label: 'Lohnsatz Bediener', unit: '€/h' })}
+            <Info>Ausbringung: <b>{num(r.pieces_per_hour, 0)} Stk/h</b> (theoretisch {num(r.pieces_per_hour_theoretical, 0)}) · Maschinenstunden p. a. <b>{num(r.machine_hours_year, 0)} h</b></Info>
+          </Section>
+
+          <Section title="Rüsten">
+            {F({ k: 'setup_time_h', label: 'Rüstzeit je Los', unit: 'h', step: 0.25 })}
+            {F({ k: 'setup_persons', label: 'Einrichter', unit: 'Pers.', step: 0.5 })}
+            {F({ k: 'setup_rate_h', label: 'Lohnsatz Einrichter', unit: '€/h' })}
+            {F({ k: 'startup_scrap_pcs', label: 'Anfahrausschuss je Los', unit: 'Stk', step: 10 })}
+            <Info>Rüstkosten je Los: <b>{eur(r.setup_cost_per_lot)}</b> · {num(r.lots_per_year, 1)} Lose p. a.</Info>
+          </Section>
+
+          <Section title="Montage">
+            {F({ k: 'assembly_time_s', label: 'Montagezeit je Stück', unit: 's', step: 0.5 })}
+            {F({ k: 'assembly_persons', label: 'Personen', unit: 'Pers.', step: 0.5 })}
+            {F({ k: 'assembly_rate_h', label: 'Lohnsatz Montage', unit: '€/h' })}
+            {F({ k: 'assembly_productivity_pct', label: 'Produktivität Montage', unit: '%' })}
+          </Section>
+
+          <Section title="Zuschläge & Gewinn">
+            {F({ k: 'mgk_pct', label: 'Materialgemeinkosten', unit: '%', step: 0.5 })}
+            {F({ k: 'fgk_pct', label: 'Fertigungsgemeinkosten', unit: '%', step: 0.5 })}
+            {F({ k: 'scrap_pct', label: 'Ausschuss', unit: '%', step: 0.5 })}
+            {F({ k: 'vwgk_pct', label: 'Verwaltungsgemeinkosten', unit: '%', step: 0.5 })}
+            {F({ k: 'vtgk_pct', label: 'Vertriebsgemeinkosten', unit: '%', step: 0.5 })}
+            {F({ k: 'pm_pct', label: 'Projektmanagement', unit: '%', step: 0.5 })}
+            {F({ k: 'profit_pct', label: 'Gewinn', unit: '%', step: 0.5 })}
+            {F({ k: 'cash_discount_pct', label: 'Skonto', unit: '%', step: 0.5 })}
+            {F({ k: 'rebate_pct', label: 'Rabatt', unit: '%', step: 0.5 })}
+          </Section>
+
+          <ListSection title="Zusatzpositionen" hint="Peripherie, Nacharbeit, Bedrucken, Verpackung, Transport …"
+            rows={inputs.extras} onChange={(v) => set('extras', v)}
+            empty={{ label: '', amount: 0, basis: 'stueck', category: 'fertigung' }}
+            cols={[
+              { k: 'label', label: 'Bezeichnung', w: '40%' },
+              { k: 'amount', label: 'Betrag €', type: 'number' },
+              { k: 'basis', label: 'je', type: 'select', options: [['stueck', 'Stück'], ['tausend', '1.000 Stk'], ['los', 'Los'], ['jahr', 'Jahr']] },
+              { k: 'category', label: 'Art', type: 'select', options: [['fertigung', 'Fertigung (vor Ausschuss)'], ['vertrieb', 'Vertrieb (nach HK)']] },
+            ]} />
+
+          <ListSection title="Einmalkosten" hint="Werkzeug, Bemusterung, Prüfmittel, Vorrichtungen – separat ausgewiesen"
+            rows={inputs.one_time} onChange={(v) => set('one_time', v)}
+            empty={{ label: '', cost: 0, price: 0 }}
+            cols={[
+              { k: 'label', label: 'Bezeichnung', w: '45%' },
+              { k: 'cost', label: 'Kosten €', type: 'number' },
+              { k: 'price', label: 'Preis an Kunde €', type: 'number' },
+            ]} />
+        </fieldset>
+      </div>
+
+      <aside className="calc-results">
+        <Results r={r} inputs={inputs} set={set} canWrite={canWrite} calc={calc} versionNo={dirty ? `V${latest.version_no + 1} (Entwurf)` : `V${base.version_no}`} />
+      </aside>
+    </div>
+  )
+}
+
+function Section({ title, children }) {
+  return <div className="card"><h3>{title}</h3><div className="form-grid form-grid-3">{children}</div></div>
+}
+function Info({ children }) {
+  return <div className="calc-info span-3">{children}</div>
+}
+
+function NumField({ k, label, unit, value, def, onChange, step = 'any', hint }) {
+  const changed = def != null && value !== '' && value != null && Number(value) !== Number(def)
+  return (
+    <div className={`field ${changed ? 'field-changed' : ''}`}>
+      <label htmlFor={`in-${k}`}>{label}{unit && <span className="unit"> {unit}</span>}</label>
+      <input id={`in-${k}`} type="number" step={step} className="num" value={value ?? ''}
+        onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))} />
+      {changed
+        ? <button type="button" className="std-reset" onClick={() => onChange(def)} title="Auf Standardwert zurücksetzen">≠ Standard {num(def, 4)} ↺</button>
+        : hint && <small className="hint">{hint}</small>}
+    </div>
+  )
+}
+
+function ListSection({ title, hint, rows, onChange, cols, empty }) {
+  const upd = (i, k, v) => onChange(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)))
+  return (
+    <div className="card">
+      <div className="section-head"><h3>{title}</h3>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => onChange([...(rows || []), { ...empty }])}>+ Position</button></div>
+      <p className="card-sub">{hint}</p>
+      {rows?.length ? (
+        <table className="table items-table">
+          <thead><tr>{cols.map((c) => <th key={c.k} style={{ width: c.w }}>{c.label}</th>)}<th /></tr></thead>
+          <tbody>{rows.map((row, i) => (
+            <tr key={i}>
+              {cols.map((c) => (
+                <td key={c.k}>{c.type === 'select'
+                  ? <select value={row[c.k]} onChange={(e) => upd(i, c.k, e.target.value)}>{c.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
+                  : <input type={c.type || 'text'} step="any" className={c.type === 'number' ? 'num' : ''} value={row[c.k] ?? ''}
+                    onChange={(e) => upd(i, c.k, c.type === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value)} />}
+                </td>))}
+              <td><button type="button" className="icon-btn" title="Entfernen" onClick={() => onChange(rows.filter((_, j) => j !== i))}>×</button></td>
+            </tr>))}
+          </tbody>
+        </table>
+      ) : <div className="empty small">Keine Positionen</div>}
+    </div>
+  )
+}
+
+function Results({ r, inputs, set, canWrite, calc, versionNo }) {
+  return (
+    <div className="stack">
+      <div className="card result-card">
+        <div className="result-head">
+          <span className="muted small">{calc.number} · {versionNo}</span>
+          <span className="result-price">{eur4(r.unit_price)} <small>/ Stk</small></span>
+          <span className="muted">{num2(r.price_per_100)} € je 100 · <b>{num2(r.price_per_1000)} € je 1.000</b></span>
+        </div>
+        <div className="result-kpis">
+          <div><span>Jahresumsatz</span><b>{eur(r.annual_revenue)}</b></div>
+          <div><span>Gewinn p. a.</span><b className={r.annual_profit < 0 ? 'text-critical' : ''}>{eur(r.annual_profit)}</b></div>
+          <div><span>Marge</span><b className={r.margin_pct < 0 ? 'text-critical' : ''}>{num(r.margin_pct, 1)} %</b></div>
+          <div><span>Projektumsatz</span><b>{eur(r.project_revenue)}</b></div>
+          <div><span>Einmalumsatz</span><b>{eur(r.one_time_price)}</b></div>
+          <div><span>1. Jahr gesamt</span><b>{eur(r.first_year_revenue)}</b></div>
+        </div>
+        {r.warnings?.map((w) => <div key={w} className="warn-box">⚠ {w}</div>)}
+      </div>
+
+      <div className="card card-flush">
+        <table className="table table-calc">
+          <thead><tr><th>Kalkulationsschema</th><th className="num">€/Stk</th><th className="num">€/100</th><th className="num">€/1.000</th><th className="num">%</th></tr></thead>
+          <tbody>
+            {r.lines.filter((l) => l.per_piece !== 0 || ['summe'].includes(l.group)).map((l) => (
+              <tr key={l.key} className={`calc-row-${l.group}`}>
+                <td>{l.label}</td>
+                <td className="num">{fix4(l.per_piece)}</td>
+                <td className="num">{num2(l.per_100)}</td>
+                <td className="num">{num2(l.per_1000)}</td>
+                <td className="num">{num(l.share_pct, 1)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="card">
+        <h3>Verkaufspreis festlegen</h3>
+        <div className="field">
+          <label>Preis manuell (€/Stk) – leer = kalkulierter Preis</label>
+          <input type="number" step="0.0001" className="num" disabled={!canWrite} value={inputs.price_override ?? ''}
+            onChange={(e) => set('price_override', e.target.value === '' ? null : Number(e.target.value))} />
+          <small className="hint">{r.price_source === 'manuell' ? 'Gewinn ergibt sich als Differenz zu den Selbstkosten.' : `Kalkuliert mit ${num(inputs.profit_pct, 1)} % Gewinn auf Selbstkosten.`}</small>
+        </div>
+      </div>
+
+      {r.one_time?.length > 0 && (
+        <div className="card">
+          <h3>Einmalkosten</h3>
+          <table className="table table-compact">
+            <thead><tr><th>Position</th><th className="num">Kosten</th><th className="num">Preis</th></tr></thead>
+            <tbody>
+              {r.one_time.map((o, i) => <tr key={i}><td>{o.label}</td><td className="num">{eur(o.cost)}</td><td className="num">{eur(o.price)}</td></tr>)}
+              <tr className="calc-row-summe"><td>Summe · Ergebnis {eur(r.one_time_margin)}</td><td className="num">{eur(r.one_time_cost)}</td><td className="num">{eur(r.one_time_price)}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ------------------------------------------------------------------ Versionen
+const KEY_RESULTS = [
+  ['unit_price', 'Verkaufspreis €/Stk', 4], ['self_cost', 'Selbstkosten €/Stk', 4], ['margin_pct', 'Marge %', 1],
+  ['pieces_per_hour', 'Stück/h', 0], ['annual_revenue', 'Jahresumsatz €', 0], ['annual_profit', 'Gewinn p. a. €', 0],
+  ['one_time_price', 'Einmalumsatz €', 0], ['machine_hours_year', 'Maschinenstunden p. a.', 0],
+]
+
+function VersionsTab({ calc }) {
+  const vs = calc.versions
+  const [a, setA] = useState(vs.length > 1 ? vs[vs.length - 2].version_no : vs[0].version_no)
+  const [b, setB] = useState(vs[vs.length - 1].version_no)
+  const A = vs.find((v) => v.version_no === a)
+  const B = vs.find((v) => v.version_no === b)
+  const changed = Object.keys({ ...A.inputs, ...B.inputs })
+    .filter((k) => !k.endsWith('_id') && JSON.stringify(A.inputs[k]) !== JSON.stringify(B.inputs[k]))
+  const show = (k, v) => {
+    if (Array.isArray(v)) return v.map((x) => `${x.label}: ${num(x.amount ?? x.price ?? 0, 2)}`).join('; ') || '–'
+    if (v === null || v === '' || v === undefined) return '–'
+    return typeof v === 'number' ? num(v, 4) : String(v)
+  }
+  return (
+    <div className="stack">
+      <div className="card card-flush">
+        <table className="table">
+          <thead><tr><th>Version</th><th>Datum</th><th>Von</th><th>Änderung</th><th className="num">€/Stk</th><th className="num">€/1.000</th><th className="num">Marge</th><th className="num">Umsatz p. a.</th><th>Vergleich</th></tr></thead>
+          <tbody>
+            {[...vs].reverse().map((v) => (
+              <tr key={v.id}>
+                <td><strong>V{v.version_no}</strong>{v.version_no === calc.current_version && <> <Badge tone="info">aktuell</Badge></>}</td>
+                <td>{fmtDateTime(v.created_at)}</td>
+                <td>{v.created_by?.name || '–'}</td>
+                <td>{v.change_note || <span className="muted">–</span>}</td>
+                <td className="num">{eur4(v.results.unit_price)}</td>
+                <td className="num">{num2(v.results.price_per_1000)}</td>
+                <td className="num">{num(v.results.margin_pct, 1)} %</td>
+                <td className="num">{eur(v.results.annual_revenue)}</td>
+                <td className="nowrap">
+                  <label className="cmp"><input type="radio" name="va" checked={a === v.version_no} onChange={() => setA(v.version_no)} /> A</label>
+                  <label className="cmp"><input type="radio" name="vb" checked={b === v.version_no} onChange={() => setB(v.version_no)} /> B</label>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="grid-2">
+        <div className="card">
+          <h3>Geänderte Eingaben V{a} → V{b}</h3>
+          {changed.length ? (
+            <table className="table table-compact">
+              <thead><tr><th>Wert</th><th className="num">V{a}</th><th className="num">V{b}</th></tr></thead>
+              <tbody>{changed.map((k) => (
+                <tr key={k}><td>{INPUT_LABELS[k]?.[0] || k} <small className="muted">{INPUT_LABELS[k]?.[1]}</small></td>
+                  <td className="num">{show(k, A.inputs[k])}</td><td className="num"><b>{show(k, B.inputs[k])}</b></td></tr>
+              ))}</tbody>
+            </table>
+          ) : <div className="empty small">Keine Unterschiede in den Eingaben.</div>}
+        </div>
+        <div className="card">
+          <h3>Auswirkung</h3>
+          <table className="table table-compact">
+            <thead><tr><th>Kennzahl</th><th className="num">V{a}</th><th className="num">V{b}</th><th className="num">Δ</th></tr></thead>
+            <tbody>{KEY_RESULTS.map(([k, l, d]) => {
+              const x = A.results[k] || 0, y = B.results[k] || 0
+              const pct = x ? ((y - x) / Math.abs(x)) * 100 : 0
+              return (
+                <tr key={k}><td>{l}</td><td className="num">{num(x, d)}</td><td className="num">{num(y, d)}</td>
+                  <td className={`num ${y - x !== 0 ? 'delta-neutral' : 'muted'}`}>
+                    {y - x === 0 ? '–' : `${y - x > 0 ? '+' : ''}${num(y - x, d)}${k !== 'margin_pct' ? ` (${pct > 0 ? '+' : ''}${num(pct, 1)} %)` : ' Pkt.'}`}</td></tr>
+              )
+            })}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}

@@ -14,6 +14,9 @@ import Quotes from './pages/Quotes'
 import QuoteEditor from './pages/QuoteEditor'
 import Users from './pages/Users'
 import Profile from './pages/Profile'
+import Calculations from './pages/Calculations'
+import CalculationEditor from './pages/CalculationEditor'
+import MasterData from './pages/MasterData'
 import { ROLES } from './constants'
 
 function Layout() {
@@ -25,7 +28,9 @@ function Layout() {
     ['/firmen', 'Firmen', '▣'],
     ['/kontakte', 'Kontakte', '☺'],
     ['/aktivitaeten', 'Aktivitäten', '✓'],
+    ['/kalkulationen', 'Kalkulation', '∑'],
     ['/angebote', 'Angebote', '€'],
+    ['/stammdaten', 'Stammdaten', '≡'],
   ]
   if (isAdmin) nav.push(['/benutzer', 'Benutzer', '⚙'])
   return (
@@ -70,6 +75,9 @@ function App() {
             <Route path="/aktivitaeten" element={<Activities />} />
             <Route path="/angebote" element={<Quotes />} />
             <Route path="/angebote/:id" element={<QuoteEditor />} />
+            <Route path="/kalkulationen" element={<Calculations />} />
+            <Route path="/kalkulationen/:id" element={<CalculationEditor />} />
+            <Route path="/stammdaten" element={<MasterData />} />
             <Route path="/benutzer" element={<Users />} />
             <Route path="/profil" element={<Profile />} />
           </Route>

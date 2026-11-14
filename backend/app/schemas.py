@@ -264,3 +264,137 @@ class Page(BaseModel):
 
 
 Token.model_rebuild()
+
+
+# ---------- Kalkulation ----------
+CalcStatus = Literal["anfrage", "kalkulation", "angeboten", "verhandlung", "gewonnen", "verloren", "zurueckgestellt"]
+CloseReason = Literal["artikelpreis_zu_hoch", "werkzeug_zu_teuer", "investition_zu_teuer",
+                      "projekt_kunde_nicht_gewonnen", "projekt_eingestellt", "lieferzeit", "technik", "sonstiges"]
+
+
+class MachineBase(BaseModel):
+    number: str | None = None
+    name: str = Field(min_length=1)
+    clamping_force_t: float | None = None
+    hourly_rate: float = 0
+    maintenance_rate: float = 0
+    productivity_pct: float = 85
+    operator_factor: float = 0.3
+    location: str | None = None
+    notes: str | None = None
+    active: bool = True
+
+
+class MachineUpdate(MachineBase):
+    name: str | None = None
+
+
+class MachineOut(ORM, MachineBase):
+    id: int
+
+
+class MaterialBase(BaseModel):
+    name: str = Field(min_length=1)
+    family: str | None = None
+    supplier: str | None = None
+    price_per_kg: float = 0
+    density: float | None = None
+    notes: str | None = None
+    active: bool = True
+
+
+class MaterialUpdate(MaterialBase):
+    name: str | None = None
+
+
+class MaterialOut(ORM, MaterialBase):
+    id: int
+
+
+class CalcMeta(BaseModel):
+    article_name: str | None = None
+    customer_article_no: str | None = None
+    own_article_no: str | None = None
+    account_id: int | None = None
+    contact_id: int | None = None
+    opportunity_id: int | None = None
+    status: CalcStatus | None = None
+    probability: int | None = Field(default=None, ge=0, le=100)
+    close_reason: CloseReason | None = None
+    remark: str | None = None
+    last_call_at: datetime | None = None
+    inquiry_date: date | None = None
+    due_date: date | None = None
+    sop_date: date | None = None
+    sync_opportunity: bool | None = None
+    owner_id: int | None = None
+
+
+class CalcCreate(CalcMeta):
+    article_name: str = Field(min_length=1)
+    inputs: dict | None = None
+
+
+class CalcVersionIn(BaseModel):
+    inputs: dict
+    change_note: str | None = None
+
+
+class CalcVersionOut(ORM):
+    id: int
+    version_no: int
+    change_note: str | None
+    inputs: dict
+    results: dict
+    created_by: UserRef | None = None
+    created_at: datetime
+
+
+class PostCalcIn(BaseModel):
+    version_no: int | None = None
+    reference: str | None = None
+    period_from: date | None = None
+    period_to: date | None = None
+    actuals: dict
+    remark: str | None = None
+
+
+class PostCalcOut(ORM):
+    id: int
+    version_no: int
+    reference: str | None
+    period_from: date | None
+    period_to: date | None
+    actuals: dict
+    results: dict
+    traffic_light: str
+    remark: str | None
+    created_by: UserRef | None = None
+    created_at: datetime
+
+
+class CalcOut(ORM, CalcMeta):
+    id: int
+    number: str
+    article_name: str
+    status: str
+    probability: int
+    sync_opportunity: bool
+    current_version: int
+    unit_price: float
+    annual_volume: float
+    annual_revenue: float
+    one_time_revenue: float
+    margin_pct: float
+    last_traffic_light: str | None = None
+    account: AccountRef | None = None
+    contact: ContactRef | None = None
+    opportunity: OpportunityRef | None = None
+    owner: UserRef | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class CalcDetail(CalcOut):
+    versions: list[CalcVersionOut]
+    post_calcs: list[PostCalcOut]

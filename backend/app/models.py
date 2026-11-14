@@ -185,3 +185,132 @@ class QuoteItem(Base):
             float(self.quantity or 0) * float(self.unit_price or 0)
             * (1 - float(self.discount_pct or 0) / 100), 2
         )
+
+
+# =====================================================================
+# Kalkulation (Spritzguss)
+# =====================================================================
+from sqlalchemy import JSON  # noqa: E402
+
+CALC_STATUS = ("anfrage", "kalkulation", "angeboten", "verhandlung", "gewonnen", "verloren", "zurueckgestellt")
+CLOSE_REASONS = (
+    "artikelpreis_zu_hoch", "werkzeug_zu_teuer", "investition_zu_teuer",
+    "projekt_kunde_nicht_gewonnen", "projekt_eingestellt", "lieferzeit", "technik", "sonstiges",
+)
+
+
+class Machine(TimestampMixin, Base):
+    """Maschinen-Stammdaten mit Standard-Stundensätzen."""
+    __tablename__ = "machines"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[str | None] = mapped_column(String(40))
+    name: Mapped[str] = mapped_column(String(120))
+    clamping_force_t: Mapped[float | None] = mapped_column(Float)
+    hourly_rate: Mapped[float] = mapped_column(Float, default=0)        # Maschinenstundensatz €/h (ohne Personal)
+    maintenance_rate: Mapped[float] = mapped_column(Float, default=0)   # Instandhaltung €/h
+    productivity_pct: Mapped[float] = mapped_column(Float, default=85)  # Nutzungsgrad / Produktivität
+    operator_factor: Mapped[float] = mapped_column(Float, default=0.3)  # Personen je Maschine
+    location: Mapped[str | None] = mapped_column(String(80))
+    notes: Mapped[str | None] = mapped_column(Text)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class Material(TimestampMixin, Base):
+    __tablename__ = "materials"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120))          # z. B. PA6 GF30 schwarz
+    family: Mapped[str | None] = mapped_column(String(40))  # PA6, PP, ABS ...
+    supplier: Mapped[str | None] = mapped_column(String(120))
+    price_per_kg: Mapped[float] = mapped_column(Float, default=0)
+    density: Mapped[float | None] = mapped_column(Float)
+    notes: Mapped[str | None] = mapped_column(Text)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class CalcSettings(Base):
+    """Standardwerte für neue Kalkulationen (eine Zeile, id=1)."""
+    __tablename__ = "calc_settings"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    data: Mapped[dict] = mapped_column(JSON, default=dict)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+
+
+class Calculation(TimestampMixin, Base):
+    """Anfrage / Kalkulation mit Versionen."""
+    __tablename__ = "calculations"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[str] = mapped_column(String(30), unique=True, index=True)  # KA-2026-0001
+    article_name: Mapped[str] = mapped_column(String(200))
+    customer_article_no: Mapped[str | None] = mapped_column(String(80))
+    own_article_no: Mapped[str | None] = mapped_column(String(80))
+    account_id: Mapped[int | None] = mapped_column(ForeignKey("accounts.id", ondelete="SET NULL"), index=True)
+    contact_id: Mapped[int | None] = mapped_column(ForeignKey("contacts.id", ondelete="SET NULL"))
+    opportunity_id: Mapped[int | None] = mapped_column(ForeignKey("opportunities.id", ondelete="SET NULL"))
+    status: Mapped[str] = mapped_column(String(30), default="anfrage", index=True)
+    probability: Mapped[int] = mapped_column(Integer, default=25)
+    close_reason: Mapped[str | None] = mapped_column(String(40))
+    remark: Mapped[str | None] = mapped_column(Text)
+    last_call_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    inquiry_date: Mapped[date | None] = mapped_column(Date)
+    due_date: Mapped[date | None] = mapped_column(Date)              # Angebotsabgabe bis
+    sop_date: Mapped[date | None] = mapped_column(Date)              # Serienstart (SOP)
+    sync_opportunity: Mapped[bool] = mapped_column(Boolean, default=True)
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    # Kennzahlen der aktuellen Version (für Listen/Sortierung)
+    current_version: Mapped[int] = mapped_column(Integer, default=0)
+    unit_price: Mapped[float] = mapped_column(Float, default=0)
+    annual_volume: Mapped[float] = mapped_column(Float, default=0)
+    annual_revenue: Mapped[float] = mapped_column(Float, default=0)
+    one_time_revenue: Mapped[float] = mapped_column(Float, default=0)
+    margin_pct: Mapped[float] = mapped_column(Float, default=0)
+
+    account = relationship("Account", lazy="joined")
+    contact = relationship("Contact", lazy="joined")
+    opportunity = relationship("Opportunity", lazy="joined")
+    owner = relationship("User", lazy="joined")
+    versions = relationship("CalculationVersion", back_populates="calculation", cascade="all, delete-orphan",
+                            order_by="CalculationVersion.version_no", lazy="selectin")
+    post_calcs = relationship("PostCalculation", back_populates="calculation", cascade="all, delete-orphan",
+                              order_by="PostCalculation.created_at", lazy="selectin")
+
+
+class CalculationVersion(Base):
+    __tablename__ = "calculation_versions"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    calculation_id: Mapped[int] = mapped_column(ForeignKey("calculations.id", ondelete="CASCADE"), index=True)
+    version_no: Mapped[int] = mapped_column(Integer)
+    change_note: Mapped[str | None] = mapped_column(Text)
+    inputs: Mapped[dict] = mapped_column(JSON)
+    results: Mapped[dict] = mapped_column(JSON)
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+    calculation = relationship("Calculation", back_populates="versions")
+    created_by = relationship("User", lazy="joined")
+
+
+class PostCalculation(Base):
+    """Nachkalkulation zu einer Kalkulationsversion (z. B. je Auftrag/Zeitraum)."""
+    __tablename__ = "post_calculations"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    calculation_id: Mapped[int] = mapped_column(ForeignKey("calculations.id", ondelete="CASCADE"), index=True)
+    version_no: Mapped[int] = mapped_column(Integer)
+    reference: Mapped[str | None] = mapped_column(String(120))  # Auftragsnummer / Zeitraum
+    period_from: Mapped[date | None] = mapped_column(Date)
+    period_to: Mapped[date | None] = mapped_column(Date)
+    actuals: Mapped[dict] = mapped_column(JSON)
+    results: Mapped[dict] = mapped_column(JSON)
+    traffic_light: Mapped[str] = mapped_column(String(10), default="gruen")  # gruen/gelb/rot
+    remark: Mapped[str | None] = mapped_column(Text)
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+    calculation = relationship("Calculation", back_populates="post_calcs")
+    created_by = relationship("User", lazy="joined")
+
+
+def _last_light(self):
+    return self.post_calcs[-1].traffic_light if self.post_calcs else None
+
+
+Calculation.last_traffic_light = property(_last_light)

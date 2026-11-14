@@ -90,7 +90,7 @@ export default function QuoteEditor() {
 
   return (
     <div className="page">
-      <div className="no-print">
+      <div className="no-print quote-screen">
         <Link to="/angebote" className="back">‹ Alle Angebote</Link>
         <header className="page-head">
           <div>

@@ -5,6 +5,8 @@ Ausgelegt für ein Vertriebsteam von bis zu ca. 12 Personen plus eine reine Lese
 
 **Stack:** Python FastAPI · PostgreSQL 16 · React 18 (Vite) · Docker Compose
 
+📄 **Anforderungen und Änderungshistorie: [docs/LASTENHEFT.md](docs/LASTENHEFT.md)** – wird bei jeder Änderung mitgezogen.
+
 ## Funktionen
 
 | Modul | Inhalt |
@@ -15,6 +17,8 @@ Ausgelegt für ein Vertriebsteam von bis zu ca. 12 Personen plus eine reine Lese
 | **Pipeline** | Kanban-Board mit Drag & Drop (Lead → Qualifiziert → Angebot → Verhandlung → Gewonnen/Verloren) und Listenansicht. Wahrscheinlichkeit wird je Phase automatisch gesetzt (überschreibbar), Abschlussdatum beim Gewinnen/Verlieren automatisch. |
 | **Aktivitäten** | Anrufe, Termine, E-Mails, Aufgaben, Notizen mit Fälligkeit; Filter überfällig / heute / 7 Tage; Abhaken direkt in der Liste. |
 | **Angebote** | Positionen mit Menge, Einheit, Einzelpreis, Rabatt; Netto/MwSt./Brutto; automatische Nummer (AN-2026-0001), Duplizieren, Status, Druckansicht → PDF über den Browser. |
+| **Kalkulation** | Anfragen mit Kalkulationsnummer (KA-2026-0001), Zuschlagskalkulation Spritzguss (Material, MGK, Maschine, Instandhaltung, Personal, Rüsten, Montage, FGK, Ausschuss, Verwaltung, Vertrieb, Projektmanagement, Gewinn), Werte je Stück/100/1.000, Versionen mit Vergleich, Verlustgründe, „zuletzt angerufen“, Übernahme in Verkaufschance, Angebot per Klick, Nachkalkulation mit Ampel. |
+| **Stammdaten** | Maschinen (Stundensatz, Instandhaltung, Produktivität, Bedienfaktor), Materialien (€/kg), Parameter (Standard-Zuschläge, Gewinn 7 %, Lohnsätze, Ampel-Schwellen). Alles in der Kalkulation überschreibbar. |
 | **Benutzer** | Anlegen, Rollen, Deaktivieren, Passwort zurücksetzen. Jeder Nutzer kann sein Passwort selbst ändern. |
 
 ### Rollen
@@ -81,10 +85,13 @@ backend/app/
   schemas.py       Ein-/Ausgabe-Validierung (Pydantic)
   auth.py          Login (JWT), Passwort-Hashing (bcrypt), Rollenprüfung
   crud.py          Generischer Router: Suche, Filter, Sortierung, Paging
-  routers/         entities.py, quotes.py, users.py, dashboard.py
+  calc_engine.py   Rechenkern der Kalkulation (Schema und Nachkalkulation)
+  routers/         entities.py, quotes.py, users.py, dashboard.py, calc.py
   seed.py          Demo-Daten
 frontend/src/
-  pages/           Dashboard, Pipeline, Firmen, Firmen-Detail, Kontakte, Aktivitäten, Angebote, Benutzer
+  pages/           Dashboard, Pipeline, Firmen, Kontakte, Aktivitäten, Kalkulationen, Kalkulations-Editor,
+                   Nachkalkulation, Stammdaten, Angebote, Benutzer
+docs/LASTENHEFT.md Lastenheft mit Änderungshistorie
   components/      Formulare, Listen-Seite, Diagramme, Dialoge
   forms.js         Feld-Definitionen der Formulare (hier neue Felder ergänzen)
 ```

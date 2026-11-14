@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, qs } from '../api'
 import { useAuth } from '../auth'
 import { Badge, confirmDelete, EntityForm, ErrorBox, Modal, useFetch } from '../components/ui'
-import { ACCOUNT_TYPES, activityType, contactName, eur, fmtDate, fmtDateTime, QUOTE_STATUS, stageLabel } from '../constants'
+import { ACCOUNT_TYPES, activityType, calcStatus, contactName, eur, eur4, fmtDate, fmtDateTime, QUOTE_STATUS, reasonLabel, stageLabel } from '../constants'
 import { accountFields, activityFields, contactFields, opportunityFields } from '../forms'
 import { DoneToggle, isOverdue } from './Activities'
 import { typeTone } from './Accounts'
@@ -17,6 +17,7 @@ export default function AccountDetail() {
   const opps = useFetch(`/opportunities${qs({ account_id: id, limit: 200 })}`)
   const acts = useFetch(`/activities${qs({ account_id: id, limit: 200, sort: '-due_at' })}`)
   const quotes = useFetch(`/quotes${qs({ account_id: id, limit: 200 })}`)
+  const calcs = useFetch(`/calculations${qs({ account_id: id, limit: 200 })}`)
   const [modal, setModal] = useState(null) // {kind, values}
 
   const cfg = {
@@ -100,6 +101,15 @@ export default function AccountDetail() {
                 <div><strong>{o.name}</strong><br /><small className="muted">{stageLabel(o.stage)} · {o.probability} % · Abschluss {fmtDate(o.close_date)}</small></div>
                 <div className="num"><strong>{eur(o.amount)}</strong></div>
               </div>
+            ))}
+          </Section>
+
+          <Section title="Kalkulationen" count={calcs.data?.total} onAdd={canWrite && (() => nav('/kalkulationen/neu'))}>
+            {calcs.data?.items.map((c) => (
+              <Link key={c.id} to={`/kalkulationen/${c.id}`} className="list-row">
+                <div><strong>{c.number}</strong> {c.article_name}<br /><small className="muted">{calcStatus(c.status).label}{c.close_reason ? ` · ${reasonLabel(c.close_reason)}` : ''} · V{c.current_version} · {c.probability} %</small></div>
+                <div className="num">{eur4(c.unit_price)}<br /><small className="muted">{eur(c.annual_revenue)} p. a.</small></div>
+              </Link>
             ))}
           </Section>
 

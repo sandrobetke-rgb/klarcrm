@@ -8,7 +8,7 @@ from .auth import hash_password
 from .config import settings
 from .database import Base, SessionLocal, engine
 from .models import User
-from .routers import dashboard, entities, quotes, users
+from .routers import calc, dashboard, entities, quotes, users
 
 
 def init_db():
@@ -42,6 +42,10 @@ app.include_router(entities.opportunities, prefix="/api/opportunities", tags=["V
 app.include_router(entities.activities, prefix="/api/activities", tags=["Aktivitäten"])
 app.include_router(quotes.router, prefix="/api/quotes", tags=["Angebote"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
+app.include_router(calc.machines, prefix="/api/machines", tags=["Stammdaten"])
+app.include_router(calc.materials, prefix="/api/materials", tags=["Stammdaten"])
+app.include_router(calc.router, prefix="/api/calc", tags=["Kalkulation"])
+app.include_router(calc.calcs, prefix="/api/calculations", tags=["Kalkulation"])
 
 
 @app.get("/api/health")

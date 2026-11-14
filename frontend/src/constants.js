@@ -50,3 +50,60 @@ export const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('de-DE') : '�
 export const fmtDateTime = (d) =>
   d ? new Date(d).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '–'
 export const contactName = (c) => (c ? `${c.first_name} ${c.last_name}` : '')
+
+// ---------- Kalkulation ----------
+export const CALC_STATUS = [
+  { value: 'anfrage', label: 'Anfrage', tone: 'neutral' },
+  { value: 'kalkulation', label: 'In Kalkulation', tone: 'info' },
+  { value: 'angeboten', label: 'Angeboten', tone: 'info' },
+  { value: 'verhandlung', label: 'Verhandlung', tone: 'info' },
+  { value: 'gewonnen', label: 'Gewonnen', tone: 'good' },
+  { value: 'verloren', label: 'Verloren', tone: 'critical' },
+  { value: 'zurueckgestellt', label: 'Zurückgestellt', tone: 'neutral' },
+]
+export const calcStatus = (v) => CALC_STATUS.find((s) => s.value === v) || { label: v, tone: 'neutral' }
+
+export const CLOSE_REASONS = [
+  { value: 'artikelpreis_zu_hoch', label: 'Artikelpreis zu hoch' },
+  { value: 'werkzeug_zu_teuer', label: 'Werkzeug zu teuer' },
+  { value: 'investition_zu_teuer', label: 'Investition zu teuer' },
+  { value: 'projekt_kunde_nicht_gewonnen', label: 'Kunde hat Projekt nicht gewonnen' },
+  { value: 'projekt_eingestellt', label: 'Projekt beim Kunden eingestellt' },
+  { value: 'lieferzeit', label: 'Lieferzeit / Kapazität' },
+  { value: 'technik', label: 'Technisch nicht machbar' },
+  { value: 'sonstiges', label: 'Sonstiges' },
+]
+export const reasonLabel = (v) => CLOSE_REASONS.find((r) => r.value === v)?.label || v || ''
+
+const n4 = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
+const n2 = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+export const eur4 = (v) => `${n4.format(Number(v || 0))} €`
+export const num2 = (v) => n2.format(Number(v || 0))
+export const num = (v, d = 0) => Number(v || 0).toLocaleString('de-DE', { maximumFractionDigits: d })
+
+export const LIGHTS = {
+  gruen: { label: 'Grün', cls: 'light-green', text: 'im Plan' },
+  gelb: { label: 'Gelb', cls: 'light-yellow', text: 'leicht über Plan' },
+  rot: { label: 'Rot', cls: 'light-red', text: 'deutlich über Plan / Verlust' },
+}
+
+// Beschriftung aller Kalkulations-Eingaben (für Versionsvergleich und Nachkalkulation)
+export const INPUT_LABELS = {
+  annual_volume: ['Jahresmenge', 'Stk'], lot_size: ['Losgröße', 'Stk'], project_years: ['Projektlaufzeit', 'Jahre'],
+  material_name: ['Material', ''], material_price_kg: ['Materialpreis', '€/kg'], part_weight_g: ['Teilgewicht', 'g'],
+  sprue_weight_g: ['Angussgewicht je Schuss', 'g'], regrind_pct: ['Mahlgutanteil Anguss', '%'],
+  masterbatch_pct: ['Masterbatch-Anteil', '%'], masterbatch_price_kg: ['Masterbatch-Preis', '€/kg'],
+  purchased_parts: ['Zukaufteile je Stück', '€'],
+  machine_name: ['Maschine', ''], machine_rate_h: ['Maschinenstundensatz', '€/h'], maintenance_rate_h: ['Instandhaltung', '€/h'],
+  cycle_time_s: ['Zykluszeit', 's'], cavities: ['Fachzahl', ''], productivity_pct: ['Produktivität / Nutzungsgrad', '%'],
+  operator_factor: ['Bedienfaktor', 'Pers./Masch.'], labor_rate_h: ['Lohnsatz Bediener', '€/h'],
+  setup_time_h: ['Rüstzeit je Los', 'h'], setup_persons: ['Einrichter je Rüstvorgang', 'Pers.'], setup_rate_h: ['Lohnsatz Einrichter', '€/h'],
+  startup_scrap_pcs: ['Anfahrausschuss je Los', 'Stk'],
+  assembly_time_s: ['Montagezeit je Stück', 's'], assembly_persons: ['Montage-Personen', 'Pers.'], assembly_rate_h: ['Lohnsatz Montage', '€/h'],
+  assembly_productivity_pct: ['Produktivität Montage', '%'],
+  mgk_pct: ['Materialgemeinkosten', '%'], fgk_pct: ['Fertigungsgemeinkosten', '%'], scrap_pct: ['Ausschuss', '%'],
+  vwgk_pct: ['Verwaltungsgemeinkosten', '%'], vtgk_pct: ['Vertriebsgemeinkosten', '%'], pm_pct: ['Projektmanagement', '%'],
+  profit_pct: ['Gewinn', '%'], cash_discount_pct: ['Skonto', '%'], rebate_pct: ['Rabatt', '%'], price_override: ['Verkaufspreis manuell', '€/Stk'],
+  extras: ['Zusatzpositionen', ''], one_time: ['Einmalkosten (Werkzeug …)', ''],
+}
+export const fix4 = (v) => n4.format(Number(v || 0))

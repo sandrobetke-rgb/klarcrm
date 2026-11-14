@@ -10,7 +10,7 @@ import { confirmDelete, EntityForm, ErrorBox, Modal, Pager, SearchInput, useFetc
  */
 export default function ListPage({
   title, subtitle, path, columns, fields, entityLabel, defaultSort, filters = [], baseParams = {},
-  newDefaults = {}, onRowClick, toForm = (r) => r, extraActions, limit = 50,
+  newDefaults = {}, onRowClick, toForm = (r) => r, extraActions, limit = 50, top, rowClass,
 }) {
   const { canWrite } = useAuth()
   const [q, setQ] = useState('')
@@ -49,6 +49,7 @@ export default function ListPage({
           )}
         </div>
       </header>
+      {top}
       <div className="filters">
         <SearchInput value={q} onChange={(v) => { setQ(v); setOffset(0) }} />
         {filters.map((f) => (
@@ -77,7 +78,7 @@ export default function ListPage({
           </thead>
           <tbody>
             {data?.items.map((r) => (
-              <tr key={r.id} className="row-click"
+              <tr key={r.id} className={`row-click ${rowClass ? rowClass(r) : ''}`}
                 onClick={() => (onRowClick ? onRowClick(r) : canWrite && fields && setEditing(toForm(r)))}>
                 {columns.map((c) => <td key={c.key} className={c.className}>{c.render ? c.render(r, reload) : r[c.key] ?? '–'}</td>)}
               </tr>

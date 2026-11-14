@@ -19,7 +19,12 @@ jobs:
           for i in $(seq 1 40); do curl -sf http://localhost:8080/api/health && break; sleep 3; done
           curl -sf http://localhost:8080/api/health
           curl -sf -X POST http://localhost:8080/api/auth/login -d "username=admin@firma.de&password=admin1234" > /dev/null
-          echo "Login OK"
+          TOKEN=$(curl -sf -X POST http://localhost:8080/api/auth/login -d "username=admin@firma.de&password=admin1234" | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+          PRICE=$(curl -sf -X POST http://localhost:8080/api/calc/preview -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+            -d '{"annual_volume":100000,"lot_size":10000,"material_price_kg":3,"part_weight_g":20,"sprue_weight_g":4,"machine_rate_h":45,"maintenance_rate_h":5,"cycle_time_s":30,"cavities":4,"productivity_pct":85,"operator_factor":0.3,"labor_rate_h":38,"setup_time_h":2,"setup_persons":1,"setup_rate_h":48,"startup_scrap_pcs":0,"scrap_pct":3}' \
+            | python3 -c "import sys,json;print(json.load(sys.stdin)['unit_price'])")
+          echo "Referenzkalkulation: $PRICE €/Stk (erwartet 0.315)"
+          test "$PRICE" = "0.315"
       - name: Logs bei Fehler
         if: failure()
         run: docker compose logs

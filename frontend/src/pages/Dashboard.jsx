@@ -23,6 +23,7 @@ export default function Dashboard() {
   const { user } = useAuth()
   const [owner, setOwner] = useState(null)
   const { data, error } = useFetch('/dashboard' + qs({ owner_id: owner }))
+  const cs = useFetch('/calculations/stats' + qs({ owner_id: owner }))
   if (error) return <ErrorBox error={error} />
   if (!data) return <div className="loading">Lade Dashboard…</div>
   const k = data.kpis
@@ -49,6 +50,16 @@ export default function Dashboard() {
         <Kpi label="Offene Angebote" value={eur(k.open_quotes.amount)} sub={`${k.open_quotes.count} versendet`} to="/angebote" />
         <Kpi label="Aufgaben" value={k.activities_overdue} sub={`überfällig · ${k.activities_today} heute fällig`} to="/aktivitaeten" />
       </section>
+
+      {cs.data && (
+        <section className="kpi-grid">
+          <Kpi label="Anfragen / Kalkulationen offen" value={cs.data.count_open} sub={`${cs.data.overdue_calls} seit > 14 Tagen ohne Anruf`} to="/kalkulationen" />
+          <Kpi label="Potenzial Jahresumsatz" value={eur(cs.data.open_revenue)} sub={`gewichtet ${eur(cs.data.open_weighted)}`} to="/kalkulationen" />
+          <Kpi label="Werkzeuge offen" value={eur(cs.data.open_tooling)} sub="Einmalumsatz in offenen Kalkulationen" />
+          <Kpi label="Trefferquote Kalkulationen" value={cs.data.hit_rate != null ? `${cs.data.hit_rate.toLocaleString('de-DE')} %` : '–'} sub={`${cs.data.won_count} gewonnen / ${cs.data.lost_count} verloren`} />
+          <Kpi label="Nachkalkulation" value={`${cs.data.traffic_lights.gruen} / ${cs.data.traffic_lights.gelb} / ${cs.data.traffic_lights.rot}`} sub="grün / gelb / rot" to="/kalkulationen" />
+        </section>
+      )}
 
       <section className="grid-2">
         <div className="card">
