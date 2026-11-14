@@ -10,6 +10,7 @@ Schema je Stück:
   Fertigungseinzelkosten (FEK) = Maschine + Instandhaltung + Personal (je Stück über Stück/h)
                                  + Rüsten (je Los / Losgröße) + Montage
   Fertigungsgemeinkosten (FGK) = FEK × FGK-%
+  Qualität / Werkzeugbau       = je % auf FEK (dann Teil der Herstellkosten) oder auf HK (dann nach den HK)
   Sondereinzelkosten Fertigung = Zusatzpositionen „Fertigung“ (Peripherie, Nacharbeit, Bedrucken …)
   Herstellkosten vor Ausschuss = Summe
   Ausschuss                    = HK vor Ausschuss / (1 − Ausschuss-%) − HK vor Ausschuss
@@ -35,6 +36,8 @@ DEFAULT_SETTINGS = {
     "vwgk_pct": 6.0,
     "vtgk_pct": 3.0,
     "pm_pct": 2.0,
+    "quality_pct": 1.5,            # Qualität (Prüfung, Messtechnik, QS)
+    "toolshop_pct": 2.0,           # Werkzeugbau (Wartung, Instandhaltung Werkzeuge)
     "profit_pct": 7.0,
     "cash_discount_pct": 0.0,
     "rebate_pct": 0.0,
@@ -66,6 +69,9 @@ DEFAULT_INPUTS = {
     # Zuschläge
     "mgk_pct": 6.0, "fgk_pct": 12.0, "scrap_pct": 3.0, "vwgk_pct": 6.0, "vtgk_pct": 3.0,
     "pm_pct": 2.0, "profit_pct": 7.0, "cash_discount_pct": 0.0, "rebate_pct": 0.0,
+    # Qualität / Werkzeugbau: 0 als Vorgabe, damit ältere Versionen unverändert rechnen;
+    # neue Kalkulationen erhalten die Werte aus den Parametern. Basis: "fek" oder "hk".
+    "quality_pct": 0.0, "quality_base": "hk", "toolshop_pct": 0.0, "toolshop_base": "fek",
     "price_override": None,
     # Listen
     "extras": [],     # [{label, amount, basis: stueck|tausend|los|jahr, category: fertigung|vertrieb}]
@@ -80,6 +86,11 @@ def _f(v, default=0.0) -> float:
         return float(v)
     except (TypeError, ValueError):
         return float(default)
+
+
+def _p(v) -> str:
+    """Prozentwert für Beschriftungen im deutschen Format (1,5)."""
+    return f"{_f(v):g}".replace(".", ",")
 
 
 def normalize(inputs: dict) -> dict:
@@ -130,6 +141,10 @@ def compute(raw: dict) -> dict:
     assembly = (_f(i["assembly_time_s"]) / 3600 * _f(i["assembly_rate_h"]) * _f(i["assembly_persons"]) / ap) if ap > 0 else 0.0
     fek = run_cost_piece + setup + assembly
     fgk = fek * _f(i["fgk_pct"]) / 100
+    q_base = "fek" if i.get("quality_base") == "fek" else "hk"
+    t_base = "hk" if i.get("toolshop_base") == "hk" else "fek"
+    quality_f = fek * _f(i["quality_pct"]) / 100 if q_base == "fek" else 0.0
+    toolshop_f = fek * _f(i["toolshop_pct"]) / 100 if t_base == "fek" else 0.0
 
     # --- Zusatzpositionen
     def extra_piece(e):
@@ -148,7 +163,7 @@ def compute(raw: dict) -> dict:
     sek_v = sum(e["per_piece"] for e in extras_detail if e["category"] == "vertrieb")
 
     # --- Herstellkosten & Ausschuss
-    hk_pre = mek + mgk + fek + fgk + sek_f
+    hk_pre = mek + mgk + fek + fgk + quality_f + toolshop_f + sek_f
     scrap_rate = min(_f(i["scrap_pct"]) / 100, 0.95)
     hk = hk_pre / (1 - scrap_rate)
     scrap = hk - hk_pre
@@ -156,7 +171,9 @@ def compute(raw: dict) -> dict:
     vwgk = hk * _f(i["vwgk_pct"]) / 100
     vtgk = hk * _f(i["vtgk_pct"]) / 100
     pm = hk * _f(i["pm_pct"]) / 100
-    sk = hk + vwgk + vtgk + pm + sek_v
+    quality_h = hk * _f(i["quality_pct"]) / 100 if q_base == "hk" else 0.0
+    toolshop_h = hk * _f(i["toolshop_pct"]) / 100 if t_base == "hk" else 0.0
+    sk = hk + vwgk + vtgk + pm + quality_h + toolshop_h + sek_v
 
     sd = _f(i["cash_discount_pct"]) / 100
     rb = _f(i["rebate_pct"]) / 100
@@ -183,23 +200,27 @@ def compute(raw: dict) -> dict:
     lines = [
         ("mek_material", "Material (inkl. Angussanteil)", "material", mek_material),
         ("purchased", "Zukaufteile", "material", purchased),
-        ("mgk", f"Materialgemeinkosten {_f(i['mgk_pct']):g} %", "material", mgk),
+        ("mgk", f"Materialgemeinkosten {_p(i['mgk_pct'])} %", "material", mgk),
         ("machine", "Maschine", "fertigung", machine),
         ("maintenance", "Instandhaltung", "fertigung", maintenance),
         ("labor", "Personal Maschine", "fertigung", labor),
         ("setup", "Rüsten (je Los umgelegt)", "fertigung", setup),
         ("assembly", "Montage", "fertigung", assembly),
-        ("fgk", f"Fertigungsgemeinkosten {_f(i['fgk_pct']):g} %", "fertigung", fgk),
+        ("fgk", f"Fertigungsgemeinkosten {_p(i['fgk_pct'])} %", "fertigung", fgk),
+        ("quality_f", f"Qualität {_p(i['quality_pct'])} % auf FEK", "fertigung", quality_f),
+        ("toolshop_f", f"Werkzeugbau {_p(i['toolshop_pct'])} % auf FEK", "fertigung", toolshop_f),
         ("sek_f", "Sondereinzelkosten Fertigung", "fertigung", sek_f),
         ("hk_pre", "Herstellkosten vor Ausschuss", "summe", hk_pre),
-        ("scrap", f"Ausschuss {_f(i['scrap_pct']):g} %", "fertigung", scrap),
+        ("scrap", f"Ausschuss {_p(i['scrap_pct'])} %", "fertigung", scrap),
         ("hk", "Herstellkosten", "summe", hk),
-        ("vwgk", f"Verwaltungsgemeinkosten {_f(i['vwgk_pct']):g} %", "gemeinkosten", vwgk),
-        ("vtgk", f"Vertriebsgemeinkosten {_f(i['vtgk_pct']):g} %", "gemeinkosten", vtgk),
-        ("pm", f"Projektmanagement {_f(i['pm_pct']):g} %", "gemeinkosten", pm),
+        ("vwgk", f"Verwaltungsgemeinkosten {_p(i['vwgk_pct'])} %", "gemeinkosten", vwgk),
+        ("vtgk", f"Vertriebsgemeinkosten {_p(i['vtgk_pct'])} %", "gemeinkosten", vtgk),
+        ("pm", f"Projektmanagement {_p(i['pm_pct'])} %", "gemeinkosten", pm),
+        ("quality_h", f"Qualität {_p(i['quality_pct'])} % auf HK", "gemeinkosten", quality_h),
+        ("toolshop_h", f"Werkzeugbau {_p(i['toolshop_pct'])} % auf HK", "gemeinkosten", toolshop_h),
         ("sek_v", "Sondereinzelkosten Vertrieb", "gemeinkosten", sek_v),
         ("sk", "Selbstkosten", "summe", sk),
-        ("profit", "Gewinn" + (f" {_f(i['profit_pct']):g} %" if price_source == "kalkuliert" else " (Rest)"), "ergebnis", profit),
+        ("profit", "Gewinn" + (f" {_p(i['profit_pct'])} %" if price_source == "kalkuliert" else " (Rest)"), "ergebnis", profit),
         ("discounts", "Skonto / Rabatt", "ergebnis", discounts),
         ("price", "Verkaufspreis", "summe", price),
     ]

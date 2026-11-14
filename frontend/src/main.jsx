@@ -18,6 +18,7 @@ import Calculations from './pages/Calculations'
 import CalculationEditor from './pages/CalculationEditor'
 import MasterData from './pages/MasterData'
 import { ROLES } from './constants'
+import Footer from './components/Footer'
 
 function Layout() {
   const { user, logout, isAdmin } = useAuth()
@@ -55,7 +56,10 @@ function Layout() {
           <button className="btn btn-ghost btn-sm logout" onClick={logout}>Abmelden</button>
         </div>
       </aside>
-      <main className="content"><Outlet /></main>
+      <main className="content">
+        <Outlet />
+        <Footer />
+      </main>
     </div>
   )
 }

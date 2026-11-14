@@ -103,7 +103,23 @@ export const INPUT_LABELS = {
   assembly_productivity_pct: ['Produktivität Montage', '%'],
   mgk_pct: ['Materialgemeinkosten', '%'], fgk_pct: ['Fertigungsgemeinkosten', '%'], scrap_pct: ['Ausschuss', '%'],
   vwgk_pct: ['Verwaltungsgemeinkosten', '%'], vtgk_pct: ['Vertriebsgemeinkosten', '%'], pm_pct: ['Projektmanagement', '%'],
+  quality_pct: ['Qualität', '%'], quality_base: ['Basis Qualität', ''], toolshop_pct: ['Werkzeugbau', '%'], toolshop_base: ['Basis Werkzeugbau', ''],
   profit_pct: ['Gewinn', '%'], cash_discount_pct: ['Skonto', '%'], rebate_pct: ['Rabatt', '%'], price_override: ['Verkaufspreis manuell', '€/Stk'],
   extras: ['Zusatzpositionen', ''], one_time: ['Einmalkosten (Werkzeug …)', ''],
 }
 export const fix4 = (v) => n4.format(Number(v || 0))
+
+export const CALL_RESULTS = [
+  { value: 'nicht_erreicht', label: 'Nicht erreicht', tone: 'neutral' },
+  { value: 'rueckruf_vereinbart', label: 'Rückruf vereinbart', tone: 'info' },
+  { value: 'kunde_entscheidet_noch', label: 'Kunde entscheidet noch', tone: 'info' },
+  { value: 'preis_nachverhandeln', label: 'Preis nachverhandeln', tone: 'warning' },
+  { value: 'neu_kalkulieren', label: 'Neu kalkulieren / Änderung', tone: 'warning' },
+  { value: 'auftrag_in_aussicht', label: 'Auftrag in Aussicht', tone: 'good' },
+  { value: 'auftrag_erhalten', label: 'Auftrag erhalten', tone: 'good' },
+  { value: 'absage', label: 'Absage', tone: 'critical' },
+  { value: 'sonstiges', label: 'Sonstiges', tone: 'neutral' },
+]
+export const callResult = (v) => CALL_RESULTS.find((r) => r.value === v) || { label: v, tone: 'neutral' }
+
+export const BRAND = { name: 'SB Thinkworks', claim: 'built with clarity', year: new Date().getFullYear() }

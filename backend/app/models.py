@@ -309,6 +309,39 @@ class PostCalculation(Base):
     created_by = relationship("User", lazy="joined")
 
 
+CALL_RESULTS = (
+    "nicht_erreicht", "rueckruf_vereinbart", "kunde_entscheidet_noch", "preis_nachverhandeln",
+    "neu_kalkulieren", "auftrag_in_aussicht", "auftrag_erhalten", "absage", "sonstiges",
+)
+
+
+class CalculationCall(Base):
+    """Anruf zu einer Kalkulation mit Ergebnis."""
+    __tablename__ = "calculation_calls"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    calculation_id: Mapped[int] = mapped_column(ForeignKey("calculations.id", ondelete="CASCADE"), index=True)
+    called_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    result: Mapped[str] = mapped_column(String(40), default="sonstiges")
+    note: Mapped[str | None] = mapped_column(Text)
+    contact_id: Mapped[int | None] = mapped_column(ForeignKey("contacts.id", ondelete="SET NULL"))
+    follow_up: Mapped[date | None] = mapped_column(Date)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+
+    contact = relationship("Contact", lazy="joined")
+    user = relationship("User", lazy="joined")
+
+
+Calculation.calls = relationship("CalculationCall", cascade="all, delete-orphan",
+                                 order_by="CalculationCall.called_at", lazy="selectin")
+
+
+def _last_call(self):
+    return self.calls[-1] if self.calls else None
+
+
+Calculation.last_call = property(_last_call)
+
+
 def _last_light(self):
     return self.post_calcs[-1].traffic_light if self.post_calcs else None
 

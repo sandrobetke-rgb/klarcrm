@@ -29,7 +29,8 @@ const materialFields = [
 const PARAMS = [
   ['Lohnsätze', [['labor_rate_h', 'Lohnsatz Maschinenbediener', '€/h'], ['setup_rate_h', 'Lohnsatz Einrichter', '€/h'], ['assembly_rate_h', 'Lohnsatz Montage', '€/h']]],
   ['Zuschläge', [['mgk_pct', 'Materialgemeinkosten', '%'], ['fgk_pct', 'Fertigungsgemeinkosten', '%'], ['scrap_pct', 'Ausschuss', '%'],
-    ['vwgk_pct', 'Verwaltungsgemeinkosten', '%'], ['vtgk_pct', 'Vertriebsgemeinkosten', '%'], ['pm_pct', 'Projektmanagement', '%']]],
+    ['vwgk_pct', 'Verwaltungsgemeinkosten', '%'], ['vtgk_pct', 'Vertriebsgemeinkosten', '%'], ['pm_pct', 'Projektmanagement', '%'],
+    ['quality_pct', 'Qualität', '%'], ['toolshop_pct', 'Werkzeugbau', '%']]],
   ['Gewinn & Konditionen', [['profit_pct', 'Gewinn', '%'], ['cash_discount_pct', 'Skonto', '%'], ['rebate_pct', 'Rabatt', '%']]],
   ['Fertigung', [['productivity_pct', 'Produktivität (ohne Maschine)', '%'], ['assembly_productivity_pct', 'Produktivität Montage', '%'],
     ['setup_time_h', 'Rüstzeit je Los', 'h'], ['setup_persons', 'Einrichter je Rüstvorgang', 'Pers.'], ['startup_scrap_pcs', 'Anfahrausschuss je Los', 'Stk']]],

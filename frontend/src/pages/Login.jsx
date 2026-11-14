@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { ErrorBox } from '../components/ui'
+import Footer from '../components/Footer'
 
 export default function Login() {
   const { user, login } = useAuth()
@@ -39,6 +40,7 @@ export default function Login() {
         <ErrorBox error={error} />
         <button className="btn btn-primary btn-block" disabled={busy}>{busy ? 'Anmelden…' : 'Anmelden'}</button>
       </form>
+      <Footer />
     </div>
   )
 }

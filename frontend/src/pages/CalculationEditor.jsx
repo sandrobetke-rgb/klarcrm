@@ -2,12 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth'
-import { Badge, confirmDelete, EntityForm, ErrorBox, Modal } from '../components/ui'
+import { Badge, confirmDelete, EntityForm, ErrorBox } from '../components/ui'
 import {
   CALC_STATUS, calcStatus, CLOSE_REASONS, eur, eur4, fix4, fmtDate, fmtDateTime, INPUT_LABELS, num, num2, reasonLabel,
 } from '../constants'
 import { Light } from './Calculations'
 import PostCalcTab from './PostCalcTab'
+import CallPanel, { LastCall } from '../components/CallPanel'
 
 export const calcMetaFields = [
   { name: 'article_name', label: 'Artikelbezeichnung', required: true, span: true },
@@ -28,7 +29,7 @@ export const calcMetaFields = [
   { name: 'remark', label: 'Bemerkung', type: 'textarea', span: true, rows: 3 },
 ]
 
-const TABS = [['calc', 'Kalkulation'], ['meta', 'Anfrage & Status'], ['versions', 'Versionen'], ['post', 'Nachkalkulation']]
+const TABS = [['calc', 'Kalkulation'], ['calls', 'Anrufe'], ['meta', 'Anfrage & Status'], ['versions', 'Versionen'], ['post', 'Nachkalkulation']]
 
 export default function CalculationEditor() {
   const { id } = useParams()
@@ -85,8 +86,14 @@ export default function CalculationEditor() {
             {calc.close_reason && ` · ${reasonLabel(calc.close_reason)}`}
             {calc.opportunity && <> · Chance: <Link to="/pipeline">{calc.opportunity.name}</Link></>}
           </p>
+          <div className="lastcall-head">
+            <span className="muted small">Zuletzt angerufen:</span>
+            <LastCall call={calc.last_call} date={calc.last_call_at} onClick={() => setTab('calls')}
+              open={!['gewonnen', 'verloren', 'zurueckgestellt'].includes(calc.status)} />
+            {calc.last_call?.note && <span className="lastcall-note">„{calc.last_call.note}“</span>}
+          </div>
         </div>
-        {canWrite && <HeaderActions calc={calc} setCalc={setCalc} onDelete={remove} />}
+        {canWrite && <HeaderActions calc={calc} setCalc={setCalc} onDelete={remove} onCall={() => setTab('calls')} />}
       </header>
       <div className="tabs no-print">
         {TABS.map(([k, l]) => (
@@ -104,20 +111,19 @@ export default function CalculationEditor() {
             onCancel={() => setTab('calc')} />
         </div>
       )}
+      {tab === 'calls' && <CallPanel calc={calc} onChange={setCalc} />}
       {tab === 'versions' && <VersionsTab calc={calc} />}
       {tab === 'post' && <PostCalcTab calc={calc} setCalc={setCalc} />}
     </div>
   )
 }
 
-function HeaderActions({ calc, setCalc, onDelete }) {
+function HeaderActions({ calc, setCalc, onDelete, onCall }) {
   const nav = useNavigate()
-  const [callOpen, setCallOpen] = useState(false)
-  const [note, setNote] = useState('')
   const [err, setErr] = useState(null)
   return (
     <div className="toolbar no-print">
-      <button className="btn btn-ghost" onClick={() => setCallOpen(true)}>☎ Anruf dokumentieren</button>
+      <button className="btn btn-ghost" onClick={onCall}>☎ Anruf dokumentieren</button>
       {!calc.opportunity_id && <button className="btn btn-ghost" onClick={async () => {
         try { setCalc(await api.post(`/calculations/${calc.id}/opportunity`)) } catch (e) { setErr(e) }
       }}>→ Verkaufschance anlegen</button>}
@@ -128,21 +134,6 @@ function HeaderActions({ calc, setCalc, onDelete }) {
       }}>→ Angebot erstellen</button>
       <button className="btn btn-danger-ghost" onClick={onDelete}>Löschen</button>
       <ErrorBox error={err} />
-      {callOpen && (
-        <Modal title="Anruf dokumentieren" onClose={() => setCallOpen(false)}>
-          <div className="form">
-            <p className="muted">Setzt „zuletzt angerufen“ auf jetzt und legt eine Aktivität beim Kunden an.</p>
-            <div className="field"><label>Gesprächsnotiz</label><textarea rows={4} value={note} onChange={(e) => setNote(e.target.value)} /></div>
-            <div className="form-actions"><span className="spacer" />
-              <button className="btn btn-ghost" onClick={() => setCallOpen(false)}>Abbrechen</button>
-              <button className="btn btn-primary" onClick={async () => {
-                setCalc(await api.post(`/calculations/${calc.id}/call`, { note }))
-                setNote(''); setCallOpen(false)
-              }}>Speichern</button>
-            </div>
-          </div>
-        </Modal>
-      )}
     </div>
   )
 }
@@ -179,7 +170,7 @@ function CalcTab({ calc, setCalc, master }) {
     material_price_kg: material?.price_per_kg,
     labor_rate_h: S.labor_rate_h, setup_rate_h: S.setup_rate_h, assembly_rate_h: S.assembly_rate_h,
     mgk_pct: S.mgk_pct, fgk_pct: S.fgk_pct, scrap_pct: S.scrap_pct, vwgk_pct: S.vwgk_pct, vtgk_pct: S.vtgk_pct,
-    pm_pct: S.pm_pct, profit_pct: S.profit_pct, cash_discount_pct: S.cash_discount_pct, rebate_pct: S.rebate_pct,
+    pm_pct: S.pm_pct, quality_pct: S.quality_pct, toolshop_pct: S.toolshop_pct, profit_pct: S.profit_pct, cash_discount_pct: S.cash_discount_pct, rebate_pct: S.rebate_pct,
     setup_time_h: S.setup_time_h, setup_persons: S.setup_persons, startup_scrap_pcs: S.startup_scrap_pcs,
     assembly_productivity_pct: S.assembly_productivity_pct,
   }), [machine, material, S])
@@ -288,6 +279,10 @@ function CalcTab({ calc, setCalc, master }) {
             {F({ k: 'vwgk_pct', label: 'Verwaltungsgemeinkosten', unit: '%', step: 0.5 })}
             {F({ k: 'vtgk_pct', label: 'Vertriebsgemeinkosten', unit: '%', step: 0.5 })}
             {F({ k: 'pm_pct', label: 'Projektmanagement', unit: '%', step: 0.5 })}
+            {F({ k: 'quality_pct', label: 'Qualität', unit: '%', step: 0.5, hint: 'Prüfung, Messtechnik, QS' })}
+            <BaseSelect k="quality_base" value={inputs.quality_base} onChange={(v) => set('quality_base', v)} label="Basis Qualität" />
+            {F({ k: 'toolshop_pct', label: 'Werkzeugbau', unit: '%', step: 0.5, hint: 'Wartung / Instandhaltung Werkzeuge' })}
+            <BaseSelect k="toolshop_base" value={inputs.toolshop_base} onChange={(v) => set('toolshop_base', v)} label="Basis Werkzeugbau" />
             {F({ k: 'profit_pct', label: 'Gewinn', unit: '%', step: 0.5 })}
             {F({ k: 'cash_discount_pct', label: 'Skonto', unit: '%', step: 0.5 })}
             {F({ k: 'rebate_pct', label: 'Rabatt', unit: '%', step: 0.5 })}
@@ -318,6 +313,16 @@ function CalcTab({ calc, setCalc, master }) {
         <Results r={r} inputs={inputs} set={set} canWrite={canWrite} calc={calc} versionNo={dirty ? `V${latest.version_no + 1} (Entwurf)` : `V${base.version_no}`} />
       </aside>
     </div>
+  )
+}
+
+function BaseSelect({ k, value, onChange, label }) {
+  return (
+    <div className="field"><label htmlFor={`in-${k}`}>{label}</label>
+      <select id={`in-${k}`} value={value || (k === 'quality_base' ? 'hk' : 'fek')} onChange={(e) => onChange(e.target.value)}>
+        <option value="fek">auf FEK (in den HK)</option>
+        <option value="hk">auf HK (nach den HK)</option>
+      </select></div>
   )
 }
 

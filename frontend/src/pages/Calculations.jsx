@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import CallPanel, { LastCall } from '../components/CallPanel'
 import { useAuth } from '../auth'
 import { BarList } from '../components/charts'
 import ListPage from '../components/ListPage'
-import { Badge, useFetch } from '../components/ui'
-import { CALC_STATUS, calcStatus, CLOSE_REASONS, contactName, eur, eur4, fmtDate, LIGHTS, num, reasonLabel } from '../constants'
+import { Badge, Modal, useFetch } from '../components/ui'
+import { CALC_STATUS, calcStatus, CLOSE_REASONS, contactName, eur, eur4, LIGHTS, num, reasonLabel } from '../constants'
 
 export function Light({ value, withText }) {
   if (!value) return <span className="muted">–</span>
@@ -11,7 +13,6 @@ export function Light({ value, withText }) {
   return <span className="light-wrap" title={`Nachkalkulation: ${l.label} – ${l.text}`}><span className={`light ${l.cls}`} />{withText && l.label}</span>
 }
 
-const callAge = (d) => (d ? (Date.now() - new Date(d)) / 86400000 : Infinity)
 
 function Stats() {
   const { data } = useFetch('/calculations/stats')
@@ -46,11 +47,26 @@ function Stats() {
   )
 }
 
+function CallModal({ id, onClose }) {
+  const { data, reload } = useFetch(`/calculations/${id}`)
+  const [calc, setCalc] = useState(null)
+  const c = calc || data
+  return (
+    <Modal wide title={c ? `Anrufe · ${c.number} ${c.article_name}` : 'Anrufe'} onClose={onClose}>
+      <div className="form">{c ? <CallPanel calc={c} compact onChange={(x) => { setCalc(x); reload() }} /> : 'Lade…'}</div>
+    </Modal>
+  )
+}
+
 export default function Calculations() {
   const nav = useNavigate()
   const { canWrite } = useAuth()
+  const [callFor, setCallFor] = useState(null)
+  const [tick, setTick] = useState(0)
   return (
-    <ListPage
+    <>
+    {callFor && <CallModal id={callFor} onClose={() => { setCallFor(null); setTick((t) => t + 1) }} />}
+    <ListPage key={tick}
       title="Kalkulationen" subtitle="Anfragen, Kalkulationen und ihr Weg zum Auftrag" path="/calculations"
       entityLabel="Kalkulation" defaultSort="-updated_at" limit={100}
       top={<Stats />}
@@ -74,13 +90,17 @@ export default function Calculations() {
         { key: 'annual_volume', label: 'Menge p. a.', sort: 'annual_volume', className: 'num', render: (r) => num(r.annual_volume) },
         { key: 'annual_revenue', label: 'Umsatz p. a.', sort: 'annual_revenue', className: 'num', render: (r) => <>{eur(r.annual_revenue)}{r.one_time_revenue > 0 && <><br /><small className="muted">+ {eur(r.one_time_revenue)} einm.</small></>}</> },
         { key: 'probability', label: 'Wahrsch.', sort: 'probability', className: 'num', render: (r) => <>{r.probability} %<br /><small className="muted">{eur(r.annual_revenue * r.probability / 100)}</small></> },
-        { key: 'last_call_at', label: 'Zuletzt angerufen', sort: 'last_call_at', render: (r) => {
-          const open = !['gewonnen', 'verloren', 'zurueckgestellt'].includes(r.status)
-          return <span className={open && callAge(r.last_call_at) > 14 ? 'text-critical' : ''}>{fmtDate(r.last_call_at)}</span>
-        } },
+        { key: 'last_call_at', label: 'Zuletzt angerufen / Ergebnis', sort: 'last_call_at', render: (r) => (
+          <div onClick={(e) => e.stopPropagation()}>
+            <LastCall call={r.last_call} date={r.last_call_at} open={!['gewonnen', 'verloren', 'zurueckgestellt'].includes(r.status)}
+              onClick={() => setCallFor(r.id)} />
+            {r.last_call?.note && <div className="small muted truncate" title={r.last_call.note}>{r.last_call.note}</div>}
+          </div>
+        ) },
         { key: 'remark', label: 'Bemerkung', render: (r) => <span className="truncate" title={r.remark || ''}>{r.remark || '–'}</span> },
         { key: 'nk', label: 'NK', render: (r) => <Light value={r.last_traffic_light} /> },
       ]}
     />
+    </>
   )
 }

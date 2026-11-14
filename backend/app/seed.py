@@ -50,6 +50,7 @@ def run():
     if db.scalar(select(func.count()).select_from(Account)):
         print("Es existieren bereits CRM-Daten – Basis-Seed übersprungen.")
         seed_calc(db)
+        seed_calls(db)
         return
     users = []
     for email, name, role in USERS:
@@ -114,6 +115,7 @@ def run():
                             contact_id=random.choice(contacts).id, owner_id=owner.id))
     db.commit()
     seed_calc(db)
+    seed_calls(db)
     print("Demo-Daten angelegt. Logins: anna.berg@firma.de / demo1234, gesellschafter@firma.de / demo1234")
 
 
@@ -213,6 +215,34 @@ def seed_calc(db):
                                                        results=pres, traffic_light=light, created_by_id=owner.id))
     db.commit()
     print("Kalkulations-Stammdaten und Beispielkalkulationen angelegt.")
+
+
+CALL_SCRIPT = {
+    "anfrage": [("rueckruf_vereinbart", "Zeichnung und Stückzahlen angefragt, Rückruf nächste Woche.")],
+    "kalkulation": [("neu_kalkulieren", "Kunde ändert Wandstärke auf 1,8 mm – Gewicht neu bewerten."),
+                    ("rueckruf_vereinbart", "Neue Zeichnung kommt bis Freitag.")],
+    "angeboten": [("nicht_erreicht", None), ("kunde_entscheidet_noch", "Vergleich mit 2 Wettbewerbern, Entscheidung Ende des Monats.")],
+    "verhandlung": [("preis_nachverhandeln", "Zielpreis 27 €/1.000 – Zykluszeit prüfen."),
+                    ("auftrag_in_aussicht", "Mit neuer Zykluszeit im Rahmen, Freigabe Einkauf steht aus.")],
+    "gewonnen": [("auftrag_in_aussicht", "Technische Freigabe erteilt."), ("auftrag_erhalten", "Bestellung Werkzeug und Rahmenvertrag erhalten.")],
+    "verloren": [("kunde_entscheidet_noch", "Angebot liegt vor, Rückmeldung offen."), ("absage", "Absage – Wettbewerber günstiger.")],
+}
+
+
+def seed_calls(db):
+    from .models import Calculation, CalculationCall
+    if db.scalar(select(func.count()).select_from(CalculationCall)):
+        return
+    for calc in db.scalars(select(Calculation)).unique().all():
+        script = CALL_SCRIPT.get(calc.status, [])
+        last = calc.last_call_at or datetime.now(timezone.utc) - timedelta(days=5)
+        for n, (res, note) in enumerate(reversed(script)):
+            calc.calls.append(CalculationCall(called_at=last - timedelta(days=9 * n), result=res, note=note,
+                                              contact_id=calc.contact_id, user_id=calc.owner_id))
+        if script:
+            calc.last_call_at = last
+    db.commit()
+    print("Demo-Anrufe angelegt.")
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.1 |
+| **Dokumentversion** | 1.2 |
 | **Stand** | 14.11.2026 |
 | **Status** | Testphase (GitHub Codespaces) |
 
@@ -51,6 +51,7 @@ von Standardwerten werden markiert; jede Änderung an einer Kalkulation erzeugt 
 | **Stammdaten** | Maschinen, Materialien, Kalkulations-Parameter |
 | Angebote | Angebote mit Positionen, Druck/PDF, Erzeugung aus Kalkulation |
 | Benutzer | Konten, Rollen, Passwörter |
+| Fußzeile | Copyright-Hinweis „© SB/Thinkworks“ auf allen Seiten |
 
 ## 4. CRM-Grundfunktionen (umgesetzt in v1.0)
 
@@ -80,7 +81,7 @@ von Standardwerten werden markiert; jede Änderung an einer Kalkulation erzeugt 
 
 ### 5.3 Parameter (Standardwerte)
 - STM-6: Lohnsätze Bediener, Einrichter, Montage (€/h).
-- STM-7: Zuschläge MGK, FGK, Ausschuss, Verwaltung, Vertrieb, Projektmanagement (%).
+- STM-7: Zuschläge MGK, FGK, Ausschuss, Verwaltung, Vertrieb, Projektmanagement, **Qualität**, **Werkzeugbau** (%).
 - STM-8: Gewinn (Standard **7 %**), Skonto, Rabatt.
 - STM-9: Fertigungs-Standards: Produktivität, Montage-Produktivität, Rüstzeit, Einrichter je Rüstvorgang, Anfahrausschuss.
 - STM-10: Ampel-Schwellen der Nachkalkulation (Standard grün bis +3 %, rot ab +10 %).
@@ -99,8 +100,16 @@ von Standardwerten werden markiert; jede Änderung an einer Kalkulation erzeugt 
   Artikelpreis zu hoch · Werkzeug zu teuer · Investition zu teuer · Kunde hat Projekt nicht gewonnen ·
   Projekt beim Kunden eingestellt · Lieferzeit/Kapazität · Technisch nicht machbar · Sonstiges.
 - KAL-7: Bemerkungsfeld, Anfragedatum, Angebotsabgabe bis, Serienstart (SOP).
-- KAL-8: **Zuletzt angerufen** – per Schaltfläche „Anruf dokumentieren“ mit Gesprächsnotiz; legt zusätzlich eine
-  Aktivität beim Kunden an. In der Liste rot markiert, wenn offene Anfrage > 14 Tage nicht angerufen.
+- KAL-8: **Zuletzt angerufen** inkl. **Ergebnis** des letzten Anrufs – sichtbar in der Kalkulationsliste (Datum,
+  Ergebnis, Gesprächsnotiz) und im Kopf jeder Kalkulation. In der Liste rot markiert, wenn eine offene Anfrage
+  > 14 Tage nicht angerufen wurde.
+- KAL-9: **Anrufhistorie** je Kalkulation (eigener Reiter „Anrufe“): Datum/Uhrzeit, Gesprächspartner, **Ergebnis**,
+  Gesprächsnotiz/Resultat, Wiedervorlage, Benutzer. Ein Klick auf das Datum „zuletzt angerufen“ in der Liste öffnet die
+  Historie direkt – so ist z. B. sichtbar, was der Anruf vom 10.10. ergeben hat.
+  Ergebnisse: Nicht erreicht · Rückruf vereinbart · Kunde entscheidet noch · Preis nachverhandeln ·
+  Neu kalkulieren/Änderung · Auftrag in Aussicht · Auftrag erhalten · Absage · Sonstiges.
+- KAL-10: Jeder dokumentierte Anruf legt eine erledigte Aktivität „Anruf“ beim Kunden an; ist eine Wiedervorlage
+  gesetzt, zusätzlich eine offene Aufgabe für den Verantwortlichen zu diesem Datum.
 
 ### 6.2 Kalkulationsschema (Zuschlagskalkulation)
 Alle Eingaben sind überschreibbar. Abweichungen vom Standardwert (Maschine, Material, Parameter) werden gelb markiert
@@ -115,7 +124,7 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | Maschine & Fertigung | Maschine (Stammdaten), Maschinenstundensatz €/h, Instandhaltung €/h, **Zykluszeit s**, **Fachzahl**, **Produktivität %**, Bedienfaktor, Lohnsatz Bediener |
 | Rüsten | Rüstzeit je Los h, Einrichter, Lohnsatz Einrichter, Anfahrausschuss je Los Stk |
 | Montage | Montagezeit je Stück s, Personen, Lohnsatz, Produktivität Montage % |
-| Zuschläge | MGK, FGK, Ausschuss, Verwaltung, Vertrieb, Projektmanagement, Gewinn, Skonto, Rabatt (%) |
+| Zuschläge | MGK, FGK, Ausschuss, Verwaltung, Vertrieb, Projektmanagement, **Qualität**, **Werkzeugbau**, Gewinn, Skonto, Rabatt (%); für Qualität und Werkzeugbau ist die **Basis wählbar**: FEK oder HK |
 | Zusatzpositionen | frei: Bezeichnung, Betrag, Bezug (je Stück / je 1.000 / je Los / je Jahr), Art (Fertigung oder Vertrieb) – z. B. Peripherie, Nacharbeit, Bedrucken, Verpackung, Transport |
 | Einmalkosten | frei: Bezeichnung, Kosten, Preis an Kunde – z. B. Werkzeug, Erstbemusterung, Prüfmittel |
 | Verkaufspreis | optional manuell festgelegt (Gewinn ergibt sich dann als Rest) |
@@ -134,15 +143,20 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | Montage | Montagezeit/3600 × Lohnsatz × Personen / Produktivität Montage |
 | FEK | Maschine + Instandhaltung + Personal + Rüsten + Montage |
 | FGK | FEK × FGK % |
+| Qualität / Werkzeugbau (Basis FEK) | FEK × Qualität % bzw. FEK × Werkzeugbau % – Teil der Herstellkosten (vor Ausschuss) |
 | SEK Fertigung | Zusatzpositionen „Fertigung“ |
-| HK vor Ausschuss | MEK + MGK + FEK + FGK + SEK Fertigung |
+| HK vor Ausschuss | MEK + MGK + FEK + FGK + Qualität/Werkzeugbau (Basis FEK) + SEK Fertigung |
 | Ausschuss | HK vor Ausschuss / (1 − Ausschuss %) − HK vor Ausschuss |
 | Herstellkosten | HK vor Ausschuss + Ausschuss |
 | Verwaltung / Vertrieb / PM | je HK × % |
+| Qualität / Werkzeugbau (Basis HK) | HK × Qualität % bzw. HK × Werkzeugbau % |
 | SEK Vertrieb | Zusatzpositionen „Vertrieb“ |
-| Selbstkosten | HK + Verwaltung + Vertrieb + PM + SEK Vertrieb |
+| Selbstkosten | HK + Verwaltung + Vertrieb + PM + Qualität/Werkzeugbau (Basis HK) + SEK Vertrieb |
 | Gewinn | SK × Gewinn % (bzw. Rest bei manuellem Preis) |
 | Verkaufspreis | (SK + Gewinn) / (1 − Skonto) / (1 − Rabatt) |
+
+- KAL-27: Standard: Qualität 1,5 % auf HK, Werkzeugbau 2 % auf FEK (Parameter). Ältere Versionen ohne diese Werte
+  rechnen unverändert mit 0 % weiter (Reproduzierbarkeit, KAL-31).
 
 **Ausgaben**
 - KAL-22: Jede Position je **Stück, je 100, je 1.000** und als Anteil am Preis in %.
@@ -187,7 +201,7 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
   Teil- und Angussgewicht, Rüstzeit, Losgröße, Montagezeit, Lohnsatz, Bedienfaktor, Maschinen- und
   Instandhaltungssatz, Zukaufteile, produzierte Menge, zusätzliche Ist-Kosten gesamt, erzielter Preis.
 - NK-3: Die Ist-Rechnung nutzt **dasselbe Schema** wie die Vorkalkulation (vergleichbar).
-- NK-4: Plan/Ist-Vergleich je Position (€/Stk, Δ €/Stk, Δ %), Stück/h, Marge Ist, Ergebnis gesamt (Menge × Gewinn).
+- NK-4: Plan/Ist-Vergleich je Position inkl. Qualität und Werkzeugbau (€/Stk, Δ €/Stk, Δ %), Stück/h, Marge Ist, Ergebnis gesamt (Menge × Gewinn).
 - NK-5: **Ampel**: grün bis Grün-Schwelle Abweichung der Selbstkosten, gelb bis Rot-Schwelle, rot darüber oder wenn
   der Preis die Ist-Selbstkosten nicht deckt. Schwellen in den Parametern (STM-10).
 - NK-6: Live-Vorschau der Ampel vor dem Speichern.
@@ -199,6 +213,7 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 - NFA-4: Betrieb hinter HTTPS-Reverse-Proxy; tägliches Datenbank-Backup.
 - NFA-5: Automatischer Build- und Starttest bei jedem Push (GitHub Actions).
 - NFA-6: API vollständig dokumentiert (Swagger unter /docs).
+- NFA-7: Fußzeile auf allen Seiten inkl. Anmeldung: „© <Jahr> SB/Thinkworks · KlarCRM · built with clarity“ (nicht im Druck).
 
 ## 9. Technik
 - Backend: Python FastAPI, SQLAlchemy, PostgreSQL 16; Rechenkern in `backend/app/calc_engine.py`.
@@ -218,7 +233,8 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 - [ ] Mehrere Artikel je Anfrage in einer Kalkulationsmappe.
 - [ ] Übernahme von Ist-Werten aus BDE/MES für die Nachkalkulation.
 - [ ] CSV-/Excel-Import und -Export (Firmen, Kontakte, Kalkulationsliste).
-- [ ] Wiedervorlage-Automatik (Aufgabe, wenn > 14 Tage kein Anruf).
+- [ ] Wiedervorlage-Automatik ohne manuelles Datum (Aufgabe, wenn > 14 Tage kein Anruf).
+- [ ] Zuschlagsbasis für weitere Zuschläge wählbar machen, falls die F&R-Excel-Kalkulation das erfordert.
 - [ ] Rechte: Kalkulation nur für bestimmte Rollen sichtbar machen (z. B. Gewinnsätze).
 
 ## 12. Änderungshistorie
@@ -227,3 +243,4 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 |---|---|---|
 | 1.0 | 13.11.2026 | Erstversion CRM: Firmen, Kontakte, Pipeline, Aktivitäten, Angebote, Dashboard, Rollen, Docker, Codespaces-Testumgebung |
 | 1.1 | 14.11.2026 | Modul **Kalkulation**: Stammdaten Maschinen/Materialien/Parameter, Zuschlagskalkulation Spritzguss (Material, MGK, Maschine, Instandhaltung, Personal, Rüsten, Montage, FGK, Ausschuss, Verwaltung, Vertrieb, Projektmanagement, Gewinn 7 % Standard), Zusatz- und Einmalkosten, Werte je Stück/100/1.000, Versionen mit Vergleich, Kalkulationsliste mit Verlustgründen und „zuletzt angerufen“, Übernahme in Verkaufschance, Angebot aus Kalkulation, Nachkalkulation mit Ampel, KPIs im Dashboard. Lastenheft eingeführt. |
+| 1.2 | 14.11.2026 | Anrufhistorie mit Ergebnis je Kalkulation (KAL-8 bis KAL-10), Anzeige „zuletzt angerufen + Ergebnis“ in Liste und Kalkulationskopf, Wiedervorlage als Aufgabe; Zuschläge **Qualität** und **Werkzeugbau** mit wählbarer Basis FEK/HK (KAL-27, STM-7, Rechenweg 6.2); Copyright-Fußzeile SB/Thinkworks (NFA-7). Neue Tabelle `calculation_calls` (wird automatisch angelegt). |

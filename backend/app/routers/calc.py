@@ -11,7 +11,7 @@ from ..calc_engine import DEFAULT_INPUTS, DEFAULT_SETTINGS, compute, normalize, 
 from ..crud import make_crud_router
 from ..database import get_db
 from ..models import (
-    STAGE_PROBABILITY, Activity, CalcSettings, Calculation, CalculationVersion, Machine, Material,
+    STAGE_PROBABILITY, Activity, CalcSettings, Calculation, CalculationCall, CalculationVersion, Machine, Material,
     Opportunity, PostCalculation, Quote, QuoteItem, User,
 )
 from .quotes import next_number as next_quote_number
@@ -71,7 +71,7 @@ def default_inputs(db: Session) -> dict:
     st = get_settings(db)
     inp = dict(DEFAULT_INPUTS)
     for k in ("labor_rate_h", "setup_rate_h", "assembly_rate_h", "mgk_pct", "fgk_pct", "scrap_pct", "vwgk_pct",
-              "vtgk_pct", "pm_pct", "profit_pct", "cash_discount_pct", "rebate_pct", "productivity_pct",
+              "vtgk_pct", "pm_pct", "quality_pct", "toolshop_pct", "profit_pct", "cash_discount_pct", "rebate_pct", "productivity_pct",
               "assembly_productivity_pct", "setup_time_h", "setup_persons", "startup_scrap_pcs"):
         inp[k] = st[k]
     inp["extras"], inp["one_time"] = [], [{"label": "Spritzgießwerkzeug", "cost": 0, "price": 0}]
@@ -90,7 +90,8 @@ def preview(inputs: dict, _: User = Depends(can_read)):
 
 @router.get("/meta")
 def meta(_: User = Depends(can_read)):
-    return {"close_reasons": REASON_LABELS, "status_probability": STATUS_PROBABILITY}
+    return {"close_reasons": REASON_LABELS, "status_probability": STATUS_PROBABILITY,
+            "call_results": CALL_RESULT_LABELS}
 
 
 # ---------------- Kalkulationen ----------------
@@ -336,17 +337,50 @@ def create_quote(calc_id: int, version_no: int | None = None, db: Session = Depe
     return {"quote_id": quote.id, "number": quote.number}
 
 
+CALL_RESULT_LABELS = {
+    "nicht_erreicht": "Nicht erreicht", "rueckruf_vereinbart": "Rückruf vereinbart",
+    "kunde_entscheidet_noch": "Kunde entscheidet noch", "preis_nachverhandeln": "Preis nachverhandeln",
+    "neu_kalkulieren": "Neu kalkulieren / Änderung", "auftrag_in_aussicht": "Auftrag in Aussicht",
+    "auftrag_erhalten": "Auftrag erhalten", "absage": "Absage", "sonstiges": "Sonstiges",
+}
+
+
 @calcs.post("/{calc_id}/call", response_model=s.CalcDetail)
-def log_call(calc_id: int, data: dict, db: Session = Depends(get_db), user: User = Depends(can_write)):
-    """Anruf dokumentieren: setzt „zuletzt angerufen“ und legt eine Aktivität an."""
+def log_call(calc_id: int, data: s.CallIn, db: Session = Depends(get_db), user: User = Depends(can_write)):
+    """Anruf mit Ergebnis dokumentieren: Anrufhistorie, „zuletzt angerufen“, Aktivität, optional Wiedervorlage."""
     calc = db.get(Calculation, calc_id)
     if not calc:
         raise HTTPException(404, "Kalkulation nicht gefunden")
-    calc.last_call_at = datetime.now(timezone.utc)
-    db.add(Activity(type="anruf", subject=f"Anruf zu {calc.number} {calc.article_name}",
-                    description=(data or {}).get("note"), due_at=calc.last_call_at, done=True,
-                    account_id=calc.account_id, contact_id=calc.contact_id,
-                    opportunity_id=calc.opportunity_id, owner_id=user.id))
+    when = data.called_at or datetime.now(timezone.utc)
+    contact_id = data.contact_id or calc.contact_id
+    calc.calls.append(CalculationCall(called_at=when, result=data.result, note=data.note, contact_id=contact_id,
+                                      follow_up=data.follow_up, user_id=user.id))
+    if not calc.last_call_at or when >= calc.last_call_at:
+        calc.last_call_at = when
+    label = CALL_RESULT_LABELS.get(data.result, data.result)
+    db.add(Activity(type="anruf", subject=f"Anruf zu {calc.number} {calc.article_name}: {label}",
+                    description=data.note, due_at=when, done=True, account_id=calc.account_id,
+                    contact_id=contact_id, opportunity_id=calc.opportunity_id, owner_id=user.id))
+    if data.follow_up:
+        db.add(Activity(type="aufgabe", subject=f"Wiedervorlage {calc.number} {calc.article_name} ({label})",
+                        description=data.note, due_at=datetime.combine(data.follow_up, datetime.min.time(), timezone.utc).replace(hour=8),
+                        done=False, account_id=calc.account_id, contact_id=contact_id,
+                        opportunity_id=calc.opportunity_id, owner_id=calc.owner_id or user.id))
+    db.commit()
+    db.refresh(calc)
+    return calc
+
+
+@calcs.delete("/{calc_id}/calls/{call_id}", response_model=s.CalcDetail)
+def delete_call(calc_id: int, call_id: int, db: Session = Depends(get_db), _: User = Depends(can_write)):
+    calc = db.get(Calculation, calc_id)
+    call = db.get(CalculationCall, call_id)
+    if not calc or not call or call.calculation_id != calc_id:
+        raise HTTPException(404, "Anruf nicht gefunden")
+    db.delete(call)
+    db.flush()
+    db.refresh(calc)
+    calc.last_call_at = calc.calls[-1].called_at if calc.calls else None
     db.commit()
     db.refresh(calc)
     return calc

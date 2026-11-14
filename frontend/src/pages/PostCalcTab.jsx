@@ -9,7 +9,7 @@ const ACTUAL_FIELDS = [
   'cycle_time_s', 'cavities', 'productivity_pct', 'scrap_pct', 'material_price_kg', 'part_weight_g', 'sprue_weight_g',
   'setup_time_h', 'lot_size', 'assembly_time_s', 'labor_rate_h', 'operator_factor', 'machine_rate_h', 'maintenance_rate_h', 'purchased_parts',
 ]
-const COMPARE = ['mek_material', 'machine', 'maintenance', 'labor', 'setup', 'assembly', 'scrap', 'hk', 'sk', 'profit']
+const COMPARE = ['mek_material', 'machine', 'maintenance', 'labor', 'setup', 'assembly', 'quality_f', 'toolshop_f', 'scrap', 'hk', 'quality_h', 'toolshop_h', 'sk', 'profit']
 
 export default function PostCalcTab({ calc, setCalc }) {
   const { canWrite } = useAuth()

@@ -312,3 +312,23 @@ textarea { resize: vertical; }
 
 .table td.num, .table th.num { white-space: nowrap; }
 .table td strong { white-space: nowrap; }
+
+/* ---------- Anrufe ---------- */
+.badge-warning { background: #fff3d6; color: #8a5a00; }
+.lastcall { border: none; background: none; padding: 0; font: inherit; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; text-align: left; color: inherit; }
+.lastcall:hover > span:first-child { text-decoration: underline; }
+.lastcall-head { display: flex; gap: 8px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+.lastcall-note { font-size: 12.5px; color: var(--text-2); font-style: italic; max-width: 520px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-latest td { background: #f6f9ff; }
+.call-form h3 { margin-bottom: 0; }
+
+/* ---------- Fußzeile ---------- */
+.content { display: flex; flex-direction: column; min-height: 100vh; }
+.content > .page { flex: 1; width: 100%; }
+.app-footer { display: flex; gap: 8px; justify-content: center; align-items: center; padding: 18px 16px 22px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); margin-top: 8px; }
+.login-wrap .app-footer { border: none; position: fixed; bottom: 0; left: 0; right: 0; }
+.brand-mark { font-weight: 800; letter-spacing: 0.02em; color: var(--text); }
+.brand-mark span { color: var(--brand); margin: 0 1px; }
+.footer-sep { opacity: .5; }
+.footer-claim { font-style: italic; }
+@media print { .app-footer { display: none; } }

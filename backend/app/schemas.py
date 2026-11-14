@@ -373,6 +373,25 @@ class PostCalcOut(ORM):
     created_at: datetime
 
 
+class CallIn(BaseModel):
+    result: Literal["nicht_erreicht", "rueckruf_vereinbart", "kunde_entscheidet_noch", "preis_nachverhandeln",
+                    "neu_kalkulieren", "auftrag_in_aussicht", "auftrag_erhalten", "absage", "sonstiges"] = "sonstiges"
+    note: str | None = None
+    called_at: datetime | None = None
+    contact_id: int | None = None
+    follow_up: date | None = None
+
+
+class CallOut(ORM):
+    id: int
+    called_at: datetime
+    result: str
+    note: str | None
+    follow_up: date | None
+    contact: ContactRef | None = None
+    user: UserRef | None = None
+
+
 class CalcOut(ORM, CalcMeta):
     id: int
     number: str
@@ -387,6 +406,7 @@ class CalcOut(ORM, CalcMeta):
     one_time_revenue: float
     margin_pct: float
     last_traffic_light: str | None = None
+    last_call: CallOut | None = None
     account: AccountRef | None = None
     contact: ContactRef | None = None
     opportunity: OpportunityRef | None = None
@@ -396,5 +416,6 @@ class CalcOut(ORM, CalcMeta):
 
 
 class CalcDetail(CalcOut):
+    calls: list[CallOut]
     versions: list[CalcVersionOut]
     post_calcs: list[PostCalcOut]
