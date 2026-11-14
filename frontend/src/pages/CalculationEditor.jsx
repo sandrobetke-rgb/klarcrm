@@ -4,10 +4,11 @@ import { api } from '../api'
 import { useAuth } from '../auth'
 import { Badge, confirmDelete, EntityForm, ErrorBox } from '../components/ui'
 import {
-  CALC_STATUS, calcStatus, CLOSE_REASONS, eur, eur4, fix4, fmtDate, fmtDateTime, INPUT_LABELS, num, num2, reasonLabel,
+  CALC_STATUS, calcStatus, CLOSE_REASONS, eur, eur4, feasibility, FEASIBILITY, fix4, NO_BID_REASONS, noBidLabel, CLOSED_STATUS, fmtDate, fmtDateTime, INPUT_LABELS, num, num2, reasonLabel,
 } from '../constants'
 import { Light } from './Calculations'
 import PostCalcTab from './PostCalcTab'
+import ArticleAnalysis from './ArticleAnalysis'
 import CallPanel, { LastCall } from '../components/CallPanel'
 import { BigBadge } from '../components/BigProject'
 
@@ -21,7 +22,11 @@ export const calcMetaFields = [
   { name: 'owner_id', label: 'Verantwortlich', type: 'user' },
   { name: 'status', label: 'Status', type: 'select', required: true, options: CALC_STATUS },
   { name: 'probability', label: 'Wahrscheinlichkeit Auftrag %', type: 'number', min: 0, max: 100, hint: 'Wird beim Statuswechsel vorgeschlagen, frei änderbar' },
-  { name: 'close_reason', label: 'Grund bei Verlust', type: 'select', options: CLOSE_REASONS },
+  { name: 'close_reason', label: 'Grund bei Verlust', type: 'select', options: CLOSE_REASONS, hint: 'nur bei Status „Verloren“' },
+  { name: 'no_bid_reason', label: 'Grund „Kein Angebot“', type: 'select', options: NO_BID_REASONS, hint: 'nur bei Status „Kein Angebot abgegeben“' },
+  { name: 'no_bid_note', label: 'Erläuterung (Freitext)', hint: 'z. B. bei „Sonstiges“' },
+  { name: 'feasibility', label: 'Machbarkeit', type: 'select', options: FEASIBILITY, hint: 'Vorschlag siehe Reiter Artikelanalyse' },
+  { name: 'feasibility_note', label: 'Machbarkeit – Anmerkung' },
   { name: 'inquiry_date', label: 'Anfrage vom', type: 'date' },
   { name: 'due_date', label: 'Angebotsabgabe bis', type: 'date' },
   { name: 'sop_date', label: 'Serienstart (SOP)', type: 'date' },
@@ -30,7 +35,7 @@ export const calcMetaFields = [
   { name: 'remark', label: 'Bemerkung', type: 'textarea', span: true, rows: 3 },
 ]
 
-const TABS = [['calc', 'Kalkulation'], ['calls', 'Anrufe'], ['meta', 'Anfrage & Status'], ['versions', 'Versionen'], ['post', 'Nachkalkulation']]
+const TABS = [['calc', 'Kalkulation'], ['analysis', 'Artikelanalyse'], ['calls', 'Anrufe'], ['meta', 'Anfrage & Status'], ['versions', 'Versionen'], ['post', 'Nachkalkulation']]
 
 export default function CalculationEditor() {
   const { id } = useParams()
@@ -80,18 +85,20 @@ export default function CalculationEditor() {
         <div>
           <h1>{calc.number} · {calc.article_name} <Badge tone={st.tone}>{st.label}</Badge>
             {calc.last_traffic_light && <Light value={calc.last_traffic_light} />}
-            <BigBadge revenue={calc.annual_revenue} invest={calc.invest} /></h1>
+            <BigBadge revenue={calc.annual_revenue} invest={calc.invest} />
+            {feasibility(calc.feasibility) && <Badge tone={feasibility(calc.feasibility).tone}>⚙ {feasibility(calc.feasibility).label}</Badge>}</h1>
           <p className="muted">
             {calc.account ? <Link to={`/firmen/${calc.account.id}`}>{calc.account.name}</Link> : 'kein Kunde'}
             {calc.customer_article_no && ` · Kd.-Art.-Nr. ${calc.customer_article_no}`}
             {` · Version ${calc.current_version} · ${calc.probability} % Wahrscheinlichkeit`}
             {calc.close_reason && ` · ${reasonLabel(calc.close_reason)}`}
+            {calc.no_bid_reason && ` · Kein Angebot: ${noBidLabel(calc.no_bid_reason)}${calc.no_bid_note ? ` (${calc.no_bid_note})` : ''}`}
             {calc.opportunity && <> · Chance: <Link to="/pipeline">{calc.opportunity.name}</Link></>}
           </p>
           <div className="lastcall-head">
             <span className="muted small">Zuletzt angerufen:</span>
             <LastCall call={calc.last_call} date={calc.last_call_at} onClick={() => setTab('calls')}
-              open={!['gewonnen', 'verloren', 'zurueckgestellt'].includes(calc.status)} />
+              open={!CLOSED_STATUS.includes(calc.status)} />
             {calc.last_call?.note && <span className="lastcall-note">„{calc.last_call.note}“</span>}
           </div>
         </div>
@@ -114,6 +121,7 @@ export default function CalculationEditor() {
         </div>
       )}
       {tab === 'calls' && <CallPanel calc={calc} onChange={setCalc} />}
+      {tab === 'analysis' && <ArticleAnalysis calc={calc} setCalc={setCalc} />}
       {tab === 'versions' && <VersionsTab calc={calc} />}
       {tab === 'post' && <PostCalcTab calc={calc} setCalc={setCalc} />}
     </div>
@@ -225,6 +233,24 @@ function CalcTab({ calc, setCalc, master }) {
             {F({ k: 'annual_volume', label: 'Jahresmenge', unit: 'Stk', step: 1000 })}
             {F({ k: 'lot_size', label: 'Losgröße', unit: 'Stk', step: 500 })}
             {F({ k: 'project_years', label: 'Projektlaufzeit', unit: 'Jahre', step: 1 })}
+            <div className="field span-3"><label>Staffelpreise – weitere Losgrößen <span className="unit">Stk (bis zu 3)</span></label>
+              <div className="tier-inputs">
+                {[0, 1, 2].map((n) => (
+                  <input key={n} type="number" step="any" className="num" placeholder={`Staffel ${n + 1}`}
+                    value={(inputs.lot_tiers || [])[n] ?? ''}
+                    onChange={(e) => {
+                      const t = [...(inputs.lot_tiers || [])]
+                      t[n] = e.target.value === '' ? '' : Number(e.target.value)
+                      set('lot_tiers', t)
+                    }} />
+                ))}
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => {
+                  const l = Number(inputs.lot_size) || 10000
+                  set('lot_tiers', [Math.round(l / 2), l * 2, l * 5])
+                }}>Vorschlag ½× · 2× · 5×</button>
+              </div>
+              <small className="hint">Preis je Losgröße wird rechts angezeigt und ins Angebot übernommen.</small>
+            </div>
           </Section>
 
           <Section title="Material">
@@ -413,6 +439,22 @@ function Results({ r, inputs, set, canWrite, calc, versionNo }) {
         </table>
       </div>
 
+      {r.lot_tiers?.length > 0 && (
+        <div className="card">
+          <h3>Staffelpreise nach Losgröße</h3>
+          <table className="table table-compact">
+            <thead><tr><th className="num">Losgröße</th><th className="num">Rüsten €/Stk</th><th className="num">€/Stk</th><th className="num">€/1.000</th><th className="num">Δ</th></tr></thead>
+            <tbody>{r.lot_tiers.map((t) => (
+              <tr key={t.lot_size} className={Number(t.lot_size) === Number(inputs.lot_size) ? 'row-latest' : ''}>
+                <td className="num">{num(t.lot_size)}</td><td className="num">{fix4(t.setup_per_piece)}</td>
+                <td className="num"><b>{fix4(t.unit_price)}</b></td><td className="num">{num2(t.price_per_1000)}</td>
+                <td className={`num ${t.delta_pct > 0 ? 'delta-up' : t.delta_pct < 0 ? 'delta-down' : 'muted'}`}>{t.delta_pct > 0 ? '+' : ''}{num(t.delta_pct, 1)} %</td>
+              </tr>))}</tbody>
+          </table>
+          <small className="hint">Δ gegenüber kalkuliertem Preis bei Basis-Losgröße {num(inputs.lot_size)} Stk{inputs.price_override ? ' (manueller Preis bleibt für Staffeln unberücksichtigt)' : ''}.</small>
+        </div>
+      )}
+
       <div className="card">
         <h3>Verkaufspreis festlegen</h3>
         <div className="field">
@@ -455,7 +497,7 @@ function VersionsTab({ calc }) {
   const changed = Object.keys({ ...A.inputs, ...B.inputs })
     .filter((k) => !k.endsWith('_id') && JSON.stringify(A.inputs[k]) !== JSON.stringify(B.inputs[k]))
   const show = (k, v) => {
-    if (Array.isArray(v)) return v.map((x) => `${x.label}: ${num(x.amount ?? x.price ?? 0, 2)}`).join('; ') || '–'
+    if (Array.isArray(v)) return v.map((x) => (typeof x === 'object' && x ? `${x.label}: ${num(x.amount ?? x.price ?? 0, 2)}` : num(x))).join('; ') || '–'
     if (v === null || v === '' || v === undefined) return '–'
     return typeof v === 'number' ? num(v, 4) : String(v)
   }

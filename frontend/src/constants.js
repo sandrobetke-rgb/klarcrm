@@ -59,6 +59,7 @@ export const CALC_STATUS = [
   { value: 'verhandlung', label: 'Verhandlung', tone: 'info' },
   { value: 'gewonnen', label: 'Gewonnen', tone: 'good' },
   { value: 'verloren', label: 'Verloren', tone: 'critical' },
+  { value: 'kein_angebot', label: 'Kein Angebot abgegeben', tone: 'neutral' },
   { value: 'zurueckgestellt', label: 'Zurückgestellt', tone: 'neutral' },
 ]
 export const calcStatus = (v) => CALC_STATUS.find((s) => s.value === v) || { label: v, tone: 'neutral' }
@@ -105,6 +106,7 @@ export const INPUT_LABELS = {
   vwgk_pct: ['Verwaltungsgemeinkosten', '%'], vtgk_pct: ['Vertriebsgemeinkosten', '%'], pm_pct: ['Projektmanagement', '%'],
   quality_pct: ['Qualität', '%'], quality_base: ['Basis Qualität', ''], toolshop_pct: ['Werkzeugbau', '%'], toolshop_base: ['Basis Werkzeugbau', ''],
   profit_pct: ['Gewinn', '%'], cash_discount_pct: ['Skonto', '%'], rebate_pct: ['Rabatt', '%'], price_override: ['Verkaufspreis manuell', '€/Stk'],
+  lot_tiers: ['Staffel-Losgrößen', 'Stk'],
   extras: ['Zusatzpositionen', ''], one_time: ['Einmalkosten (Werkzeug …)', ''],
 }
 export const fix4 = (v) => n4.format(Number(v || 0))
@@ -123,3 +125,24 @@ export const CALL_RESULTS = [
 export const callResult = (v) => CALL_RESULTS.find((r) => r.value === v) || { label: v, tone: 'neutral' }
 
 export const BRAND = { name: 'SB Thinkworks', claim: 'built with clarity', year: new Date().getFullYear() }
+
+export const FEASIBILITY = [
+  { value: 'herstellbar', label: 'Herstellbar', tone: 'good' },
+  { value: 'bedingt_herstellbar', label: 'Bedingt herstellbar', tone: 'info' },
+  { value: 'anpassungen_erforderlich', label: 'Anpassungen erforderlich', tone: 'warning' },
+  { value: 'nicht_herstellbar', label: 'Nicht herstellbar', tone: 'critical' },
+]
+export const feasibility = (v) => FEASIBILITY.find((f) => f.value === v)
+
+export const NO_BID_REASONS = [
+  { value: 'mengen_zu_klein', label: 'Mengen zu klein' },
+  { value: 'artikel_zu_klein', label: 'Artikel zu klein' },
+  { value: 'artikel_zu_gross', label: 'Artikel zu groß' },
+  { value: 'keine_maschine_kapazitaet', label: 'Keine Maschine / Kapazität' },
+  { value: 'nicht_herstellbar', label: 'Nicht herstellbar' },
+  { value: 'technologie_passt_nicht', label: 'Technologie passt nicht' },
+  { value: 'termin_nicht_machbar', label: 'Termin nicht machbar' },
+  { value: 'sonstiges', label: 'Sonstiges (Freitext)' },
+]
+export const noBidLabel = (v) => NO_BID_REASONS.find((r) => r.value === v)?.label || v || ''
+export const CLOSED_STATUS = ['gewonnen', 'verloren', 'kein_angebot', 'zurueckgestellt']

@@ -6,7 +6,7 @@ import { useAuth } from '../auth'
 import { BarList } from '../components/charts'
 import ListPage from '../components/ListPage'
 import { Badge, Modal, useFetch } from '../components/ui'
-import { CALC_STATUS, calcStatus, CLOSE_REASONS, contactName, eur, eur4, LIGHTS, num, reasonLabel } from '../constants'
+import { CALC_STATUS, calcStatus, CLOSE_REASONS, CLOSED_STATUS, contactName, eur, eur4, feasibility, FEASIBILITY, LIGHTS, NO_BID_REASONS, noBidLabel, num, reasonLabel } from '../constants'
 
 export function Light({ value, withText }) {
   if (!value) return <span className="muted">–</span>
@@ -39,13 +39,27 @@ function Stats() {
             <span><Light value="rot" /> {data.traffic_lights.rot}</span>
           </span><span className="kpi-sub">letzte Nachkalk. je Artikel</span></div>
       </div>
-      {data.lost_by_reason.length > 0 && (
-        <div className="card">
-          <h3>Verlustgründe</h3>
-          <p className="card-sub">Verlorener Jahresumsatz je Grund · Anzahl Artikel</p>
-          <BarList data={data.lost_by_reason.map((r) => ({ label: r.label, value: r.revenue, note: `${r.count}×`, tone: 'muted' }))} />
-        </div>
-      )}
+      <div className="grid-2">
+        {data.lost_by_reason.length > 0 && (
+          <div className="card">
+            <h3>Verlustgründe</h3>
+            <p className="card-sub">Verlorener Jahresumsatz je Grund · Anzahl Artikel</p>
+            <BarList data={data.lost_by_reason.map((r) => ({ label: r.label, value: r.revenue, note: `${r.count}×`, tone: 'muted' }))} />
+          </div>
+        )}
+        {data.no_bid_by_reason.length > 0 && (
+          <div className="card">
+            <h3>Kein Angebot abgegeben</h3>
+            <p className="card-sub">{data.no_bid_count} Anfragen · Anzahl je Grund</p>
+            <BarList format={(v) => `${num(v)}×`} data={data.no_bid_by_reason.map((r) => ({ label: r.label, value: r.count, tone: 'muted' }))} />
+          </div>
+        )}
+      </div>
+      <div className="card feas-summary small">
+        <strong>Machbarkeit offener Anfragen:</strong>
+        {FEASIBILITY.map((f) => <span key={f.value}><Badge tone={f.tone}>{f.label}</Badge> {data.feasibility_open[f.value]}</span>)}
+        <span><Badge>nicht bewertet</Badge> {data.feasibility_open.offen}</span>
+      </div>
     </section>
   )
 }
@@ -80,6 +94,8 @@ export default function Calculations() {
       filters={[
         { name: 'status', label: 'Status', options: CALC_STATUS },
         { name: 'close_reason', label: 'Verlustgrund', options: CLOSE_REASONS },
+        { name: 'feasibility', label: 'Machbarkeit', options: [...FEASIBILITY, { value: 'null', label: 'nicht bewertet' }] },
+        { name: 'no_bid_reason', label: 'Kein Angebot', options: NO_BID_REASONS },
         { name: 'big', label: 'Großprojekte', options: [{ value: 'true', label: '★ nur Großprojekte' }] },
       ]}
       columns={[
@@ -90,16 +106,18 @@ export default function Calculations() {
         { key: 'account', label: 'Kunde / Ansprechpartner', render: (r) => <>
           {r.account ? <Link to={`/firmen/${r.account.id}`} onClick={(e) => e.stopPropagation()}>{r.account.name}</Link> : '–'}
           {r.contact && <><br /><small className="muted">{contactName(r.contact)}</small></>}</> },
-        { key: 'status', label: 'Status', sort: 'status', render: (r) => <>
+        { key: 'status', label: 'Status / Machbarkeit', sort: 'status', render: (r) => <>
           <Badge tone={calcStatus(r.status).tone}>{calcStatus(r.status).label}</Badge>
-          {r.close_reason && <><br /><small className="muted">{reasonLabel(r.close_reason)}</small></>}</> },
+          {r.close_reason && <><br /><small className="muted">{reasonLabel(r.close_reason)}</small></>}
+          {r.no_bid_reason && <><br /><small className="muted">{noBidLabel(r.no_bid_reason)}{r.no_bid_note ? `: ${r.no_bid_note}` : ''}</small></>}
+          {feasibility(r.feasibility) && <div><Badge tone={feasibility(r.feasibility).tone}>⚙ {feasibility(r.feasibility).label}</Badge></div>}</> },
         { key: 'unit_price', label: '€/Stk', sort: 'unit_price', className: 'num', render: (r) => eur4(r.unit_price) },
         { key: 'annual_volume', label: 'Menge p. a.', sort: 'annual_volume', className: 'num', render: (r) => num(r.annual_volume) },
         { key: 'annual_revenue', label: 'Umsatz p. a. / Invest', sort: 'annual_revenue', className: 'num', render: (r) => <>{eur(r.annual_revenue)}{r.invest > 0 && <><br /><small className="muted">Invest {eur(r.invest)}</small></>}</> },
         { key: 'probability', label: 'Wahrsch.', sort: 'probability', className: 'num', render: (r) => <>{r.probability} %<br /><small className="muted">{eur(r.annual_revenue * r.probability / 100)}</small></> },
         { key: 'last_call_at', label: 'Zuletzt angerufen / Ergebnis', sort: 'last_call_at', render: (r) => (
           <div onClick={(e) => e.stopPropagation()}>
-            <LastCall call={r.last_call} date={r.last_call_at} open={!['gewonnen', 'verloren', 'zurueckgestellt'].includes(r.status)}
+            <LastCall call={r.last_call} date={r.last_call_at} open={!CLOSED_STATUS.includes(r.status)}
               onClick={() => setCallFor(r.id)} />
             {r.last_call?.note && <div className="small muted truncate" title={r.last_call.note}>{r.last_call.note}</div>}
           </div>

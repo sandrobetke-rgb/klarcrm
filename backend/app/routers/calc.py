@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from .. import schemas as s
 from ..auth import admin_only, can_read, can_write
+from ..analysis import analyze
 from ..calc_engine import DEFAULT_INPUTS, DEFAULT_SETTINGS, compute, normalize, post_calculate
 from ..crud import make_crud_router
 from ..database import get_db
@@ -30,10 +31,20 @@ calcs = APIRouter()       # /api/calculations
 
 STATUS_TO_STAGE = {
     "anfrage": "lead", "kalkulation": "qualifiziert", "angeboten": "angebot",
-    "verhandlung": "verhandlung", "gewonnen": "gewonnen", "verloren": "verloren", "zurueckgestellt": "qualifiziert",
+    "verhandlung": "verhandlung", "gewonnen": "gewonnen", "verloren": "verloren", "kein_angebot": "verloren",
+    "zurueckgestellt": "qualifiziert",
 }
 STATUS_PROBABILITY = {"anfrage": 10, "kalkulation": 20, "angeboten": 40, "verhandlung": 60,
-                      "gewonnen": 100, "verloren": 0, "zurueckgestellt": 5}
+                      "gewonnen": 100, "verloren": 0, "kein_angebot": 0, "zurueckgestellt": 5}
+CLOSED = ("gewonnen", "verloren", "kein_angebot", "zurueckgestellt")
+NO_BID_LABELS = {
+    "mengen_zu_klein": "Mengen zu klein", "artikel_zu_klein": "Artikel zu klein", "artikel_zu_gross": "Artikel zu groß",
+    "keine_maschine_kapazitaet": "Keine Maschine / Kapazität", "nicht_herstellbar": "Nicht herstellbar",
+    "technologie_passt_nicht": "Technologie passt nicht", "termin_nicht_machbar": "Termin nicht machbar",
+    "sonstiges": "Sonstiges",
+}
+FEASIBILITY_LABELS = {"herstellbar": "Herstellbar", "bedingt_herstellbar": "Bedingt herstellbar",
+                      "anpassungen_erforderlich": "Anpassungen erforderlich", "nicht_herstellbar": "Nicht herstellbar"}
 REASON_LABELS = {
     "artikelpreis_zu_hoch": "Artikelpreis zu hoch", "werkzeug_zu_teuer": "Werkzeug zu teuer",
     "investition_zu_teuer": "Investition zu teuer", "projekt_kunde_nicht_gewonnen": "Kunde hat Projekt nicht gewonnen",
@@ -91,6 +102,7 @@ def preview(inputs: dict, _: User = Depends(can_read)):
 @router.get("/meta")
 def meta(_: User = Depends(can_read)):
     return {"close_reasons": REASON_LABELS, "status_probability": STATUS_PROBABILITY,
+            "no_bid_reasons": NO_BID_LABELS, "feasibility": FEASIBILITY_LABELS,
             "call_results": CALL_RESULT_LABELS}
 
 
@@ -127,7 +139,13 @@ def sync_opportunity(db: Session, calc: Calculation):
         if new_stage != opp.stage:
             opp.stage = new_stage
             opp.closed_at = date.today() if new_stage in ("gewonnen", "verloren") else None
-        opp.lost_reason = REASON_LABELS.get(calc.close_reason) if calc.status == "verloren" else None
+        if calc.status == "verloren":
+            opp.lost_reason = REASON_LABELS.get(calc.close_reason)
+        elif calc.status == "kein_angebot":
+            opp.lost_reason = "Kein Angebot: " + (NO_BID_LABELS.get(calc.no_bid_reason) or "ohne Grund") + \
+                (f" ({calc.no_bid_note})" if calc.no_bid_note else "")
+        else:
+            opp.lost_reason = None
     elif total:
         opp.probability = round(sum((c.annual_revenue + c.one_time_revenue) * c.probability for c in linked) / total)
 
@@ -145,6 +163,7 @@ def is_big(c: Calculation, st: dict) -> list[str]:
 @calcs.get("", response_model=dict)
 def list_calcs(
     q: str | None = None, status: str | None = None, close_reason: str | None = None, big: bool = False,
+    feasibility: str | None = None, no_bid_reason: str | None = None,
     account_id: int | None = None, owner_id: int | None = None, opportunity_id: int | None = None,
     sort: str = "-updated_at", limit: int = Query(100, le=1000), offset: int = 0,
     db: Session = Depends(get_db), _: User = Depends(can_read),
@@ -159,6 +178,10 @@ def list_calcs(
         stmt = stmt.where(Calculation.status.in_(status.split(",")))
     if close_reason:
         stmt = stmt.where(Calculation.close_reason == close_reason)
+    if feasibility:
+        stmt = stmt.where(Calculation.feasibility.is_(None) if feasibility == "null" else Calculation.feasibility == feasibility)
+    if no_bid_reason:
+        stmt = stmt.where(Calculation.no_bid_reason == no_bid_reason)
     for col, val in ((Calculation.account_id, account_id), (Calculation.owner_id, owner_id),
                      (Calculation.opportunity_id, opportunity_id)):
         if val:
@@ -182,7 +205,7 @@ def calc_stats(owner_id: int | None = None, db: Session = Depends(get_db), _: Us
     if owner_id:
         stmt = stmt.where(Calculation.owner_id == owner_id)
     rows = db.scalars(stmt).unique().all()
-    open_ = [c for c in rows if c.status not in ("gewonnen", "verloren", "zurueckgestellt")]
+    open_ = [c for c in rows if c.status not in CLOSED]
     won = [c for c in rows if c.status == "gewonnen"]
     lost = [c for c in rows if c.status == "verloren"]
     rev = lambda c: c.annual_revenue  # noqa: E731
@@ -197,9 +220,21 @@ def calc_stats(owner_id: int | None = None, db: Session = Depends(get_db), _: Us
         if c.last_traffic_light:
             lights[c.last_traffic_light] += 1
     decided = len(won) + len(lost)
+    no_bid = [c for c in rows if c.status == "kein_angebot"]
+    nb = {}
+    for c in no_bid:
+        k = c.no_bid_reason or "sonstiges"
+        nb.setdefault(k, {"reason": k, "label": NO_BID_LABELS.get(k, k), "count": 0, "revenue": 0})
+        nb[k]["count"] += 1
+        nb[k]["revenue"] += rev(c)
+    feas = {k: 0 for k in FEASIBILITY_LABELS} | {"offen": 0}
+    for c in open_:
+        feas[c.feasibility or "offen"] += 1
     st = get_settings(db)
     big_open = [c for c in open_ if is_big(c, st)]
     return {
+        "no_bid_count": len(no_bid), "no_bid_by_reason": sorted(nb.values(), key=lambda r: -r["count"]),
+        "feasibility_open": feas,
         "big_open_count": len(big_open),
         "big_open_revenue": round(sum(rev(c) for c in big_open), 2),
         "big_open_invest": round(sum(c.invest for c in big_open), 2),
@@ -259,6 +294,8 @@ def update_calc(calc_id: int, data: s.CalcMeta, db: Session = Depends(get_db), _
         values["probability"] = STATUS_PROBABILITY[values["status"]]
     if values.get("status") and values["status"] != "verloren":
         values.setdefault("close_reason", None)
+    if values.get("status") and values["status"] != "kein_angebot":
+        values.setdefault("no_bid_reason", None)
     for k, v in values.items():
         setattr(calc, k, v)
     db.flush()
@@ -338,7 +375,11 @@ def create_quote(calc_id: int, version_no: int | None = None, db: Session = Depe
     r, inp = ver.results, ver.inputs
     art = calc.article_name + (f"\nIhre Art.-Nr.: {calc.customer_article_no}" if calc.customer_article_no else "")
     art += f"\nMaterial: {inp.get('material_name') or '–'} · Kalkulation {calc.number} V{ver.version_no}"
-    art += f"\nPreis je 1.000 Stk: {r['price_per_1000']:.2f} € · Losgröße {inp.get('lot_size'):g} Stk"
+    de = lambda v, d=2: f"{v:,.{d}f}".replace(",", "X").replace(".", ",").replace("X", ".")  # noqa: E731
+    art += f"\nPreis je 1.000 Stk: {de(r['price_per_1000'])} € · Losgröße {de(float(inp.get('lot_size') or 0), 0)} Stk"
+    if r.get("lot_tiers"):
+        art += "\nStaffelpreise je 1.000 Stk: " + " · ".join(
+            f"Los {de(t['lot_size'], 0)}: {de(t['price_per_1000'])} €" for t in r["lot_tiers"])
     quote = Quote(number=next_quote_number(db), title=calc.article_name, account_id=calc.account_id,
                   contact_id=calc.contact_id, opportunity_id=calc.opportunity_id, owner_id=user.id,
                   status="entwurf", quote_date=date.today(), valid_until=date.today() + timedelta(days=30),
@@ -443,3 +484,107 @@ def delete_postcalc(calc_id: int, pc_id: int, db: Session = Depends(get_db), _: 
         raise HTTPException(404, "Nachkalkulation nicht gefunden")
     db.delete(pc)
     db.commit()
+
+
+
+# ---------------- Artikelanalyse ----------------
+def _machines(db: Session) -> list[dict]:
+    return [{"id": m.id, "name": m.name, "number": m.number, "clamping_force_t": m.clamping_force_t,
+             "hourly_rate": m.hourly_rate, "active": m.active}
+            for m in db.scalars(select(Machine).order_by(Machine.clamping_force_t))]
+
+
+@router.post("/analyze")
+def analyze_preview(data: dict, db: Session = Depends(get_db), _: User = Depends(can_read)):
+    return analyze(data.get("analysis") or {}, data.get("inputs") or {}, _machines(db))
+
+
+@calcs.put("/{calc_id}/analysis", response_model=s.CalcDetail)
+def save_analysis(calc_id: int, data: dict, db: Session = Depends(get_db), _: User = Depends(can_write)):
+    calc = db.get(Calculation, calc_id)
+    if not calc:
+        raise HTTPException(404, "Kalkulation nicht gefunden")
+    ver = next((v for v in calc.versions if v.version_no == calc.current_version), None)
+    calc.analysis = data.get("analysis") or {}
+    calc.analysis_results = analyze(calc.analysis, ver.inputs if ver else {}, _machines(db))
+    if data.get("feasibility") in FEASIBILITY_LABELS:
+        calc.feasibility = data["feasibility"]
+    if "feasibility_note" in data:
+        calc.feasibility_note = data["feasibility_note"]
+    db.commit()
+    db.refresh(calc)
+    return calc
+
+
+# ---------------- Auslastung ----------------
+@router.get("/utilization")
+def utilization(years: int = Query(5, ge=1, le=10), db: Session = Depends(get_db), _: User = Depends(can_read)):
+    """Maschinenstunden je Jahr: Bestand (Grundauslastung je Maschine mit Auslauf), fest (gewonnene Kalkulationen),
+    gewichtet (offen × Wahrscheinlichkeit), potenziell (offen zu 100 %). Laufzeit ab SOP (sonst ab heute bzw. Folgejahr) über die Projektlaufzeit."""
+    today = date.today()
+    year_list = [today.year + n for n in range(years)]
+    machines = {m.id: m for m in db.scalars(select(Machine))}
+    rows = {mid: {"machine": {"id": m.id, "name": m.name, "number": m.number,
+                              "clamping_force_t": m.clamping_force_t},
+                  "capacity_h": float(m.available_hours_year or 6000),
+                  "years": {y: {"base": float(m.available_hours_year or 6000) * float(m.base_load_pct or 0) / 100
+                                * (1 - float(m.base_load_decline_pct or 0) / 100) ** n,
+                                "fixed": 0.0, "weighted": 0.0, "potential": 0.0} for n, y in enumerate(year_list)},
+                  "items": []}
+            for mid, m in machines.items() if m.active}
+    none_row = {"machine": {"id": None, "name": "ohne Maschinenzuordnung", "number": None, "clamping_force_t": None},
+                "capacity_h": 0, "years": {y: {"base": 0.0, "fixed": 0.0, "weighted": 0.0, "potential": 0.0} for y in year_list}, "items": []}
+    for c in db.scalars(select(Calculation).where(Calculation.status.notin_(("verloren", "kein_angebot", "zurueckgestellt")))).unique():
+        ver = next((v for v in c.versions if v.version_no == c.current_version), None)
+        if not ver:
+            continue
+        hours = float(ver.results.get("machine_hours_year") or 0)
+        if hours <= 0:
+            continue
+        start = c.sop_date or (today if c.status == "gewonnen" else date(today.year + 1, 1, 1))
+        duration = max(float(ver.inputs.get("project_years") or 1), 0.25)
+        end_year_frac = start.year + (start.month - 1) / 12 + duration
+        row = rows.get(ver.inputs.get("machine_id")) or none_row
+        won = c.status == "gewonnen"
+        item = {"id": c.id, "number": c.number, "article_name": c.article_name, "status": c.status,
+                "probability": c.probability, "hours_year": round(hours, 1), "start": start.isoformat(),
+                "project_years": duration, "years": {}}
+        for y in year_list:
+            # Anteil des Jahres, in dem das Projekt läuft
+            overlap = max(0.0, min(y + 1, end_year_frac) - max(y, start.year + (start.month - 1) / 12))
+            h = hours * overlap
+            if h <= 0:
+                continue
+            item["years"][y] = round(h, 1)
+            cell = row["years"][y]
+            if won:
+                cell["fixed"] += h
+            else:
+                cell["weighted"] += h * c.probability / 100
+                cell["potential"] += h
+        if item["years"]:
+            row["items"].append(item)
+    out = []
+    for row in list(rows.values()) + ([none_row] if none_row["items"] else []):
+        cap = row["capacity_h"]
+        for y, cell in row["years"].items():
+            for k in ("base", "fixed", "weighted", "potential"):
+                cell[k] = round(cell[k], 1)
+            firm = cell["base"] + cell["fixed"]
+            cell["pct_fixed"] = round(firm / cap * 100, 1) if cap else None
+            cell["pct_expected"] = round((firm + cell["weighted"]) / cap * 100, 1) if cap else None
+            cell["pct_max"] = round((firm + cell["potential"]) / cap * 100, 1) if cap else None
+        row["years"] = [{"year": y, **v} for y, v in row["years"].items()]
+        out.append(row)
+    totals = []
+    cap_total = sum(r["capacity_h"] for r in out)
+    for idx, y in enumerate(year_list):
+        b = sum(r["years"][idx]["base"] for r in out)
+        f = sum(r["years"][idx]["fixed"] for r in out) + b
+        w = sum(r["years"][idx]["weighted"] for r in out)
+        p = sum(r["years"][idx]["potential"] for r in out)
+        totals.append({"year": y, "base": round(b, 1), "fixed": round(f - b, 1), "weighted": round(w, 1), "potential": round(p, 1),
+                       "capacity_h": cap_total, "pct_fixed": round(f / cap_total * 100, 1) if cap_total else None,
+                       "pct_expected": round((f + w) / cap_total * 100, 1) if cap_total else None,
+                       "pct_max": round((f + p) / cap_total * 100, 1) if cap_total else None})
+    return {"years": year_list, "machines": out, "totals": totals}

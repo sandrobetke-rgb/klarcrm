@@ -4,7 +4,7 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.3 |
+| **Dokumentversion** | 1.4 |
 | **Stand** | 14.11.2026 |
 | **Status** | Testphase (GitHub Codespaces) |
 
@@ -47,7 +47,8 @@ von Standardwerten werden markiert; jede Änderung an einer Kalkulation erzeugt 
 | Firmen / Kontakte | Kunden, Interessenten, Partner, Lieferanten und Ansprechpartner |
 | Pipeline | Verkaufschancen (Projekte) als Kanban-Board und Liste |
 | Aktivitäten | Anrufe, Termine, E-Mails, Aufgaben, Notizen mit Fälligkeit |
-| **Kalkulation** | Anfragen, Kalkulationsschema Spritzguss, Versionen, Nachkalkulation |
+| **Kalkulation** | Anfragen, Kalkulationsschema Spritzguss, Staffelpreise, Versionen, Artikelanalyse/Machbarkeit, Nachkalkulation |
+| **Auslastung** | Maschinenauslastung der kommenden Jahre aus Bestand und Kalkulationen |
 | **Stammdaten** | Maschinen, Materialien, Kalkulations-Parameter |
 | Angebote | Angebote mit Positionen, Druck/PDF, Erzeugung aus Kalkulation |
 | Benutzer | Konten, Rollen, Passwörter |
@@ -73,6 +74,8 @@ von Standardwerten werden markiert; jede Änderung an einer Kalkulation erzeugt 
   **Instandhaltung €/h**, **Standard-Produktivität %**, **Standard-Bedienfaktor** (Personen je Maschine), aktiv/inaktiv.
 - STM-2: Bei Auswahl einer Maschine in der Kalkulation werden Stundensatz, Instandhaltung, Produktivität und
   Bedienfaktor sofort übernommen und der Preis neu berechnet.
+- STM-13: Je Maschine zusätzlich: **verfügbare Stunden/Jahr** (Schichtmodell, Standard 6.000 h), **Grundauslastung
+  aus Bestandsaufträgen %** und **Auslauf des Bestands % je Jahr** – Basis der Auslastungsvorschau (Kap. 6.7).
 - STM-3: Inaktive Maschinen sind in neuen Kalkulationen nicht auswählbar; bestehende Kalkulationen bleiben unverändert.
 
 ### 5.2 Materialien
@@ -95,7 +98,14 @@ von Standardwerten werden markiert; jede Änderung an einer Kalkulation erzeugt 
 - KAL-1: Automatische **Kalkulationsnummer** KA-JJJJ-NNNN.
 - KAL-2: Artikelbezeichnung, **Artikelnummer des Kunden**, eigene Artikelnummer.
 - KAL-3: Kunde, **Ansprechpartner des Kunden**, verknüpfte Verkaufschance (Projekt), Verantwortlicher.
-- KAL-4: Status: Anfrage, In Kalkulation, Angeboten, Verhandlung, Gewonnen, Verloren, Zurückgestellt.
+- KAL-4: Status: Anfrage, In Kalkulation, Angeboten, Verhandlung, Gewonnen, Verloren, **Kein Angebot abgegeben**,
+  Zurückgestellt.
+- KAL-4a: **Kein Angebot abgegeben** mit Grund: Mengen zu klein · Artikel zu klein · Artikel zu groß ·
+  Keine Maschine/Kapazität · Nicht herstellbar · Technologie passt nicht · Termin nicht machbar · Sonstiges –
+  plus **Freitext** zur Erläuterung. Wahrscheinlichkeit 0 %; verknüpfte Verkaufschance wird als verloren mit
+  „Kein Angebot: <Grund>“ geschlossen.
+- KAL-4b: **Machbarkeit** je Kalkulation: Herstellbar · Bedingt herstellbar · Anpassungen erforderlich ·
+  Nicht herstellbar, mit Anmerkung (z. B. erforderliche Anpassungen).
 - KAL-5: **Wahrscheinlichkeit** des Auftrags in % – beim Statuswechsel vorgeschlagen, frei änderbar.
 - KAL-6: **Verlustgrund** (bei Status Verloren):
   Artikelpreis zu hoch · Werkzeug zu teuer · Investition zu teuer · Kunde hat Projekt nicht gewonnen ·
@@ -156,6 +166,10 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | Gewinn | SK × Gewinn % (bzw. Rest bei manuellem Preis) |
 | Verkaufspreis | (SK + Gewinn) / (1 − Skonto) / (1 − Rabatt) |
 
+- KAL-28: **Staffelpreise**: bis zu 3 weitere Losgrößen je Kalkulation (Vorschlag ½×, 2×, 5× der Basis-Losgröße).
+  Je Staffel: Rüstkosten je Stück, Preis je Stück und je 1.000, Δ % zum kalkulierten Preis der Basis-Losgröße.
+  Staffeln werden immer kalkuliert (ein manuell festgelegter Preis gilt nur für die Basis-Losgröße). Staffelpreise
+  werden in die Artikelposition des Angebots übernommen.
 - KAL-27: Standard: Qualität 1,5 % auf HK, Werkzeugbau 2 % auf FEK (Parameter). Ältere Versionen ohne diese Werte
   rechnen unverändert mit 0 % weiter (Reproduzierbarkeit, KAL-31).
 
@@ -176,6 +190,28 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 - KAL-33: **Versionsvergleich** A/B: geänderte Eingaben und Auswirkung auf Preis, Selbstkosten, Marge, Stück/h,
   Umsatz, Gewinn, Einmalumsatz, Maschinenstunden (absolut und %).
 
+### 6.3a Artikelanalyse / Machbarkeit (eigener Reiter)
+- ANA-1: Eingaben: Werkstoffgruppe (PP, ABS, PC/ABS, PC, PA6, PA66, POM, PBT, TPE, sonstige), Länge/Breite/Höhe,
+  projizierte Fläche je Kavität inkl. Anguss (cm²), Wandstärke min./max., längster Fließweg, Sicherheitsfaktor
+  Schließkraft (Standard 1,2), Nebenzeit. Fachzahl, Zykluszeit und Maschine kommen aus der aktuellen Version.
+- ANA-2: Werkstoffkennwerte als Richtwerte je Gruppe, einzeln überschreibbar: Werkzeuginnendruck, max. Verhältnis
+  Fließweg/Wandstärke, Temperaturleitfähigkeit, Masse-, Werkzeug-, Entformungstemperatur.
+- ANA-3: Berechnung (Richtwerte, ersetzen keine Füllsimulation):
+  | Größe | Formel |
+  |---|---|
+  | Schließkraft t | Fläche cm² × Fachzahl × Innendruck bar / 1000 × Sicherheitsfaktor |
+  | Fließweg/Wandstärke | längster Fließweg / min. Wandstärke, Vergleich mit Werkstoffgrenze |
+  | Kühlzeit s | s² / (π² · a) · ln(8/π² · (T_Masse − T_Wkz) / (T_Entf − T_Wkz)), s = max. Wandstärke |
+  | Zyklus-Richtwert s | Kühlzeit × 1,35 + Nebenzeit |
+- ANA-4: **Passende Maschinen** (Schließkraft ≥ Bedarf), kleinste passende markiert; Hinweis, wenn gewählte Maschine zu
+  klein oder deutlich überdimensioniert ist; Hinweis „keine Maschine vorhanden“, wenn Bedarf > größte Maschine.
+- ANA-5: **Checkliste** (Bewertung offen/ok/kritisch/n. a. + Anmerkung): Zeichnung/3D-Daten, Entformungsschrägen,
+  Hinterschnitte/Schieber, Einlegeteile, Toleranzen, Oberfläche/Sichtteil, Wandstärken, Anspritzpunkt/Werkzeugkonzept,
+  Materialfreigabe/Normen, Montage/Nachbearbeitung, Prüfmittel, Verpackung/Logistik.
+- ANA-6: **Machbarkeitsvorschlag**: nicht herstellbar (keine Maschine groß genug) → Anpassungen erforderlich
+  (Fließweg kritisch, Maschine zu klein, Zykluszeit deutlich unter Richtwert, kritische Checklistenpunkte) →
+  bedingt herstellbar (Hinweise oder offene Punkte) → herstellbar. Der Benutzer übernimmt oder wählt selbst (KAL-4b).
+
 ### 6.4 Übernahme in Umsatzübersicht und Angebot
 - KAL-40: Kalkulation kann mit einer Verkaufschance verknüpft oder per Klick eine Verkaufschance anlegen.
 - KAL-41: Bei aktivierter Synchronisation übernimmt die Verkaufschance automatisch: Volumen = Summe (Jahresumsatz +
@@ -194,6 +230,8 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
   Werkzeugumsätze, gewonnen, verloren, Trefferquote, Ampelverteilung.
 - KAL-53: Auswertung **Verlustgründe** (verlorener Jahresumsatz und Anzahl je Grund).
 - KAL-54: Kalkulations-KPIs auch im Dashboard (für Gesellschafter).
+- KAL-59: Liste zeigt zusätzlich Machbarkeit und Grund „Kein Angebot“; Filter Machbarkeit (inkl. „nicht bewertet“)
+  und Grund „Kein Angebot“; Auswertung „Kein Angebot abgegeben“ je Grund und Machbarkeitsübersicht offener Anfragen.
 - KAL-55: **Großprojekte hervorheben**: Eine Kalkulation gilt als Großprojekt, wenn der Jahresumsatz ≥ Umsatz-Schwelle
   **oder** der Invest ≥ Invest-Schwelle ist (STM-12). Invest = Summe der Einmalkosten (Kosten) der aktuellen Version
   (Werkzeug, Bemusterung, Prüfmittel …).
@@ -203,6 +241,17 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
   Invest) in Kalkulationsliste und Dashboard.
 - KAL-58: Angebote: Invest = Positionen mit Einheit „psch“ (Einmalkosten), Serienumsatz = Netto − Invest.
   Pipeline: Volumen der Verkaufschance ≥ Umsatz-Schwelle.
+
+### 6.7 Auslastung kommende Jahre
+- AUS-1: Matrix Maschine × Jahr (3, 5, 7 oder 10 Jahre) mit Auslastung in % der verfügbaren Stunden.
+- AUS-2: Bestandteile je Zelle: **Bestand** (verfügbare h × Grundauslastung % × (1 − Auslauf %)^Jahr), **fest**
+  (gewonnene Kalkulationen), **gewichtet** (offene Kalkulationen × Wahrscheinlichkeit), **potenziell** (offene zu 100 %).
+- AUS-3: Ansichten: Fest (Bestand + gewonnen), Erwartet (+ gewichtet), Maximal (+ alle offenen).
+- AUS-4: Stunden je Kalkulation = Maschinenstunden p. a. inkl. Rüsten der aktuellen Version, ab SOP (sonst ab heute
+  bzw. 1. Januar Folgejahr) über die Projektlaufzeit, anteilig im Start- und Endjahr. Nicht berücksichtigt:
+  verloren, kein Angebot, zurückgestellt. Kalkulationen ohne Maschine erscheinen als „ohne Maschinenzuordnung“.
+- AUS-5: Farbstufen < 60 %, 60–85 %, 85–100 %, ≥ 100 % (mit Warnsymbol); Aufklappen je Maschine zeigt die
+  beteiligten Kalkulationen mit Stunden je Jahr; Gesamtzeile; KPI „Auslastung Folgejahr“ im Dashboard.
 
 ## 7. Nachkalkulation
 - NK-1: Zu jeder Kalkulation beliebig viele Nachkalkulationen (z. B. je Fertigungsauftrag oder Zeitraum) mit
@@ -223,6 +272,8 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 - NFA-4: Betrieb hinter HTTPS-Reverse-Proxy; tägliches Datenbank-Backup.
 - NFA-5: Automatischer Build- und Starttest bei jedem Push (GitHub Actions).
 - NFA-6: API vollständig dokumentiert (Swagger unter /docs).
+- NFA-8: Datenbank-Erweiterungen werden beim Start automatisch ergänzt (neue Tabellen und neue Spalten in bestehenden
+  Tabellen); Umbenennen/Löschen von Spalten bleibt ein manueller Schritt.
 - NFA-7: Fußzeile auf allen Seiten inkl. Anmeldung: „© <Jahr> SB/Thinkworks · KlarCRM · built with clarity“ (nicht im Druck).
 
 ## 9. Technik
@@ -234,11 +285,11 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 - Kein E-Mail-Versand von Angeboten aus dem System.
 - Kein Import aus ERP/BDE; Ist-Werte der Nachkalkulation werden manuell erfasst.
 - Keine Mehrwährung; Euro.
-- Keine Datenbank-Migrationen (Alembic) – neue Spalten in bestehenden Tabellen erfordern manuellen Schritt.
+- Keine vollwertigen Datenbank-Migrationen (Alembic) – nur additive automatische Ergänzung (NFA-8).
 
 ## 11. Offene Punkte / Ideen für die finale Version
 - [ ] Abgleich des Kalkulationsschemas mit der bestehenden F&R-Excel-Kalkulation (Positionen, Zuschlagsbasen).
-- [ ] Staffelpreise (mehrere Jahresmengen / Losgrößen in einer Kalkulation).
+- [x] Staffelpreise je Losgröße (v1.4). Offen: Staffeln nach Jahresmenge.
 - [ ] Werkzeugamortisation über Stückzahl als Option.
 - [ ] Mehrere Artikel je Anfrage in einer Kalkulationsmappe.
 - [ ] Übernahme von Ist-Werten aus BDE/MES für die Nachkalkulation.
@@ -255,3 +306,4 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | 1.1 | 14.11.2026 | Modul **Kalkulation**: Stammdaten Maschinen/Materialien/Parameter, Zuschlagskalkulation Spritzguss (Material, MGK, Maschine, Instandhaltung, Personal, Rüsten, Montage, FGK, Ausschuss, Verwaltung, Vertrieb, Projektmanagement, Gewinn 7 % Standard), Zusatz- und Einmalkosten, Werte je Stück/100/1.000, Versionen mit Vergleich, Kalkulationsliste mit Verlustgründen und „zuletzt angerufen“, Übernahme in Verkaufschance, Angebot aus Kalkulation, Nachkalkulation mit Ampel, KPIs im Dashboard. Lastenheft eingeführt. |
 | 1.2 | 14.11.2026 | Anrufhistorie mit Ergebnis je Kalkulation (KAL-8 bis KAL-10), Anzeige „zuletzt angerufen + Ergebnis“ in Liste und Kalkulationskopf, Wiedervorlage als Aufgabe; Zuschläge **Qualität** und **Werkzeugbau** mit wählbarer Basis FEK/HK (KAL-27, STM-7, Rechenweg 6.2); Copyright-Fußzeile SB/Thinkworks (NFA-7). Neue Tabelle `calculation_calls` (wird automatisch angelegt). |
 | 1.3 | 14.11.2026 | **Großprojekte hervorheben** (KAL-55 bis KAL-58, STM-12): Jahresumsatz oder Invest ≥ 500.000 € (Schwellen änderbar), Kennzeichen in Kalkulationen, Angeboten und Pipeline, Filter und KPI. Fehlerbehebung: Verkaufschance aus Kalkulation übernimmt jetzt sofort das Volumen (vorher 0 €). |
+| 1.4 | 14.11.2026 | **Machbarkeit** (4 Stufen + Anmerkung), Status **„Kein Angebot abgegeben“** mit Gründen und Freitext (KAL-4a/4b, KAL-59), **Artikelanalyse** mit Schließkraft, Fließweg/Wandstärke, Kühlzeit-Richtwert, passenden Maschinen, Checkliste und Machbarkeitsvorschlag (ANA-1 bis ANA-6), **Staffelpreise** für bis zu 3 Losgrößen inkl. Übernahme ins Angebot (KAL-28), **Auslastung kommende Jahre** je Maschine mit Bestand, fest, gewichtet, potenziell (AUS-1 bis AUS-5, STM-13), automatische Ergänzung neuer DB-Spalten (NFA-8). |

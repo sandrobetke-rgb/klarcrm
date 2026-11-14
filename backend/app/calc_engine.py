@@ -78,6 +78,7 @@ DEFAULT_INPUTS = {
     # Listen
     "extras": [],     # [{label, amount, basis: stueck|tausend|los|jahr, category: fertigung|vertrieb}]
     "one_time": [],   # [{label, cost, price}]
+    "lot_tiers": [],  # Staffelpreise: weitere Losgrößen, z. B. [2000, 5000, 20000]
 }
 
 
@@ -103,6 +104,30 @@ def normalize(inputs: dict) -> dict:
 
 
 def compute(raw: dict) -> dict:
+    res = _compute(raw)
+    i = normalize(raw)
+    tiers = []
+    for lot in [t for t in (i.get("lot_tiers") or []) if _f(t) > 0][:5]:
+        # Staffeln immer kalkuliert (ohne manuellen Preis), damit die Wirkung der Losgröße sichtbar ist
+        sub = _compute({**i, "lot_size": _f(lot), "price_override": None, "lot_tiers": []})
+        tiers.append({
+            "lot_size": _f(lot),
+            "setup_per_piece": sub["values"]["setup"],
+            "self_cost": sub["self_cost"],
+            "unit_price": sub["unit_price"],
+            "price_per_1000": sub["price_per_1000"],
+            "margin_pct": sub["margin_pct"],
+            "lots_per_year": sub["lots_per_year"],
+        })
+    base = _compute({**i, "price_override": None, "lot_tiers": []})["unit_price"] if tiers else 0
+    for t in tiers:
+        t["delta_pct"] = round((t["unit_price"] - base) / base * 100, 2) if base else 0
+    res["lot_tiers"] = sorted(tiers, key=lambda t: t["lot_size"])
+    res["base_calculated_price"] = base
+    return res
+
+
+def _compute(raw: dict) -> dict:
     i = normalize(raw)
     warnings: list[str] = []
     annual = max(_f(i["annual_volume"]), 0)

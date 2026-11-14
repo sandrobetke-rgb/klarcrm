@@ -15,6 +15,9 @@ const machineFields = [
   { name: 'maintenance_rate', label: 'Instandhaltung €/h', type: 'number', step: 'any' },
   { name: 'productivity_pct', label: 'Standard-Produktivität %', type: 'number', step: 'any' },
   { name: 'operator_factor', label: 'Standard-Bedienfaktor (Pers./Masch.)', type: 'number', step: 'any' },
+  { name: 'available_hours_year', label: 'Verfügbare Stunden / Jahr', type: 'number', step: 'any', hint: 'Schichtmodell, z. B. 3-Schicht ≈ 6.000 h' },
+  { name: 'base_load_pct', label: 'Grundauslastung Bestandsaufträge %', type: 'number', step: 'any', hint: 'für die Auslastungsvorschau' },
+  { name: 'base_load_decline_pct', label: 'Auslauf Bestand % je Jahr', type: 'number', step: 'any', hint: 'z. B. 10 = Bestand sinkt jährlich um 10 %' },
   { name: 'active', label: 'Aktiv (in Kalkulation auswählbar)', type: 'checkbox' },
   { name: 'notes', label: 'Notizen', type: 'textarea', span: true },
 ]
@@ -60,7 +63,7 @@ export default function MasterData() {
   }
   return <ListPage key="mach" title="Stammdaten · Maschinen" subtitle="Standard-Stundensätze, Instandhaltung und Produktivität je Maschine"
     path="/machines" entityLabel="Maschine" fields={machineFields} defaultSort="number"
-    newDefaults={{ active: true, productivity_pct: 85, operator_factor: 0.3 }} extraActions={tabs}
+    newDefaults={{ active: true, productivity_pct: 85, operator_factor: 0.3, available_hours_year: 6000, base_load_pct: 0, base_load_decline_pct: 0 }} extraActions={tabs}
     columns={[
       { key: 'number', label: 'Nr.', sort: 'number' },
       { key: 'name', label: 'Maschine', sort: 'name', render: (r) => <strong>{r.name}</strong> },
@@ -69,6 +72,8 @@ export default function MasterData() {
       { key: 'maintenance_rate', label: '€/h Instandh.', className: 'num', render: (r) => num2(r.maintenance_rate) },
       { key: 'productivity_pct', label: 'Produktivität', className: 'num', render: (r) => `${num(r.productivity_pct, 1)} %` },
       { key: 'operator_factor', label: 'Bedienfaktor', className: 'num', render: (r) => num(r.operator_factor, 2) },
+      { key: 'available_hours_year', label: 'h/Jahr', className: 'num', render: (r) => num(r.available_hours_year) },
+      { key: 'base_load_pct', label: 'Grundlast', className: 'num', render: (r) => `${num(r.base_load_pct, 0)} % (−${num(r.base_load_decline_pct, 0)} %/J.)` },
       { key: 'location', label: 'Standort' },
       { key: 'active', label: 'Status', render: (r) => (r.active ? <Badge tone="good">aktiv</Badge> : <Badge>inaktiv</Badge>) },
     ]} />

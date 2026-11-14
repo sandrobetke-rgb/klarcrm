@@ -267,7 +267,10 @@ Token.model_rebuild()
 
 
 # ---------- Kalkulation ----------
-CalcStatus = Literal["anfrage", "kalkulation", "angeboten", "verhandlung", "gewonnen", "verloren", "zurueckgestellt"]
+CalcStatus = Literal["anfrage", "kalkulation", "angeboten", "verhandlung", "gewonnen", "verloren", "kein_angebot", "zurueckgestellt"]
+Feasibility = Literal["herstellbar", "bedingt_herstellbar", "anpassungen_erforderlich", "nicht_herstellbar"]
+NoBidReason = Literal["mengen_zu_klein", "artikel_zu_klein", "artikel_zu_gross", "keine_maschine_kapazitaet",
+                      "nicht_herstellbar", "technologie_passt_nicht", "termin_nicht_machbar", "sonstiges"]
 CloseReason = Literal["artikelpreis_zu_hoch", "werkzeug_zu_teuer", "investition_zu_teuer",
                       "projekt_kunde_nicht_gewonnen", "projekt_eingestellt", "lieferzeit", "technik", "sonstiges"]
 
@@ -281,6 +284,9 @@ class MachineBase(BaseModel):
     productivity_pct: float = 85
     operator_factor: float = 0.3
     location: str | None = None
+    available_hours_year: float | None = 6000
+    base_load_pct: float | None = 0
+    base_load_decline_pct: float | None = 0
     notes: str | None = None
     active: bool = True
 
@@ -328,6 +334,10 @@ class CalcMeta(BaseModel):
     sop_date: date | None = None
     sync_opportunity: bool | None = None
     owner_id: int | None = None
+    feasibility: Feasibility | None = None
+    feasibility_note: str | None = None
+    no_bid_reason: NoBidReason | None = None
+    no_bid_note: str | None = None
 
 
 class CalcCreate(CalcMeta):
@@ -417,6 +427,8 @@ class CalcOut(ORM, CalcMeta):
 
 
 class CalcDetail(CalcOut):
+    analysis: dict | None = None
+    analysis_results: dict | None = None
     calls: list[CallOut]
     versions: list[CalcVersionOut]
     post_calcs: list[PostCalcOut]

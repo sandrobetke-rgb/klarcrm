@@ -5,4 +5,5 @@
   dokumentiert – Anforderung mit ID ergänzen/ändern, Dokumentversion und Stand erhöhen, Zeile in der Änderungshistorie.
 - Rechenkern der Kalkulation: `backend/app/calc_engine.py`. Änderungen am Rechenweg auch in Lastenheft Kap. 6.2
   (Formeltabelle) nachziehen; die Referenzkalkulation im CI-Workflow muss weiter passen.
-- Neue Spalten in bestehenden Tabellen werden nicht automatisch angelegt (kein Alembic) – im Lastenheft/README vermerken.
+- Neue Tabellen und neue Spalten werden beim Start automatisch ergänzt (`ensure_columns` in `database.py`, nur additiv).
+  Umbenennen/Löschen von Spalten ist manuell und muss im Lastenheft vermerkt werden.

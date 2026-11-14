@@ -192,7 +192,10 @@ class QuoteItem(Base):
 # =====================================================================
 from sqlalchemy import JSON  # noqa: E402
 
-CALC_STATUS = ("anfrage", "kalkulation", "angeboten", "verhandlung", "gewonnen", "verloren", "zurueckgestellt")
+CALC_STATUS = ("anfrage", "kalkulation", "angeboten", "verhandlung", "gewonnen", "verloren", "kein_angebot", "zurueckgestellt")
+FEASIBILITY = ("herstellbar", "bedingt_herstellbar", "anpassungen_erforderlich", "nicht_herstellbar")
+NO_BID_REASONS = ("mengen_zu_klein", "artikel_zu_klein", "artikel_zu_gross", "keine_maschine_kapazitaet",
+                  "nicht_herstellbar", "technologie_passt_nicht", "termin_nicht_machbar", "sonstiges")
 CLOSE_REASONS = (
     "artikelpreis_zu_hoch", "werkzeug_zu_teuer", "investition_zu_teuer",
     "projekt_kunde_nicht_gewonnen", "projekt_eingestellt", "lieferzeit", "technik", "sonstiges",
@@ -211,6 +214,9 @@ class Machine(TimestampMixin, Base):
     productivity_pct: Mapped[float] = mapped_column(Float, default=85)  # Nutzungsgrad / Produktivität
     operator_factor: Mapped[float] = mapped_column(Float, default=0.3)  # Personen je Maschine
     location: Mapped[str | None] = mapped_column(String(80))
+    available_hours_year: Mapped[float | None] = mapped_column(Float, default=6000)  # verfügbare Std/Jahr (Schichtmodell)
+    base_load_pct: Mapped[float | None] = mapped_column(Float, default=0)          # Grundauslastung Bestandsaufträge %
+    base_load_decline_pct: Mapped[float | None] = mapped_column(Float, default=0)  # Auslauf Bestand je Jahr %
     notes: Mapped[str | None] = mapped_column(Text)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
@@ -256,6 +262,13 @@ class Calculation(TimestampMixin, Base):
     sop_date: Mapped[date | None] = mapped_column(Date)              # Serienstart (SOP)
     sync_opportunity: Mapped[bool] = mapped_column(Boolean, default=True)
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    # Machbarkeit / kein Angebot / Artikelanalyse
+    feasibility: Mapped[str | None] = mapped_column(String(40))
+    feasibility_note: Mapped[str | None] = mapped_column(Text)
+    no_bid_reason: Mapped[str | None] = mapped_column(String(40))
+    no_bid_note: Mapped[str | None] = mapped_column(Text)
+    analysis: Mapped[dict | None] = mapped_column(JSON)
+    analysis_results: Mapped[dict | None] = mapped_column(JSON)
     # Kennzahlen der aktuellen Version (für Listen/Sortierung)
     current_version: Mapped[int] = mapped_column(Integer, default=0)
     unit_price: Mapped[float] = mapped_column(Float, default=0)

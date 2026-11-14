@@ -4,7 +4,7 @@ import { qs } from '../api'
 import { useAuth } from '../auth'
 import { BarList, ColumnChart } from '../components/charts'
 import { ErrorBox, RefSelect, useFetch } from '../components/ui'
-import { eur, fmtDate, stageLabel } from '../constants'
+import { eur, fmtDate, num, stageLabel } from '../constants'
 
 const MONTHS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
 
@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [owner, setOwner] = useState(null)
   const { data, error } = useFetch('/dashboard' + qs({ owner_id: owner }))
   const cs = useFetch('/calculations/stats' + qs({ owner_id: owner }))
+  const ut = useFetch('/calc/utilization?years=3')
   if (error) return <ErrorBox error={error} />
   if (!data) return <div className="loading">Lade Dashboard…</div>
   const k = data.kpis
@@ -56,6 +57,8 @@ export default function Dashboard() {
           <Kpi label="Anfragen / Kalkulationen offen" value={cs.data.count_open} sub={`${cs.data.overdue_calls} seit > 14 Tagen ohne Anruf`} to="/kalkulationen" />
           <Kpi label="Potenzial Jahresumsatz" value={eur(cs.data.open_revenue)} sub={`gewichtet ${eur(cs.data.open_weighted)}`} to="/kalkulationen" />
           <Kpi label="★ Großprojekte offen" value={cs.data.big_open_count} sub={`${eur(cs.data.big_open_revenue)} p. a. · Invest ${eur(cs.data.big_open_invest)}`} to="/kalkulationen" />
+          {ut.data && <Kpi label={`Auslastung ${ut.data.totals[1]?.year} (erwartet)`} value={`${num(ut.data.totals[1]?.pct_expected, 0)} %`}
+            sub={`fest ${num(ut.data.totals[1]?.pct_fixed, 0)} % · max. ${num(ut.data.totals[1]?.pct_max, 0)} %`} to="/auslastung" />}
           <Kpi label="Werkzeuge offen" value={eur(cs.data.open_tooling)} sub="Einmalumsatz in offenen Kalkulationen" />
           <Kpi label="Trefferquote Kalkulationen" value={cs.data.hit_rate != null ? `${cs.data.hit_rate.toLocaleString('de-DE')} %` : '–'} sub={`${cs.data.won_count} gewonnen / ${cs.data.lost_count} verloren`} />
           <Kpi label="Nachkalkulation" value={`${cs.data.traffic_lights.gruen} / ${cs.data.traffic_lights.gelb} / ${cs.data.traffic_lights.rot}`} sub="grün / gelb / rot" to="/kalkulationen" />

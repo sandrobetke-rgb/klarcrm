@@ -17,6 +17,7 @@ import Profile from './pages/Profile'
 import Calculations from './pages/Calculations'
 import CalculationEditor from './pages/CalculationEditor'
 import MasterData from './pages/MasterData'
+import Utilization from './pages/Utilization'
 import { ROLES } from './constants'
 import Footer from './components/Footer'
 
@@ -30,6 +31,7 @@ function Layout() {
     ['/kontakte', 'Kontakte', '☺'],
     ['/aktivitaeten', 'Aktivitäten', '✓'],
     ['/kalkulationen', 'Kalkulation', '∑'],
+    ['/auslastung', 'Auslastung', '▤'],
     ['/angebote', 'Angebote', '€'],
     ['/stammdaten', 'Stammdaten', '≡'],
   ]
@@ -82,6 +84,7 @@ function App() {
             <Route path="/kalkulationen" element={<Calculations />} />
             <Route path="/kalkulationen/:id" element={<CalculationEditor />} />
             <Route path="/stammdaten" element={<MasterData />} />
+            <Route path="/auslastung" element={<Utilization />} />
             <Route path="/benutzer" element={<Users />} />
             <Route path="/profil" element={<Profile />} />
           </Route>

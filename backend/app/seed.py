@@ -119,6 +119,8 @@ def run():
     print("Demo-Daten angelegt. Logins: anna.berg@firma.de / demo1234, gesellschafter@firma.de / demo1234")
 
 
+MACHINE_HOURS = {"M01": 6000, "M02": 6000, "M03": 5500, "M04": 6000, "M05": 4800, "M06": 4800}
+MACHINE_BASE = {"M01": (62, 8), "M02": (74, 10), "M03": (55, 5), "M04": (68, 12), "M05": (41, 15), "M06": (36, 20)}
 MACHINES = [  # Nr, Name, t, €/h, IH €/h, Prod %, Bedienfaktor
     ("M01", "Spritzgießmaschine 50 t", 50, 32, 3, 88, 0.25),
     ("M02", "Spritzgießmaschine 110 t", 110, 41, 4, 86, 0.3),
@@ -144,7 +146,9 @@ def seed_calc(db):
         print("Kalkulations-Stammdaten existieren bereits – übersprungen.")
         return
     machines = [Machine(number=n, name=nm, clamping_force_t=t, hourly_rate=r, maintenance_rate=ih,
-                        productivity_pct=p, operator_factor=bf, location="Werk 1") for n, nm, t, r, ih, p, bf in MACHINES]
+                        productivity_pct=p, operator_factor=bf, location="Werk 1", available_hours_year=MACHINE_HOURS.get(n, 6000),
+                        base_load_pct=MACHINE_BASE[n][0], base_load_decline_pct=MACHINE_BASE[n][1])
+                for n, nm, t, r, ih, p, bf in MACHINES]
     materials = [Material(name=nm, family=fam, price_per_kg=pr, density=d, supplier="Rahmenvertrag")
                  for nm, fam, pr, d in MATERIALS]
     db.add_all(machines + materials)
@@ -163,6 +167,8 @@ def seed_calc(db):
         ("Trägerplatte Batterie", "BT-9001", "verloren", "projekt_kunde_nicht_gewonnen", 5, 5, 780, 0, 75, 1, 30000, 3000, 210000),
         ("Frontend-Modulträger", "FM-2027-01", "verhandlung", None, 5, 1, 1450, 0, 68, 1, 180000, 6000, 640000),
         ("Gehäuseschale Wallbox", "WB-330", "angeboten", None, 4, 3, 520, 25, 52, 1, 220000, 10000, 185000),
+        ("Distanzscheibe M4", "DS-04", "kein_angebot", "mengen_zu_klein", 0, 0, 0.3, 0, 12, 32, 5000, 5000, 9000),
+        ("Kühlergrill-Träger", "KG-900", "kein_angebot", "keine_maschine_kapazitaet", 5, 1, 2400, 0, 90, 1, 50000, 5000, 380000),
         ("Verpackungseinsatz", "PK-17", "verloren", "projekt_eingestellt", 3, 0, 95, 10, 30, 2, 200000, 20000, 35000),
         ("Dichtungsrahmen TPE", "DR-303", "anfrage", None, 1, 8, 12, 2, 32, 4, 90000, 10000, 30000),
     ]
@@ -178,7 +184,11 @@ def seed_calc(db):
                    one_time=[{"label": "Spritzgießwerkzeug", "cost": tool, "price": tool},
                              {"label": "Erstbemusterung / EMPB", "cost": 1800, "price": 1800}],
                    extras=[{"label": "Verpackung KLT", "amount": round(max(2.0, g * 0.12), 2), "basis": "tausend", "category": "vertrieb"}])
-        if art.startswith("Gehäuse"):
+        if art in ("Abdeckkappe Steuergerät", "Frontend-Modulträger", "Clip-Halter Kabelbaum"):
+            inp["lot_tiers"] = [round(lot / 2), lot, lot * 3]
+        if art.startswith("Frontend"):
+            inp["project_years"] = 6
+        if art.startswith("Gehäuse Sensor"):
             inp["assembly_time_s"] = 6
             inp["purchased_parts"] = 0.12
             inp["extras"].append({"label": "Bedrucken Tampondruck", "amount": 0.035, "basis": "stueck", "category": "fertigung"})
@@ -187,7 +197,14 @@ def seed_calc(db):
         calc = Calculation(number=f"KA-{date.today().year}-{idx + 1:04d}", article_name=art, customer_article_no=kd,
                            own_article_no=f"FR-{30100 + idx}", account_id=acc.id if acc else None,
                            contact_id=acc.contacts[0].id if acc and acc.contacts else None,
-                           status=status, close_reason=reason, probability=STATUS_PROBABILITY[status],
+                           status=status, probability=STATUS_PROBABILITY[status],
+                           close_reason=reason if status == "verloren" else None,
+                           no_bid_reason=reason if status == "kein_angebot" else None,
+                           no_bid_note={"keine_maschine_kapazitaet": "Benötigt ca. 1.300 t, größte Maschine 650 t."}.get(reason),
+                           feasibility={"anfrage": None, "kalkulation": "bedingt_herstellbar", "kein_angebot":
+                                        ("nicht_herstellbar" if reason == "keine_maschine_kapazitaet" else "herstellbar")}.get(status, "herstellbar"),
+                           sop_date=(date(date.today().year + 1, 1 + (idx * 2) % 12, 1) if status != "gewonnen"
+                                     else date.today() - timedelta(days=60)),
                            owner_id=owner.id, inquiry_date=date.today() - timedelta(days=90 - idx * 8),
                            due_date=date.today() + timedelta(days=10 + idx * 3),
                            last_call_at=nowt - timedelta(days=3 + idx * 4),

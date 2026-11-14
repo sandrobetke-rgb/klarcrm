@@ -255,7 +255,7 @@ textarea { resize: vertical; }
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); }
 .tabs button { border: none; background: none; padding: 9px 14px; font: inherit; color: var(--text-2); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; display: flex; gap: 6px; align-items: center; }
 .tabs button.on { color: var(--brand); border-bottom-color: var(--brand); font-weight: 600; }
-.calc-layout { display: grid; grid-template-columns: minmax(0, 1fr) 430px; gap: 18px; align-items: start; }
+.calc-layout { display: grid; grid-template-columns: minmax(0, 1fr) 480px; gap: 18px; align-items: start; }
 .calc-inputs { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .calc-results { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; }
 .calc-fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
@@ -277,7 +277,7 @@ textarea { resize: vertical; }
 .result-kpis span { font-size: 11px; color: var(--muted); }
 .result-kpis b { font-variant-numeric: tabular-nums; font-size: 13.5px; }
 .warn-box { background: #fff6e0; color: #7a4d00; border: 1px solid #f0d58a; padding: 8px 10px; border-radius: 8px; font-size: 13px; }
-.table-calc td, .table-calc th { padding: 6px 10px; font-size: 12.5px; }
+.table-calc td, .table-calc th { padding: 6px 8px; font-size: 12.5px; }
 .calc-row-summe td { font-weight: 700; background: var(--surface-2); border-top: 1px solid var(--border-strong); }
 .calc-row-ergebnis td { color: var(--good); }
 .table-calc tr:last-child td { background: var(--brand-50); color: var(--brand); font-size: 13.5px; }
@@ -343,3 +343,37 @@ h1 .big-badge { font-size: 12.5px; margin-top: 0; }
 .deal-big { border-color: #e8b100; box-shadow: inset 4px 0 0 #e8b100, var(--shadow); background: #fffcf2; }
 .big-star { color: #c98a00; }
 .kpi-big { border-color: #f2cf6b; background: #fffcf2; }
+
+/* ---------- Machbarkeit / Analyse ---------- */
+.tier-inputs { display: grid; grid-template-columns: repeat(3, 1fr) auto; gap: 8px; }
+.seg-sm button { padding: 4px 8px; font-size: 12px; }
+.seg button.st-ok { background: var(--good-bg); color: var(--good); }
+.seg button.st-kritisch { background: var(--critical-bg); color: var(--critical); }
+.seg button.st-na { background: #eef0f3; color: var(--text-2); }
+.row-critical td { background: #fff6f6; }
+.checklist input { padding: 5px 8px; }
+.feas-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.feas-btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 8px; padding: 8px; font: inherit; font-size: 13px; cursor: pointer; color: var(--text-2); }
+.feas-btn.on.tone-good { background: var(--good-bg); border-color: var(--good); color: var(--good); font-weight: 650; }
+.feas-btn.on.tone-info { background: var(--info-bg); border-color: var(--info); color: var(--info); font-weight: 650; }
+.feas-btn.on.tone-warning { background: #fff3d6; border-color: #d49a00; color: #8a5a00; font-weight: 650; }
+.feas-btn.on.tone-critical { background: var(--critical-bg); border-color: var(--critical); color: var(--critical); font-weight: 650; }
+.feas-summary { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; padding: 12px 16px; }
+
+/* ---------- Auslastung ---------- */
+.ut-table td.ut-cell { min-width: 120px; vertical-align: middle; }
+.ut-val { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+.ut-bar { display: flex; height: 6px; border-radius: 3px; background: #eceef2; overflow: hidden; margin-top: 4px; gap: 1px; }
+.ut-base { background: #9aa3b2; }
+.ut-fixed { background: var(--series-1); }
+.ut-open { background: #9cc3f0; }
+.ut-low .ut-val { color: var(--text-2); }
+.ut-mid .ut-val { color: var(--text); }
+.ut-high { background: #fff6dc; }
+.ut-high .ut-val { color: #8a5a00; }
+.ut-over { background: #fdecec; }
+.ut-over .ut-val { color: var(--critical); }
+.ut-sub td { background: var(--surface-2); padding-top: 6px; padding-bottom: 6px; }
+.legend-card { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; padding: 10px 16px; }
+.ut-swatch { display: inline-block; width: 12px; height: 8px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+.ut-chip { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 11.5px; border: 1px solid var(--border); }

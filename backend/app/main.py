@@ -6,13 +6,14 @@ from sqlalchemy import func, select
 
 from .auth import hash_password
 from .config import settings
-from .database import Base, SessionLocal, engine
+from .database import Base, SessionLocal, engine, ensure_columns
 from .models import User
 from .routers import calc, dashboard, entities, quotes, users
 
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    ensure_columns()
     with SessionLocal() as db:
         if not db.scalar(select(func.count()).select_from(User)):
             db.add(User(

@@ -17,7 +17,8 @@ Ausgelegt für ein Vertriebsteam von bis zu ca. 12 Personen plus eine reine Lese
 | **Pipeline** | Kanban-Board mit Drag & Drop (Lead → Qualifiziert → Angebot → Verhandlung → Gewonnen/Verloren) und Listenansicht. Wahrscheinlichkeit wird je Phase automatisch gesetzt (überschreibbar), Abschlussdatum beim Gewinnen/Verlieren automatisch. |
 | **Aktivitäten** | Anrufe, Termine, E-Mails, Aufgaben, Notizen mit Fälligkeit; Filter überfällig / heute / 7 Tage; Abhaken direkt in der Liste. |
 | **Angebote** | Positionen mit Menge, Einheit, Einzelpreis, Rabatt; Netto/MwSt./Brutto; automatische Nummer (AN-2026-0001), Duplizieren, Status, Druckansicht → PDF über den Browser. |
-| **Kalkulation** | Anfragen mit Kalkulationsnummer (KA-2026-0001), Zuschlagskalkulation Spritzguss (Material, MGK, Maschine, Instandhaltung, Personal, Rüsten, Montage, FGK, Ausschuss, Verwaltung, Vertrieb, Projektmanagement, Qualität, Werkzeugbau, Gewinn), Werte je Stück/100/1.000, Versionen mit Vergleich, Verlustgründe, Anrufhistorie mit Ergebnis und Wiedervorlage, Übernahme in Verkaufschance, Angebot per Klick, Nachkalkulation mit Ampel. |
+| **Kalkulation** | Anfragen mit Kalkulationsnummer (KA-2026-0001), Zuschlagskalkulation Spritzguss (Material, MGK, Maschine, Instandhaltung, Personal, Rüsten, Montage, FGK, Ausschuss, Verwaltung, Vertrieb, Projektmanagement, Qualität, Werkzeugbau, Gewinn), Werte je Stück/100/1.000, Versionen mit Vergleich, Verlustgründe, Anrufhistorie mit Ergebnis und Wiedervorlage, Übernahme in Verkaufschance, Angebot per Klick, Nachkalkulation mit Ampel, Staffelpreise je Losgröße, Machbarkeit und „Kein Angebot“ mit Gründen, Artikelanalyse (Schließkraft, Kühlzeit, passende Maschinen, Checkliste). |
+| **Auslastung** | Maschinenauslastung der nächsten Jahre: Bestand, gewonnene und offene Kalkulationen (gewichtet/maximal) gegen verfügbare Stunden. |
 | **Stammdaten** | Maschinen (Stundensatz, Instandhaltung, Produktivität, Bedienfaktor), Materialien (€/kg), Parameter (Standard-Zuschläge, Gewinn 7 %, Lohnsätze, Ampel-Schwellen). Alles in der Kalkulation überschreibbar. |
 | **Benutzer** | Anlegen, Rollen, Deaktivieren, Passwort zurücksetzen. Jeder Nutzer kann sein Passwort selbst ändern. |
 
@@ -103,9 +104,8 @@ Ein neues Feld, z. B. „Kundennummer" bei Firmen:
 2. `backend/app/schemas.py` → Feld in `AccountBase` ergänzen
 3. `frontend/src/forms.js` → Eintrag in `accountFields`
 
-Hinweis: Tabellen werden beim Start automatisch angelegt, **neue Spalten in bestehenden Tabellen aber nicht**.
-Für Änderungen am Datenmodell im laufenden Betrieb empfiehlt sich Alembic (Migrationen) oder ein
-`ALTER TABLE accounts ADD COLUMN customer_no varchar(30);`.
+Hinweis: Neue Tabellen und neue Spalten werden beim Start automatisch ergänzt. Umbenennen oder Löschen von Spalten
+ist ein manueller Schritt (z. B. per SQL).
 
 Mögliche nächste Ausbaustufen: CSV-Import/-Export, E-Mail-Versand von Angeboten, Outlook-Kalender-Sync,
 Produktkatalog/Artikelstamm, Anbindung an ERP, Audit-Log.
