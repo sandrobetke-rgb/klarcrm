@@ -120,8 +120,12 @@ def duplicate_quote(quote_id: int, db: Session = Depends(get_db), user: User = D
 
 @router.delete("/{quote_id}", status_code=204)
 def delete_quote(quote_id: int, db: Session = Depends(get_db), _: User = Depends(can_write)):
+    """Nur Entwürfe sind löschbar – versendete/angenommene/abgelehnte Angebote sind Nachweise."""
     quote = db.get(Quote, quote_id)
     if not quote:
         raise HTTPException(404, "Angebot nicht gefunden")
+    if quote.status != "entwurf":
+        raise HTTPException(400, "Versendete oder entschiedene Angebote bleiben als Nachweis erhalten – "
+                                 "bitte Status ändern statt löschen")
     db.delete(quote)
     db.commit()

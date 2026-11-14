@@ -47,6 +47,7 @@ class User(TimestampMixin, Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(20), default="vertrieb")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    can_approve: Mapped[bool | None] = mapped_column(Boolean, default=False)  # darf Kalkulationen freigeben
 
 
 class Account(TimestampMixin, Base):
@@ -297,6 +298,16 @@ class Calculation(TimestampMixin, Base):
     no_bid_note: Mapped[str | None] = mapped_column(Text)
     analysis: Mapped[dict | None] = mapped_column(JSON)
     analysis_results: Mapped[dict | None] = mapped_column(JSON)
+    lifecycle: Mapped[dict | None] = mapped_column(JSON)  # Lebenswegbetrachtung (ISO 14001)
+    # Freigabe (Vier-Augen-Prinzip)
+    approval_status: Mapped[str | None] = mapped_column(String(20))  # angefragt | freigegeben | abgelehnt
+    approval_version: Mapped[int | None] = mapped_column(Integer)
+    approval_comment: Mapped[str | None] = mapped_column(Text)            # Begründung der Anfrage
+    approval_decision_comment: Mapped[str | None] = mapped_column(Text)   # Kommentar der Entscheidung
+    approval_requested_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    approval_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    approval_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    approval_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Kennzahlen der aktuellen Version (für Listen/Sortierung)
     current_version: Mapped[int] = mapped_column(Integer, default=0)
     unit_price: Mapped[float] = mapped_column(Float, default=0)
@@ -308,7 +319,9 @@ class Calculation(TimestampMixin, Base):
     account = relationship("Account", lazy="joined")
     contact = relationship("Contact", lazy="joined")
     opportunity = relationship("Opportunity", lazy="joined")
-    owner = relationship("User", lazy="joined")
+    owner = relationship("User", lazy="joined", foreign_keys="Calculation.owner_id")
+    approval_by = relationship("User", lazy="joined", foreign_keys="Calculation.approval_by_id")
+    approval_requested_by = relationship("User", lazy="joined", foreign_keys="Calculation.approval_requested_by_id")
     versions = relationship("CalculationVersion", back_populates="calculation", cascade="all, delete-orphan",
                             order_by="CalculationVersion.version_no", lazy="selectin")
     post_calcs = relationship("PostCalculation", back_populates="calculation", cascade="all, delete-orphan",
@@ -424,3 +437,56 @@ class CalcTemplate(Base):
     created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     created_by = relationship("User", lazy="joined")
+
+
+
+class AuditLog(Base):
+    """Änderungsprotokoll (IATF 16949 / ISO 14001: Lenkung dokumentierter Information)."""
+    __tablename__ = "audit_log"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    user_name: Mapped[str | None] = mapped_column(String(120))
+    action: Mapped[str] = mapped_column(String(10))           # anlegen | ändern | löschen
+    entity: Mapped[str] = mapped_column(String(40), index=True)
+    entity_id: Mapped[int | None] = mapped_column(Integer)
+    label: Mapped[str | None] = mapped_column(String(255))
+    ref: Mapped[str | None] = mapped_column(String(60), index=True)  # übergeordneter Datensatz, z. B. calculations:12
+    changes: Mapped[dict | None] = mapped_column(JSON)
+
+
+def _approval_reasons(self):
+    """Gründe, warum die aktuelle Version freigegeben werden muss (Vier-Augen-Prinzip)."""
+    from sqlalchemy.orm import object_session
+    from .calc_engine import DEFAULT_SETTINGS
+    sess = object_session(self)
+    row = sess.get(CalcSettings, 1) if sess else None
+    st = {**DEFAULT_SETTINGS, **((row.data or {}) if row else {})}
+    r = []
+    if (self.annual_revenue or 0) >= st["big_revenue_threshold"]:
+        r.append("Jahresumsatz ≥ Großprojekt-Schwelle")
+    if (self.invest or 0) >= st["big_invest_threshold"]:
+        r.append("Invest ≥ Großprojekt-Schwelle")
+    if self.current_version and (self.margin_pct or 0) < st["approval_min_margin_pct"]:
+        r.append(f"Marge unter {st['approval_min_margin_pct']:g} %".replace(".", ","))
+    return r
+
+
+def _is_approved(self):
+    return self.approval_status == "freigegeben" and self.approval_version == self.current_version
+
+
+Calculation.approval_reasons = property(_approval_reasons)
+Calculation.is_approved = property(_is_approved)
+
+
+class Notification(Base):
+    """Benachrichtigung je Benutzer (Freigaben, Hinweise)."""
+    __tablename__ = "notifications"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    body: Mapped[str | None] = mapped_column(Text)
+    link: Mapped[str | None] = mapped_column(String(255))
+    read: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

@@ -107,7 +107,7 @@ export default function QuoteEditor() {
           <div className="toolbar">
             {!isNew && <button className="btn btn-ghost" onClick={() => window.print()}>Drucken / PDF</button>}
             {!isNew && canWrite && <button className="btn btn-ghost" onClick={duplicate}>Duplizieren</button>}
-            {!isNew && canWrite && <button className="btn btn-danger-ghost" onClick={remove}>Löschen</button>}
+            {!isNew && canWrite && q.status === 'entwurf' && <button className="btn btn-danger-ghost" onClick={remove}>Löschen</button>}
             {canWrite && <button className="btn btn-primary" onClick={save}>{saved ? '✓ Gespeichert' : 'Speichern'}</button>}
           </div>
         </header>

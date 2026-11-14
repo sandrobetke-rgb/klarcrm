@@ -10,6 +10,7 @@ const fields = (isNew) => [
   { name: 'email', label: 'E-Mail (Login)', type: 'email', required: true },
   { name: 'role', label: 'Rolle', type: 'select', options: ROLES, required: true },
   { name: 'password', label: isNew ? 'Passwort' : 'Neues Passwort', type: 'password', required: isNew, hint: isNew ? 'Mind. 8 Zeichen' : 'Leer lassen = unverändert' },
+  { name: 'can_approve', label: 'Darf Kalkulationen freigeben (Vier-Augen-Prinzip)', type: 'checkbox' },
   { name: 'active', label: 'Aktiv', type: 'checkbox' },
 ]
 
@@ -44,7 +45,7 @@ export default function Users() {
               <tr key={u.id} className="row-click" onClick={() => setEditing(u)}>
                 <td><strong>{u.name}</strong>{u.id === me.id && <small className="muted"> (du)</small>}</td>
                 <td>{u.email}</td>
-                <td>{ROLES.find((r) => r.value === u.role)?.label}</td>
+                <td>{ROLES.find((r) => r.value === u.role)?.label}{(u.can_approve || u.role === 'admin') && <><br /><small className="muted">✓ Freigabe</small></>}</td>
                 <td>{u.active ? <Badge tone="good">aktiv</Badge> : <Badge>deaktiviert</Badge>}</td>
                 <td>{fmtDate(u.created_at)}</td>
               </tr>

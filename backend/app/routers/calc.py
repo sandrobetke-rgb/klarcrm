@@ -1,12 +1,12 @@
 """Kalkulation: Stammdaten, Parameter, Kalkulationen mit Versionen, Nachkalkulation."""
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone  # noqa: F401
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from .. import schemas as s
-from ..auth import admin_only, can_read, can_write
+from ..auth import admin_only, can_read, can_write, get_current_user
 from ..analysis import analyze
 from ..calc_engine import DEFAULT_INPUTS, DEFAULT_SETTINGS, compute, machine_rate, normalize, post_calculate
 from ..crud import make_crud_router
@@ -168,7 +168,7 @@ def is_big(c: Calculation, st: dict) -> list[str]:
 @calcs.get("", response_model=dict)
 def list_calcs(
     q: str | None = None, status: str | None = None, close_reason: str | None = None, big: bool = False,
-    feasibility: str | None = None, no_bid_reason: str | None = None,
+    feasibility: str | None = None, no_bid_reason: str | None = None, approval_status: str | None = None,
     account_id: int | None = None, owner_id: int | None = None, opportunity_id: int | None = None,
     sort: str = "-updated_at", limit: int = Query(100, le=1000), offset: int = 0,
     db: Session = Depends(get_db), _: User = Depends(can_read),
@@ -187,6 +187,8 @@ def list_calcs(
         stmt = stmt.where(Calculation.feasibility.is_(None) if feasibility == "null" else Calculation.feasibility == feasibility)
     if no_bid_reason:
         stmt = stmt.where(Calculation.no_bid_reason == no_bid_reason)
+    if approval_status:
+        stmt = stmt.where(Calculation.approval_status == approval_status)
     for col, val in ((Calculation.account_id, account_id), (Calculation.owner_id, owner_id),
                      (Calculation.opportunity_id, opportunity_id)):
         if val:
@@ -238,6 +240,8 @@ def calc_stats(owner_id: int | None = None, db: Session = Depends(get_db), _: Us
     st = get_settings(db)
     big_open = [c for c in open_ if is_big(c, st)]
     return {
+        "approvals_open": sum(1 for c in rows if c.approval_status == "angefragt"),
+        "approvals_missing": sum(1 for c in open_ if c.approval_reasons and not c.is_approved and c.approval_status != "angefragt"),
         "no_bid_count": len(no_bid), "no_bid_by_reason": sorted(nb.values(), key=lambda r: -r["count"]),
         "feasibility_open": feas,
         "big_open_count": len(big_open),
@@ -315,7 +319,8 @@ def update_calc(calc_id: int, data: s.CalcMeta, db: Session = Depends(get_db), _
 
 
 @calcs.delete("/{calc_id}", status_code=204)
-def delete_calc(calc_id: int, db: Session = Depends(get_db), _: User = Depends(can_write)):
+def delete_calc(calc_id: int, db: Session = Depends(get_db), _: User = Depends(admin_only)):
+    """Nur Administratoren; die Löschung wird im Änderungsprotokoll festgehalten."""
     calc = db.get(Calculation, calc_id)
     if not calc:
         raise HTTPException(404, "Kalkulation nicht gefunden")
@@ -375,6 +380,9 @@ def _de(v, d=2):
 def build_quote(db: Session, pairs: list, user: User) -> Quote:
     """Angebot aus einer oder mehreren Kalkulationen (je mit Version). Serienteile zuerst, danach Einmalkosten."""
     calcs = [c for c, _ in pairs]
+    missing = [f"{c.number} ({', '.join(c.approval_reasons)})" for c in calcs if c.approval_reasons and not c.is_approved]
+    if missing:
+        raise HTTPException(409, "Freigabe erforderlich (Vier-Augen-Prinzip) für: " + "; ".join(missing))
     first = calcs[0]
     single = len(calcs) == 1
     opp_ids = {c.opportunity_id for c in calcs}
@@ -417,6 +425,19 @@ def build_quote(db: Session, pairs: list, user: User) -> Quote:
                 (f", {_de(float(inp['pack_parts_per_unit']), 0)} Stk je VE" if inp.get("pack_parts_per_unit") else "")
         if inp.get("incoterm") or (inp.get("transport_mode") or "keine") != "keine":
             art += "\nLieferbedingung: " + (inp.get("incoterm") or ("frei Haus" if inp.get("transport_mode") != "keine" else "ab Werk"))
+        lc = calc.lifecycle or {}
+        if lc.get("on_quote"):
+            bits = []
+            if lc.get("recycled_pct"):
+                bits.append(f"Rezyklatanteil {_de(float(lc['recycled_pct']), 0)} %")
+            if lc.get("marking"):
+                bits.append(f"Werkstoffkennzeichnung {lc['marking']}")
+            if lc.get("eol_route"):
+                bits.append({"stofflich": "stofflich verwertbar", "thermisch": "thermische Verwertung"}.get(lc["eol_route"], lc["eol_route"]))
+            if not inp.get("components"):
+                bits.append("Monomaterial")
+            if bits:
+                art += "\nLebensweg: " + " · ".join(bits)
         co2 = r.get("co2") or {}
         if co2.get("active") and inp.get("co2_on_quote", True):
             art += (f"\nCO₂-Fußabdruck (Cradle-to-Gate): {_de(co2['cradle_to_gate'] * 1000, 1)} g CO₂e/Stk · "
@@ -566,7 +587,7 @@ def preview_postcalc(calc_id: int, data: s.PostCalcIn, db: Session = Depends(get
 
 
 @calcs.delete("/{calc_id}/postcalcs/{pc_id}", status_code=204)
-def delete_postcalc(calc_id: int, pc_id: int, db: Session = Depends(get_db), _: User = Depends(can_write)):
+def delete_postcalc(calc_id: int, pc_id: int, db: Session = Depends(get_db), _: User = Depends(admin_only)):
     pc = db.get(PostCalculation, pc_id)
     if not pc or pc.calculation_id != calc_id:
         raise HTTPException(404, "Nachkalkulation nicht gefunden")
@@ -848,3 +869,75 @@ def delete_template(template_id: int, db: Session = Depends(get_db), _: User = D
         raise HTTPException(404, "Vorlage nicht gefunden")
     db.delete(t)
     db.commit()
+
+
+
+# ---------------- Freigabe (Vier-Augen-Prinzip) ----------------
+def _approvers(db: Session) -> list[User]:
+    return [u for u in db.scalars(select(User).where(User.active.is_(True))) if u.role == "admin" or u.can_approve]
+
+
+@calcs.post("/{calc_id}/approval/request", response_model=s.CalcDetail)
+def approval_request(calc_id: int, data: dict, db: Session = Depends(get_db), user: User = Depends(can_write)):
+    calc = db.get(Calculation, calc_id)
+    if not calc:
+        raise HTTPException(404, "Kalkulation nicht gefunden")
+    calc.approval_status, calc.approval_version = "angefragt", calc.current_version
+    calc.approval_requested_by_id, calc.approval_requested_at = user.id, datetime.now(timezone.utc)
+    calc.approval_comment, calc.approval_by_id, calc.approval_at = (data or {}).get("comment"), None, None
+    calc.approval_decision_comment = None
+    db.flush()
+    try:
+        from ..notify import notify
+        for u in _approvers(db):
+            if u.id != user.id:
+                notify(db, u.id, f"Freigabe angefragt: {calc.number} {calc.article_name}",
+                       f"V{calc.current_version} · {', '.join(calc.approval_reasons) or 'ohne Pflichtgrund'} · von {user.name}",
+                       f"/kalkulationen/{calc.id}")
+    except ImportError:
+        pass
+    db.commit()
+    db.refresh(calc)
+    return calc
+
+
+@calcs.post("/{calc_id}/approval/decide", response_model=s.CalcDetail)
+def approval_decide(calc_id: int, data: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    calc = db.get(Calculation, calc_id)
+    if not calc:
+        raise HTTPException(404, "Kalkulation nicht gefunden")
+    if not (user.role == "admin" or user.can_approve):
+        raise HTTPException(403, "Keine Freigabeberechtigung")
+    if calc.approval_requested_by_id == user.id:
+        raise HTTPException(403, "Vier-Augen-Prinzip: Die Freigabe muss eine andere Person erteilen")
+    decision = (data or {}).get("decision")
+    if decision not in ("freigegeben", "abgelehnt"):
+        raise HTTPException(400, "Entscheidung: freigegeben oder abgelehnt")
+    if decision == "abgelehnt" and not (data.get("comment") or "").strip():
+        raise HTTPException(400, "Bei Ablehnung bitte Begründung angeben")
+    calc.approval_status, calc.approval_version = decision, calc.current_version
+    calc.approval_by_id, calc.approval_at = user.id, datetime.now(timezone.utc)
+    calc.approval_decision_comment = data.get("comment")
+    try:
+        from ..notify import notify
+        if calc.approval_requested_by_id:
+            notify(db, calc.approval_requested_by_id, f"{calc.number} {decision}: {calc.article_name}",
+                   f"V{calc.current_version} von {user.name}" + (f" · {data.get('comment')}" if data.get("comment") else ""),
+                   f"/kalkulationen/{calc.id}")
+    except ImportError:
+        pass
+    db.commit()
+    db.refresh(calc)
+    return calc
+
+
+# ---------------- Lebenswegbetrachtung ----------------
+@calcs.put("/{calc_id}/lifecycle", response_model=s.CalcDetail)
+def save_lifecycle(calc_id: int, data: dict, db: Session = Depends(get_db), _: User = Depends(can_write)):
+    calc = db.get(Calculation, calc_id)
+    if not calc:
+        raise HTTPException(404, "Kalkulation nicht gefunden")
+    calc.lifecycle = data.get("lifecycle") or {}
+    db.commit()
+    db.refresh(calc)
+    return calc

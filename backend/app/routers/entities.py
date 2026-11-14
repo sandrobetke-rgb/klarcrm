@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import or_
 
 from .. import schemas as s
+from ..auth import admin_only
 from ..crud import make_crud_router
 from ..models import STAGE_PROBABILITY, Account, Activity, Contact, Opportunity
 
@@ -14,6 +15,7 @@ accounts = make_crud_router(
     search_fields=["name", "city", "industry", "email", "phone"],
     filter_fields=["type", "owner_id", "industry"],
     default_sort="name",
+    delete_dependency=admin_only,  # Firmen nur durch Administratoren löschen (mit Protokoll)
 )
 
 contacts = make_crud_router(

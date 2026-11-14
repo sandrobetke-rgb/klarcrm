@@ -28,6 +28,8 @@ function Stats() {
           <span className="kpi-sub">gewichtet {eur(data.open_weighted)}</span></div>
         <div className="kpi kpi-big"><span className="kpi-label">★ Großprojekte offen</span><span className="kpi-value">{data.big_open_count}</span>
           <span className="kpi-sub">Umsatz p. a. {eur(data.big_open_revenue)} · Invest {eur(data.big_open_invest)}</span></div>
+        <div className={`kpi ${data.approvals_open ? 'kpi-big' : ''}`}><span className="kpi-label">Freigaben</span><span className="kpi-value">{data.approvals_open}</span>
+          <span className="kpi-sub">angefragt · {data.approvals_missing} weitere nötig, noch nicht angefragt</span></div>
         <div className="kpi"><span className="kpi-label">Werkzeuge / Einmalumsatz (offen)</span><span className="kpi-value">{eur(data.open_tooling)}</span></div>
         <div className="kpi"><span className="kpi-label">Gewonnen</span><span className="kpi-value">{eur(data.won_revenue)}</span>
           <span className="kpi-sub">{data.won_count} Artikel · Trefferquote {data.hit_rate != null ? `${num(data.hit_rate, 1)} %` : '–'}</span></div>
@@ -131,6 +133,7 @@ export default function Calculations() {
         { name: 'close_reason', label: 'Verlustgrund', options: CLOSE_REASONS },
         { name: 'feasibility', label: 'Machbarkeit', options: [...FEASIBILITY, { value: 'null', label: 'nicht bewertet' }] },
         { name: 'no_bid_reason', label: 'Kein Angebot', options: NO_BID_REASONS },
+        { name: 'approval_status', label: 'Freigabe', options: [{ value: 'angefragt', label: 'angefragt' }, { value: 'freigegeben', label: 'freigegeben' }, { value: 'abgelehnt', label: 'abgelehnt' }] },
         { name: 'big', label: 'Großprojekte', options: [{ value: 'true', label: '★ nur Großprojekte' }] },
       ]}
       columns={[
@@ -145,7 +148,10 @@ export default function Calculations() {
           <Badge tone={calcStatus(r.status).tone}>{calcStatus(r.status).label}</Badge>
           {r.close_reason && <><br /><small className="muted">{reasonLabel(r.close_reason)}</small></>}
           {r.no_bid_reason && <><br /><small className="muted">{noBidLabel(r.no_bid_reason)}{r.no_bid_note ? `: ${r.no_bid_note}` : ''}</small></>}
-          {feasibility(r.feasibility) && <div><Badge tone={feasibility(r.feasibility).tone}>⚙ {feasibility(r.feasibility).label}</Badge></div>}</> },
+          {feasibility(r.feasibility) && <div><Badge tone={feasibility(r.feasibility).tone}>⚙ {feasibility(r.feasibility).label}</Badge></div>}
+          {r.approval_reasons?.length > 0 && <div>{r.is_approved ? <Badge tone="good">✓ freigegeben</Badge>
+            : r.approval_status === 'angefragt' && r.approval_version === r.current_version ? <Badge tone="warning">⏳ Freigabe angefragt</Badge>
+            : <Badge tone="warning">Freigabe nötig</Badge>}</div>}</> },
         { key: 'unit_price', label: '€/Stk', sort: 'unit_price', className: 'num', render: (r) => eur4(r.unit_price) },
         { key: 'annual_volume', label: 'Menge p. a.', sort: 'annual_volume', className: 'num', render: (r) => num(r.annual_volume) },
         { key: 'annual_revenue', label: 'Umsatz p. a. / Invest', sort: 'annual_revenue', className: 'num', render: (r) => <>{eur(r.annual_revenue)}{r.invest > 0 && <><br /><small className="muted">Invest {eur(r.invest)}</small></>}</> },

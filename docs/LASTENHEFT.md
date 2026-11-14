@@ -4,7 +4,7 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.9 |
+| **Dokumentversion** | 1.10 |
 | **Stand** | 14.11.2026 |
 | **Status** | Testphase (GitHub Codespaces) |
 
@@ -32,10 +32,11 @@ von Standardwerten werden markiert; jede Änderung an einer Kalkulation erzeugt 
 
 | ID | Rolle | Rechte |
 |---|---|---|
-| ROL-1 | Administrator | Alles inkl. Benutzerverwaltung und Kalkulations-Parameter (Standardsätze) |
+| ROL-1 | Administrator | Alles inkl. Benutzerverwaltung und Kalkulations-Parameter (Standardsätze); darf freigeben und löschen |
 | ROL-2 | Vertrieb | Alle Daten sehen, anlegen, ändern, löschen; Stammdaten Maschinen/Materialien pflegen |
 | ROL-3 | Gesellschafter | Alles sehen (Dashboard, Pipeline, Kalkulationen, Nachkalkulation), **nichts ändern** |
 
+- ROL-6: Zusatzrecht **„darf Kalkulationen freigeben“** je Benutzer (z. B. Geschäftsführung, Vertriebsleitung).
 - ROL-4: Rechte werden serverseitig erzwungen (HTTP 403), nicht nur in der Oberfläche.
 - ROL-5: Auslegung für bis zu ca. 12 gleichzeitige Nutzer.
 
@@ -336,6 +337,58 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
   der Preis die Ist-Selbstkosten nicht deckt. Schwellen in den Parametern (STM-10).
 - NK-6: Live-Vorschau der Ampel vor dem Speichern.
 
+## 7a. Freigabe, Nachweisführung und Lebensweg (IATF 16949 / ISO 14001)
+
+### 7a.1 Freigabe-Workflow (Vier-Augen-Prinzip)
+- FRG-1: Eine Kalkulation ist **freigabepflichtig**, wenn Jahresumsatz ≥ Großprojekt-Schwelle, Invest ≥
+  Großprojekt-Schwelle oder Marge < Mindestmarge (Parameter, Standard 3 %).
+- FRG-2: Freigabe anfordern (mit Begründung) → Benachrichtigung aller Freigabeberechtigten. Freigeben/Ablehnen nur
+  durch Administratoren oder Benutzer mit Recht „darf freigeben“; **nie durch die anfragende Person** (Vier Augen).
+  Ablehnung nur mit Begründung. Anfragende Person wird über die Entscheidung benachrichtigt.
+- FRG-3: Die Freigabe gilt **nur für die freigegebene Version**; jede neue Version macht eine erneute Freigabe nötig.
+- FRG-4: Ohne gültige Freigabe kann aus einer freigabepflichtigen Kalkulation **kein Angebot** (auch kein
+  Sammelangebot) erzeugt werden.
+- FRG-5: Anzeige im Kalkulationskopf (Status, Version, Personen, Zeitpunkte, Kommentare), Kennzeichen und Filter in
+  der Liste, Kennzahl „Freigaben angefragt / noch nicht angefragt“.
+
+### 7a.2 Änderungsprotokoll (Audit-Trail)
+- PRT-1: Jede Anlage, Änderung und Löschung an allen Datensätzen wird automatisch protokolliert: Zeitpunkt,
+  Benutzer, Aktion, Datensatz, je Feld **alter → neuer Wert**. Passwörter werden maskiert, große Strukturen
+  (Kalkulationseingaben/-ergebnisse) als „geändert“ vermerkt – ihr Inhalt ist in der unveränderlichen Version gesichert.
+- PRT-2: Protokolleinträge sind über die Oberfläche **nicht änderbar oder löschbar**.
+- PRT-3: Gesamtprotokoll mit Filtern (Bereich, Benutzer, Zeitraum, Suche) für Administration, Gesellschafter und
+  Freigabeberechtigte; je Kalkulation Reiter „Protokoll“ inkl. Versionen, Anrufe, Nachkalkulationen.
+- PRT-4: Feldnamen werden im Protokoll mit deutschen Bezeichnungen angezeigt.
+
+### 7a.3 Löschschutz / Aufbewahrung
+- LSH-1: Kalkulationen, Nachkalkulationen und Firmen löschen nur Administratoren; jede Löschung steht im Protokoll.
+- LSH-2: Angebote sind nur als **Entwurf** löschbar; versendete/angenommene/abgelehnte Angebote bleiben als Nachweis.
+- LSH-3: Kalkulationsversionen sind unveränderlich (KAL-31).
+
+### 7a.4 Lebenswegbetrachtung (ISO 14001, 6.1.2) – Kurzfassung je Artikel
+- LWB-1: Fünf Phasen mit automatisch übernommenen Kennzahlen aus der Kalkulation und kurzen Angaben:
+  **Rohstoffe** (Material/Komponenten, CO₂-Anteil; Rezyklatanteil %, biobasiert, Anmerkung) ·
+  **Herstellung** (Strom Wh/Stk, Ausschuss, Mahlgut, Scope 1+2; Anmerkung) ·
+  **Transport & Verpackung** (Mehrweg/Einweg, Lieferbedingung, CO₂; Anmerkung) ·
+  **Nutzung** (Umweltrelevanz gering/mittel/hoch; Anmerkung) ·
+  **Ende des Lebenswegs** (Monomaterial/Verbund automatisch; Recyclingfähigkeit, Verwertungsweg,
+  Werkstoffkennzeichnung, Anmerkung).
+- LWB-2: **Wesentlicher Umweltaspekt** = Phase mit dem höchsten CO₂-Anteil (automatisch); Feld
+  Verbesserungsmaßnahme/Ziel.
+- LWB-3: Optional Kurzfassung im Angebot (Rezyklatanteil, Kennzeichnung, Verwertung, Monomaterial).
+
+### 7a.5 Zuordnung zu Normforderungen (Unterstützung, keine Zertifizierungsaussage)
+| Forderung | Umsetzung in KlarCRM |
+|---|---|
+| IATF 16949 / ISO 9001 – Bewertung der Anforderungen an Produkte, Herstellbarkeitsanalyse | Artikelanalyse, Machbarkeit, Checkliste (ANA-1 … 6, KAL-4b) |
+| Lenkung dokumentierter Information, Rückverfolgbarkeit von Änderungen | Unveränderliche Versionen, Änderungsprotokoll, Löschschutz (KAL-30 … 33, PRT, LSH) |
+| Verantwortung und Befugnis, Freigaben | Rollen, Freigabeberechtigung, Vier-Augen-Prinzip (ROL, FRG) |
+| ISO 14001 6.1.2 – Umweltaspekte mit Lebenswegbetrachtung | Lebenswegbetrachtung je Artikel, CO₂-Fußabdruck (LWB, CO2) |
+| ISO 14001 9.1 – Überwachung, Messung | CO₂ je Teil/Jahr, Nachkalkulation mit Ist-Werten (CO2, NK) |
+
+Hinweis: Die Software unterstützt die Nachweisführung. Ob die Prozesse normkonform sind, bewertet das Audit;
+Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind im Managementsystem zu regeln.
+
 ## 8. Nicht-funktionale Anforderungen
 - NFA-1: Web-Anwendung (Desktop und Tablet), deutschsprachig, Zahlen im deutschen Format.
 - NFA-2: Selbst gehostet (Docker), keine Lizenzkosten je Nutzer; Daten bleiben auf eigenem Server (DSGVO).
@@ -372,6 +425,7 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 - [ ] Zuschlagsbasis für weitere Zuschläge wählbar machen, falls die F&R-Excel-Kalkulation das erfordert.
 - [ ] CO₂: Ist-Energiewerte aus BDE/Energiemonitoring in die Nachkalkulation übernehmen; CO₂-Summen je Kunde/Jahr.
 - [ ] Rechte: Kalkulation nur für bestimmte Rollen sichtbar machen (z. B. Gewinnsätze).
+- [ ] Aufbewahrungsfristen und Archivierung (z. B. 10 Jahre) im Managementsystem festlegen und im System abbilden.
 
 ## 12. Änderungshistorie
 
@@ -387,3 +441,4 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | 1.7 | 14.11.2026 | **CO₂-Fußabdruck je Teil** (Kap. 6.8, CO2-1 bis CO2-6, STM-14): Material, Strom (Scope 2), Werksemissionen (Scope 1), Zukaufteile, Verpackung, Transport; je Stück, 1.000, Los, Jahresmenge, Lieferung; Ausweis im Angebot. Neue Stammdatenfelder (Materialfaktor, Maschinenleistung, Standort-Stromfaktor) werden automatisch ergänzt. |
 | 1.8 | 14.11.2026 | Verpackung wahlweise **pauschal in % auf HK** oder detailliert; Transport pauschal in % weiterhin wählbar; Standardsätze Verpackung 1,5 % / Transport 2,0 % in den Parametern (KAL-29a). |
 | 1.9 | 14.11.2026 | **Etappe 1 Profi-Kalkulation**: Mehrkomponenten 2K/3K (KAL-28b), Familienwerkzeug (KAL-28c), Werkzeugamortisation (KAL-28d), Staffeln nach Jahresmenge (KAL-28a), Kopieren und Vorlagen (KAL-28e), Preisgleitklausel im Angebot (KAL-28f), Herleitung Maschinenstundensatz inkl. Umlage Kostenstelle (STM-15), Rohstoffpreis-Historie und Preisgleitung (STM-16/17), Rechentests im Build (NFA-9). Angebotspositionen ohne Längenbegrenzung. |
+| 1.10 | 14.11.2026 | **Etappe 2 Nachweisführung**: Freigabe-Workflow mit Vier-Augen-Prinzip (FRG-1 … 5, ROL-6), Änderungsprotokoll für alle Daten (PRT-1 … 4), Löschschutz (LSH-1 … 3), Lebenswegbetrachtung nach ISO 14001 6.1.2 (LWB-1 … 3), Zuordnung zu IATF 16949 / ISO 14001 (Kap. 7a.5). |

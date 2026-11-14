@@ -49,6 +49,7 @@ class UserBase(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     role: Role = "vertrieb"
     active: bool = True
+    can_approve: bool | None = False
 
 
 class UserCreate(UserBase):
@@ -60,6 +61,7 @@ class UserUpdate(BaseModel):
     name: str | None = None
     role: Role | None = None
     active: bool | None = None
+    can_approve: bool | None = None
     password: str | None = Field(default=None, min_length=8)
 
 
@@ -432,6 +434,16 @@ class CalcOut(ORM, CalcMeta):
     margin_pct: float
     last_traffic_light: str | None = None
     last_call: CallOut | None = None
+    approval_status: str | None = None
+    approval_version: int | None = None
+    approval_comment: str | None = None
+    approval_decision_comment: str | None = None
+    approval_at: datetime | None = None
+    approval_requested_at: datetime | None = None
+    approval_by: UserRef | None = None
+    approval_requested_by: UserRef | None = None
+    approval_reasons: list[str] = []
+    is_approved: bool = False
     account: AccountRef | None = None
     contact: ContactRef | None = None
     opportunity: OpportunityRef | None = None
@@ -441,6 +453,7 @@ class CalcOut(ORM, CalcMeta):
 
 
 class CalcDetail(CalcOut):
+    lifecycle: dict | None = None
     analysis: dict | None = None
     analysis_results: dict | None = None
     calls: list[CallOut]

@@ -15,6 +15,16 @@ class Settings:
     ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "admin123")
     DEFAULT_TAX_RATE: float = float(os.getenv("DEFAULT_TAX_RATE", "19"))
     COMPANY_NAME: str = os.getenv("COMPANY_NAME", "Meine Firma GmbH")
+    APP_URL: str = os.getenv("APP_URL", "")  # z. B. https://crm.firma.local – für Links in E-Mails/Kalender
+    UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "/data/uploads")
+    MAX_UPLOAD_MB: int = int(os.getenv("MAX_UPLOAD_MB", "50"))
+    # E-Mail (optional, interner Mailserver)
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "25"))
+    SMTP_USER: str = os.getenv("SMTP_USER", "")
+    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+    SMTP_STARTTLS: bool = os.getenv("SMTP_STARTTLS", "false").lower() in ("1", "true", "ja")
+    SMTP_FROM: str = os.getenv("SMTP_FROM", "klarcrm@firma.local")
 
 
 settings = Settings()

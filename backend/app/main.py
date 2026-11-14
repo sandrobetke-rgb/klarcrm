@@ -11,7 +11,7 @@ from .context import current_user_id
 from .database import Base, SessionLocal, engine, ensure_columns
 from .models import User
 from . import events  # noqa: F401  (Session-Ereignisse registrieren)
-from .routers import calc, dashboard, entities, quotes, users
+from .routers import audit, calc, dashboard, entities, quotes, users
 
 
 def init_db():
@@ -63,6 +63,7 @@ app.include_router(entities.opportunities, prefix="/api/opportunities", tags=["V
 app.include_router(entities.activities, prefix="/api/activities", tags=["Aktivitäten"])
 app.include_router(quotes.router, prefix="/api/quotes", tags=["Angebote"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
+app.include_router(audit.router, prefix="/api/audit", tags=["Protokoll"])
 app.include_router(calc.machines, prefix="/api/machines", tags=["Stammdaten"])
 app.include_router(calc.materials, prefix="/api/materials", tags=["Stammdaten"])
 app.include_router(calc.router, prefix="/api/calc", tags=["Kalkulation"])

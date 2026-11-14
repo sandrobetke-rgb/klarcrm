@@ -281,9 +281,19 @@ def seed_calc(db):
     db.commit()
     # Großprojekte mit Verkaufschance und Angebot verknüpfen (zeigt Hervorhebung in Pipeline/Angeboten)
     from .routers.calc import create_opportunity, create_quote
+    approver = db.scalar(select(User).where(User.email == "tim.kraus@firma.de"))
+    if approver:
+        approver.can_approve = True
     for calc in db.scalars(select(Calculation).where(Calculation.article_name.in_(
             ["Frontend-Modulträger", "Gehäuseschale Wallbox"]))).unique().all():
         owner = db.get(User, calc.owner_id)
+        # Großprojekt: Freigabe (Vier-Augen) vor dem Angebot
+        calc.approval_status, calc.approval_version = "freigegeben", calc.current_version
+        calc.approval_requested_by_id = owner.id
+        calc.approval_by_id = approver.id if approver and approver.id != owner.id else None
+        calc.approval_at = calc.approval_requested_at = datetime.now(timezone.utc)
+        calc.approval_comment = "Strategischer Kunde, Marge akzeptiert"
+        db.flush()
         create_opportunity(calc.id, db=db, user=owner)
         create_quote(calc.id, version_no=None, db=db, user=owner)
     print("Kalkulations-Stammdaten und Beispielkalkulationen angelegt.")

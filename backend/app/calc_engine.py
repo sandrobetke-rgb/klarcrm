@@ -60,6 +60,7 @@ DEFAULT_SETTINGS = {
     "space_cost_m2_year": 90.0,     # Raumkosten €/m² und Jahr (Herleitung Maschinenstundensatz)
     "energy_price_kwh": 0.20,       # Strompreis €/kWh (Herleitung Maschinenstundensatz)
     "escalation_threshold_pct": 5.0,  # Preisgleitung: Anpassung ab Materialpreisänderung ± %
+    "approval_min_margin_pct": 3.0,  # Freigabe nötig unter dieser Marge (zusätzlich bei Großprojekten)
     "transport_pct": 2.0,           # Transport pauschal % auf HK (wenn Details unbekannt)
     "big_revenue_threshold": 500000.0,  # Großprojekt: Jahresumsatz ab … €
     "big_invest_threshold": 500000.0,   # Großprojekt: Invest (Einmalkosten Werkzeug etc.) ab … €

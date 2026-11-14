@@ -9,6 +9,9 @@ import {
 import { Light } from './Calculations'
 import PostCalcTab from './PostCalcTab'
 import ArticleAnalysis from './ArticleAnalysis'
+import LifecycleTab from './LifecycleTab'
+import ApprovalBar from '../components/Approval'
+import AuditTable from '../components/AuditTable'
 import CallPanel, { LastCall } from '../components/CallPanel'
 import { BigBadge } from '../components/BigProject'
 
@@ -35,7 +38,7 @@ export const calcMetaFields = [
   { name: 'remark', label: 'Bemerkung', type: 'textarea', span: true, rows: 3 },
 ]
 
-const TABS = [['calc', 'Kalkulation'], ['analysis', 'Artikelanalyse'], ['calls', 'Anrufe'], ['meta', 'Anfrage & Status'], ['versions', 'Versionen'], ['post', 'Nachkalkulation']]
+const TABS = [['calc', 'Kalkulation'], ['analysis', 'Artikelanalyse'], ['lifecycle', 'Lebensweg'], ['calls', 'Anrufe'], ['meta', 'Anfrage & Status'], ['versions', 'Versionen'], ['post', 'Nachkalkulation'], ['audit', 'Protokoll']]
 
 export default function CalculationEditor() {
   const { id } = useParams()
@@ -92,6 +95,7 @@ export default function CalculationEditor() {
         </div>
         {canWrite && <HeaderActions calc={calc} setCalc={setCalc} onDelete={remove} onCall={() => setTab('calls')} />}
       </header>
+      <ApprovalBar calc={calc} setCalc={setCalc} />
       <div className="tabs no-print">
         {TABS.map(([k, l]) => (
           <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>
@@ -110,6 +114,8 @@ export default function CalculationEditor() {
       )}
       {tab === 'calls' && <CallPanel calc={calc} onChange={setCalc} />}
       {tab === 'analysis' && <ArticleAnalysis calc={calc} setCalc={setCalc} />}
+      {tab === 'lifecycle' && <LifecycleTab calc={calc} setCalc={setCalc} />}
+      {tab === 'audit' && <CalcAudit calc={calc} />}
       {tab === 'versions' && <VersionsTab calc={calc} />}
       {tab === 'post' && <PostCalcTab calc={calc} setCalc={setCalc} />}
     </div>
@@ -165,7 +171,14 @@ function NewCalc() {
   )
 }
 
+function CalcAudit({ calc }) {
+  const [rows, setRows] = useState(null)
+  useEffect(() => { api.get(`/audit/ref/calculations/${calc.id}`).then(setRows) }, [calc])
+  return <div className="card card-flush">{rows ? <AuditTable rows={rows} /> : <div className="loading">Lade…</div>}</div>
+}
+
 function HeaderActions({ calc, setCalc, onDelete, onCall }) {
+  const { isAdmin } = useAuth()
   const nav = useNavigate()
   const [err, setErr] = useState(null)
   return (
@@ -184,10 +197,10 @@ function HeaderActions({ calc, setCalc, onDelete, onCall }) {
       }}>Als Vorlage</button>
       <button className="btn btn-ghost" onClick={() => window.print()}>Drucken</button>
       <button className="btn btn-ghost" onClick={async () => {
-        const r = await api.post(`/calculations/${calc.id}/quote`)
-        nav(`/angebote/${r.quote_id}`)
+        setErr(null)
+        try { const r = await api.post(`/calculations/${calc.id}/quote`); nav(`/angebote/${r.quote_id}`) } catch (e) { setErr(e) }
       }}>→ Angebot erstellen</button>
-      <button className="btn btn-danger-ghost" onClick={onDelete}>Löschen</button>
+      {isAdmin && <button className="btn btn-danger-ghost" onClick={onDelete}>Löschen</button>}
       <ErrorBox error={err} />
     </div>
   )

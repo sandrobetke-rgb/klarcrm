@@ -18,6 +18,7 @@ import Calculations from './pages/Calculations'
 import CalculationEditor from './pages/CalculationEditor'
 import MasterData from './pages/MasterData'
 import Utilization from './pages/Utilization'
+import AuditLog from './pages/AuditLog'
 import { ROLES } from './constants'
 import Footer from './components/Footer'
 
@@ -35,6 +36,7 @@ function Layout() {
     ['/angebote', 'Angebote', '€'],
     ['/stammdaten', 'Stammdaten', '≡'],
   ]
+  if (isAdmin || user.role === 'gesellschafter' || user.can_approve) nav.push(['/protokoll', 'Protokoll', '⎙'])
   if (isAdmin) nav.push(['/benutzer', 'Benutzer', '⚙'])
   return (
     <div className="app">
@@ -85,6 +87,7 @@ function App() {
             <Route path="/kalkulationen/:id" element={<CalculationEditor />} />
             <Route path="/stammdaten" element={<MasterData />} />
             <Route path="/auslastung" element={<Utilization />} />
+            <Route path="/protokoll" element={<AuditLog />} />
             <Route path="/benutzer" element={<Users />} />
             <Route path="/profil" element={<Profile />} />
           </Route>
