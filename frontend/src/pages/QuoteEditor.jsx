@@ -98,7 +98,11 @@ export default function QuoteEditor() {
             <h1>{isNew ? 'Neues Angebot' : q.number} {!isNew && <Badge tone={quoteTone[q.status]}>{QUOTE_STATUS.find((s) => s.value === q.status)?.label}</Badge>}
               <BigBadge revenue={net - q.items.filter((i) => i.unit === 'psch').reduce((s, i) => s + lineTotal(i), 0)}
                 invest={q.items.filter((i) => i.unit === 'psch').reduce((s, i) => s + lineTotal(i), 0)} /></h1>
-            <p className="muted">{isNew ? 'Nummer wird beim Speichern vergeben' : `Erstellt ${fmtDate(q.quote_date)} von ${q.owner?.name || '–'}`}</p>
+            <p className="muted">{isNew ? 'Nummer wird beim Speichern vergeben' : `Erstellt ${fmtDate(q.quote_date)} von ${q.owner?.name || '–'}`}
+              {q.calculation_ids?.length > 0 && <> · aus Kalkulation{q.calculation_ids.length > 1 ? 'en' : ''}{' '}
+                {(q.calculations || q.calculation_ids.map((id) => ({ id, number: `#${id}` }))).map((c, i) => (
+                  <span key={c.id}>{i > 0 && ', '}<Link to={`/kalkulationen/${c.id}`} title={c.article_name}>{c.number}</Link></span>))}</>}
+            </p>
           </div>
           <div className="toolbar">
             {!isNew && <button className="btn btn-ghost" onClick={() => window.print()}>Drucken / PDF</button>}
@@ -128,12 +132,12 @@ export default function QuoteEditor() {
 
         <div className="card card-flush">
           <table className="table items-table">
-            <thead><tr><th style={{ width: 36 }}>Pos</th><th>Beschreibung</th><th className="num" style={{ width: 100 }}>Menge</th><th style={{ width: 80 }}>Einheit</th><th className="num" style={{ width: 130 }}>Einzelpreis €</th><th className="num" style={{ width: 80 }}>Rabatt %</th><th className="num" style={{ width: 130 }}>Gesamt</th><th style={{ width: 90 }} /></tr></thead>
+            <thead><tr><th style={{ width: 36 }}>Pos</th><th>Beschreibung</th><th className="num" style={{ width: 120 }}>Menge</th><th style={{ width: 80 }}>Einheit</th><th className="num" style={{ width: 130 }}>Einzelpreis €</th><th className="num" style={{ width: 80 }}>Rabatt %</th><th className="num" style={{ width: 130 }}>Gesamt</th><th style={{ width: 90 }} /></tr></thead>
             <tbody>
               {q.items.map((it, idx) => (
                 <tr key={idx}>
                   <td>{idx + 1}</td>
-                  <td><textarea rows={1} disabled={ro} value={it.description} onChange={(e) => setItem(idx, 'description', e.target.value)} placeholder="Artikel / Leistung" /></td>
+                  <td><textarea rows={Math.min(8, Math.max(1, (it.description || '').split('\n').reduce((n, l) => n + Math.max(1, Math.ceil(l.length / 75)), 0)))} disabled={ro} value={it.description} onChange={(e) => setItem(idx, 'description', e.target.value)} placeholder="Artikel / Leistung" /></td>
                   <td><input disabled={ro} type="number" step="any" className="num" value={it.quantity} onChange={(e) => setItem(idx, 'quantity', e.target.value)} /></td>
                   <td><input disabled={ro} value={it.unit} onChange={(e) => setItem(idx, 'unit', e.target.value)} /></td>
                   <td><input disabled={ro} type="number" step="any" className="num" value={it.unit_price} onChange={(e) => setItem(idx, 'unit_price', e.target.value)} /></td>

@@ -1,6 +1,7 @@
 from datetime import date, datetime, timezone
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Date,
     DateTime,
@@ -11,6 +12,7 @@ from sqlalchemy import (
     String,
     Text,
 )
+from sqlalchemy import select
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -143,6 +145,7 @@ class Quote(TimestampMixin, Base):
     intro_text: Mapped[str | None] = mapped_column(Text)
     terms: Mapped[str | None] = mapped_column(Text)
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    calculation_ids: Mapped[list | None] = mapped_column(JSON)  # Herkunft: Kalkulationen (Sammelangebot)
 
     account = relationship("Account", lazy="joined")
     contact = relationship("Contact", lazy="joined")
@@ -152,6 +155,18 @@ class Quote(TimestampMixin, Base):
         "QuoteItem", back_populates="quote", cascade="all, delete-orphan",
         order_by="QuoteItem.position", lazy="selectin",
     )
+
+    @property
+    def calculations(self) -> list[dict]:
+        """Herkunfts-Kalkulationen (Nummer, Artikel) für die Anzeige."""
+        from sqlalchemy.orm import object_session
+        ids = self.calculation_ids or []
+        sess = object_session(self)
+        if not ids or sess is None:
+            return []
+        rows = sess.execute(select(Calculation.id, Calculation.number, Calculation.article_name)
+                            .where(Calculation.id.in_(ids)).order_by(Calculation.number)).all()
+        return [{"id": r[0], "number": r[1], "article_name": r[2]} for r in rows]
 
     @property
     def net_total(self) -> float:

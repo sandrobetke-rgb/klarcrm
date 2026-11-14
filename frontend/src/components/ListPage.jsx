@@ -10,7 +10,7 @@ import { confirmDelete, EntityForm, ErrorBox, Modal, Pager, SearchInput, useFetc
  */
 export default function ListPage({
   title, subtitle, path, columns, fields, entityLabel, defaultSort, filters = [], baseParams = {},
-  newDefaults = {}, onRowClick, toForm = (r) => r, extraActions, limit = 50, top, rowClass,
+  newDefaults = {}, onRowClick, toForm = (r) => r, extraActions, limit = 50, top, rowClass, bulkBar,
 }) {
   const { canWrite } = useAuth()
   const [q, setQ] = useState('')
@@ -18,6 +18,9 @@ export default function ListPage({
   const [offset, setOffset] = useState(0)
   const [filterVals, setFilterVals] = useState({})
   const [editing, setEditing] = useState(null)
+  const [selected, setSelected] = useState({})
+  const selRows = Object.values(selected)
+  const toggle = (r) => setSelected((s) => { const n = { ...s }; if (n[r.id]) delete n[r.id]; else n[r.id] = r; return n })
   const params = { ...baseParams, ...filterVals, q, sort, limit, offset }
   const { data, error, loading, reload } = useFetch(path + qs(params))
 
@@ -61,10 +64,22 @@ export default function ListPage({
         ))}
       </div>
       <ErrorBox error={error} />
+      {bulkBar && selRows.length > 0 && <div className="bulk-bar">{bulkBar(selRows, () => setSelected({}))}</div>}
       <div className="card card-flush">
         <table className="table">
           <thead>
             <tr>
+              {bulkBar && (
+                <th className="sel-col">
+                  <input type="checkbox" aria-label="Alle auf dieser Seite auswählen"
+                    checked={!!data?.items.length && data.items.every((r) => selected[r.id])}
+                    onChange={(e) => setSelected((s) => {
+                      const n = { ...s }
+                      data?.items.forEach((r) => { if (e.target.checked) n[r.id] = r; else delete n[r.id] })
+                      return n
+                    })} />
+                </th>
+              )}
               {columns.map((c) => (
                 <th key={c.key} className={c.className}>
                   {c.sort ? (
@@ -80,11 +95,16 @@ export default function ListPage({
             {data?.items.map((r) => (
               <tr key={r.id} className={`row-click ${rowClass ? rowClass(r) : ''}`}
                 onClick={() => (onRowClick ? onRowClick(r) : canWrite && fields && setEditing(toForm(r)))}>
+                {bulkBar && (
+                  <td className="sel-col" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" aria-label="Auswählen" checked={!!selected[r.id]} onChange={() => toggle(r)} />
+                  </td>
+                )}
                 {columns.map((c) => <td key={c.key} className={c.className}>{c.render ? c.render(r, reload) : r[c.key] ?? '–'}</td>)}
               </tr>
             ))}
             {data && !data.items.length && (
-              <tr><td colSpan={columns.length} className="empty">Keine Einträge gefunden.</td></tr>
+              <tr><td colSpan={columns.length + (bulkBar ? 1 : 0)} className="empty">Keine Einträge gefunden.</td></tr>
             )}
             {loading && !data && <tr><td colSpan={columns.length} className="empty">Lade…</td></tr>}
           </tbody>

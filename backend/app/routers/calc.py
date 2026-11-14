@@ -27,6 +27,7 @@ materials = make_crud_router(
 )
 
 router = APIRouter()      # /api/calc  (Parameter, Vorschau)
+quote_bulk = APIRouter()  # /api/calculations-bulk
 calcs = APIRouter()       # /api/calculations
 
 STATUS_TO_STAGE = {
@@ -363,6 +364,51 @@ def create_opportunity(calc_id: int, db: Session = Depends(get_db), user: User =
     return calc
 
 
+def _de(v, d=2):
+    return f"{v:,.{d}f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def build_quote(db: Session, pairs: list, user: User) -> Quote:
+    """Angebot aus einer oder mehreren Kalkulationen (je mit Version). Serienteile zuerst, danach Einmalkosten."""
+    calcs = [c for c, _ in pairs]
+    first = calcs[0]
+    single = len(calcs) == 1
+    opp_ids = {c.opportunity_id for c in calcs}
+    title = first.article_name if single else \
+        f"Sammelangebot {len(calcs)} Artikel" + (f" – {first.account.name}" if first.account else "")
+    quote = Quote(number=next_quote_number(db), title=title, account_id=first.account_id,
+                  contact_id=first.contact_id, opportunity_id=opp_ids.pop() if len(opp_ids) == 1 else None,
+                  owner_id=user.id, status="entwurf", quote_date=date.today(),
+                  valid_until=date.today() + timedelta(days=30), tax_rate=19,
+                  intro_text="vielen Dank für Ihre Anfrage. Gerne bieten wir Ihnen an:",
+                  terms="Preise netto ab Werk, zzgl. gesetzl. MwSt. Werkzeugkosten zahlbar 50 % bei Bestellung, "
+                        "50 % bei Freigabe Erstmuster. Zahlungsbedingungen Serienteile: 30 Tage netto.",
+                  calculation_ids=[c.id for c in calcs])
+    items, one_time = [], []
+    for calc, ver in pairs:
+        r, inp = ver.results, ver.inputs
+        art = calc.article_name + (f"\nIhre Art.-Nr.: {calc.customer_article_no}" if calc.customer_article_no else "")
+        art += f"\nMaterial: {inp.get('material_name') or '–'} · Kalkulation {calc.number} V{ver.version_no}"
+        art += f"\nPreis je 1.000 Stk: {_de(r['price_per_1000'])} € · Losgröße {_de(float(inp.get('lot_size') or 0), 0)} Stk"
+        if r.get("lot_tiers"):
+            art += "\nStaffelpreise je 1.000 Stk: " + " · ".join(
+                f"Los {_de(t['lot_size'], 0)}: {_de(t['price_per_1000'])} €" for t in r["lot_tiers"])
+        items.append(dict(description=art, quantity=r["annual_volume"], unit="Stk", unit_price=r["unit_price"]))
+        for o in [o for o in r["one_time"] if o["price"]]:
+            label = o["label"] if single else f"{o['label']} – {calc.article_name}"
+            one_time.append(dict(description=f"{label} (einmalig)", quantity=1, unit="psch", unit_price=o["price"]))
+    quote.items = [QuoteItem(position=n, **it) for n, it in enumerate(items + one_time, start=1)]
+    db.add(quote)
+    for calc in calcs:
+        if calc.status in ("anfrage", "kalkulation"):
+            calc.status = "angeboten"
+            calc.probability = max(calc.probability, STATUS_PROBABILITY["angeboten"])
+    db.flush()
+    for calc in calcs:
+        sync_opportunity(db, calc)
+    return quote
+
+
 @calcs.post("/{calc_id}/quote")
 def create_quote(calc_id: int, version_no: int | None = None, db: Session = Depends(get_db),
                  user: User = Depends(can_write)):
@@ -372,32 +418,46 @@ def create_quote(calc_id: int, version_no: int | None = None, db: Session = Depe
     ver = next((v for v in calc.versions if v.version_no == (version_no or calc.current_version)), None)
     if not ver:
         raise HTTPException(404, "Version nicht gefunden")
-    r, inp = ver.results, ver.inputs
-    art = calc.article_name + (f"\nIhre Art.-Nr.: {calc.customer_article_no}" if calc.customer_article_no else "")
-    art += f"\nMaterial: {inp.get('material_name') or '–'} · Kalkulation {calc.number} V{ver.version_no}"
-    de = lambda v, d=2: f"{v:,.{d}f}".replace(",", "X").replace(".", ",").replace("X", ".")  # noqa: E731
-    art += f"\nPreis je 1.000 Stk: {de(r['price_per_1000'])} € · Losgröße {de(float(inp.get('lot_size') or 0), 0)} Stk"
-    if r.get("lot_tiers"):
-        art += "\nStaffelpreise je 1.000 Stk: " + " · ".join(
-            f"Los {de(t['lot_size'], 0)}: {de(t['price_per_1000'])} €" for t in r["lot_tiers"])
-    quote = Quote(number=next_quote_number(db), title=calc.article_name, account_id=calc.account_id,
-                  contact_id=calc.contact_id, opportunity_id=calc.opportunity_id, owner_id=user.id,
-                  status="entwurf", quote_date=date.today(), valid_until=date.today() + timedelta(days=30),
-                  tax_rate=19, intro_text="vielen Dank für Ihre Anfrage. Gerne bieten wir Ihnen an:",
-                  terms="Preise netto ab Werk, zzgl. gesetzl. MwSt. Werkzeugkosten zahlbar 50 % bei Bestellung, "
-                        "50 % bei Freigabe Erstmuster. Zahlungsbedingungen Serienteile: 30 Tage netto.")
-    quote.items = [QuoteItem(position=1, description=art, quantity=r["annual_volume"], unit="Stk",
-                             unit_price=r["unit_price"])]
-    for n, o in enumerate([o for o in r["one_time"] if o["price"]], start=2):
-        quote.items.append(QuoteItem(position=n, description=f"{o['label']} (einmalig)", quantity=1,
-                                     unit="psch", unit_price=o["price"]))
-    db.add(quote)
-    if calc.status in ("anfrage", "kalkulation"):
-        calc.status = "angeboten"
-        calc.probability = max(calc.probability, STATUS_PROBABILITY["angeboten"])
-        sync_opportunity(db, calc)
+    quote = build_quote(db, [(calc, ver)], user)
     db.commit()
     return {"quote_id": quote.id, "number": quote.number}
+
+
+@quote_bulk.post("/quote")
+def create_bulk_quote(data: dict, db: Session = Depends(get_db), user: User = Depends(can_write)):
+    """Sammelangebot aus mehreren Kalkulationen (aktuelle Versionen) desselben Kunden."""
+    ids = [int(i) for i in dict.fromkeys(data.get("ids") or [])]
+    if not ids:
+        raise HTTPException(400, "Bitte mindestens eine Kalkulation auswählen")
+    calcs = [db.get(Calculation, i) for i in ids]
+    if any(c is None for c in calcs):
+        raise HTTPException(404, "Kalkulation nicht gefunden")
+    accounts = {c.account_id for c in calcs}
+    if None in accounts:
+        raise HTTPException(400, "Alle Kalkulationen brauchen einen Kunden: " +
+                            ", ".join(c.number for c in calcs if not c.account_id))
+    if len(accounts) > 1:
+        raise HTTPException(400, "Ein Sammelangebot geht nur an einen Kunden – ausgewählt sind " +
+                            ", ".join(sorted({c.account.name for c in calcs})))
+    closed = [c.number for c in calcs if c.status in ("verloren", "kein_angebot")]
+    if closed:
+        raise HTTPException(400, f"Verlorene bzw. nicht angebotene Kalkulationen ausnehmen: {', '.join(closed)}")
+    calcs.sort(key=lambda c: c.number)
+    pairs = [(c, next(v for v in c.versions if v.version_no == c.current_version)) for c in calcs]
+    quote = build_quote(db, pairs, user)
+    db.commit()
+    return {"quote_id": quote.id, "number": quote.number, "count": len(calcs)}
+
+
+@calcs.get("/{calc_id}/quotes")
+def calc_quotes(calc_id: int, db: Session = Depends(get_db), _: User = Depends(can_read)):
+    calc = db.get(Calculation, calc_id)
+    if not calc:
+        raise HTTPException(404, "Kalkulation nicht gefunden")
+    rows = db.scalars(select(Quote).where(Quote.account_id == calc.account_id).order_by(Quote.number.desc())).unique().all()
+    return [{"id": q.id, "number": q.number, "status": q.status, "title": q.title, "quote_date": q.quote_date.isoformat(),
+             "net_total": q.net_total, "articles": len(q.calculation_ids or [])}
+            for q in rows if calc_id in (q.calculation_ids or [])]
 
 
 CALL_RESULT_LABELS = {

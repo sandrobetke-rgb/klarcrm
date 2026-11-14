@@ -46,6 +46,7 @@ app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"]
 app.include_router(calc.machines, prefix="/api/machines", tags=["Stammdaten"])
 app.include_router(calc.materials, prefix="/api/materials", tags=["Stammdaten"])
 app.include_router(calc.router, prefix="/api/calc", tags=["Kalkulation"])
+app.include_router(calc.quote_bulk, prefix="/api/calculations-bulk", tags=["Kalkulation"])
 app.include_router(calc.calcs, prefix="/api/calculations", tags=["Kalkulation"])
 
 

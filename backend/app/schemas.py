@@ -251,6 +251,8 @@ class QuoteOut(ORM, QuoteBase):
     net_total: float
     tax_total: float
     gross_total: float
+    calculation_ids: list[int] | None = None
+    calculations: list[dict] = []
     account: AccountRef | None = None
     contact: ContactRef | None = None
     opportunity: OpportunityRef | None = None

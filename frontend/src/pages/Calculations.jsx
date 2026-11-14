@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { api } from '../api'
 import CallPanel, { LastCall } from '../components/CallPanel'
 import { BigBadge, bigReasons, useThresholds } from '../components/BigProject'
 import { useAuth } from '../auth'
@@ -79,6 +80,8 @@ export default function Calculations() {
   const nav = useNavigate()
   const { canWrite } = useAuth()
   const [callFor, setCallFor] = useState(null)
+  const [accountFilter, setAccountFilter] = useState(null)
+  const [bulkErr, setBulkErr] = useState(null)
   const t = useThresholds()
   const [tick, setTick] = useState(0)
   return (
@@ -87,8 +90,40 @@ export default function Calculations() {
     <ListPage key={tick}
       title="Kalkulationen" subtitle="Anfragen, Kalkulationen und ihr Weg zum Auftrag" path="/calculations"
       entityLabel="Kalkulation" defaultSort="-updated_at" limit={100}
-      top={<Stats />}
+      top={<>
+        <Stats />
+        {accountFilter && (
+          <div className="filter-chip">Kunde: <strong>{accountFilter.name}</strong>
+            <button className="icon-btn" onClick={() => setAccountFilter(null)} title="Kundenfilter entfernen">×</button></div>
+        )}
+      </>}
       onRowClick={(r) => nav(`/kalkulationen/${r.id}`)}
+      baseParams={accountFilter ? { account_id: accountFilter.id } : {}}
+      bulkBar={canWrite && ((rows, clear) => {
+        const accs = [...new Map(rows.filter((r) => r.account).map((r) => [r.account.id, r.account])).values()]
+        const closed = rows.filter((r) => ['verloren', 'kein_angebot'].includes(r.status))
+        const ok = accs.length === 1 && rows.every((r) => r.account) && !closed.length
+        const sum = rows.reduce((s, r) => s + r.annual_revenue, 0)
+        return (
+          <>
+            <strong>{rows.length} Artikel ausgewählt</strong>
+            <span className="muted">{accs.map((a) => a.name).join(', ') || 'ohne Kunde'} · Umsatz p. a. {eur(sum)} · Invest {eur(rows.reduce((s, r) => s + (r.invest || 0), 0))}</span>
+            {accs.length > 1 && <span className="text-critical small">Ein Sammelangebot geht nur an einen Kunden.</span>}
+            {closed.length > 0 && <span className="text-critical small">Verlorene / nicht angebotene Artikel ausnehmen: {closed.map((r) => r.number).join(', ')}</span>}
+            {bulkErr && <span className="text-critical small">{bulkErr}</span>}
+            <span className="spacer" />
+            {accs.length === 1 && !accountFilter && <button className="btn btn-ghost btn-sm" onClick={() => setAccountFilter(accs[0])}>Nur {accs[0].name} anzeigen</button>}
+            <button className="btn btn-ghost btn-sm" onClick={() => { clear(); setBulkErr(null) }}>Auswahl aufheben</button>
+            <button className="btn btn-primary btn-sm" disabled={!ok} onClick={async () => {
+              setBulkErr(null)
+              try {
+                const res = await api.post('/calculations-bulk/quote', { ids: rows.map((r) => r.id) })
+                nav(`/angebote/${res.quote_id}`)
+              } catch (e) { setBulkErr(e.message) }
+            }}>→ Sammelangebot erstellen ({rows.length})</button>
+          </>
+        )
+      })}
       rowClass={(r) => (bigReasons(t, r.annual_revenue, r.invest).length ? 'row-big' : '')}
       extraActions={canWrite && <button className="btn btn-primary" onClick={() => nav('/kalkulationen/neu')}>+ Neue Anfrage / Kalkulation</button>}
       filters={[

@@ -101,6 +101,7 @@ export default function CalculationEditor() {
               open={!CLOSED_STATUS.includes(calc.status)} />
             {calc.last_call?.note && <span className="lastcall-note">„{calc.last_call.note}“</span>}
           </div>
+          <QuoteLinks calc={calc} />
         </div>
         {canWrite && <HeaderActions calc={calc} setCalc={setCalc} onDelete={remove} onCall={() => setTab('calls')} />}
       </header>
@@ -124,6 +125,20 @@ export default function CalculationEditor() {
       {tab === 'analysis' && <ArticleAnalysis calc={calc} setCalc={setCalc} />}
       {tab === 'versions' && <VersionsTab calc={calc} />}
       {tab === 'post' && <PostCalcTab calc={calc} setCalc={setCalc} />}
+    </div>
+  )
+}
+
+function QuoteLinks({ calc }) {
+  const [rows, setRows] = useState([])
+  useEffect(() => { api.get(`/calculations/${calc.id}/quotes`).then(setRows).catch(() => {}) }, [calc.id, calc.status])
+  if (!rows.length) return null
+  return (
+    <div className="lastcall-head">
+      <span className="muted small">Angebote:</span>
+      {rows.map((q) => (
+        <Link key={q.id} to={`/angebote/${q.id}`} className="small">{q.number}{q.articles > 1 ? ` (Sammelangebot, ${q.articles} Artikel)` : ''}</Link>
+      ))}
     </div>
   )
 }

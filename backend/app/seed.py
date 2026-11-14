@@ -167,6 +167,8 @@ def seed_calc(db):
         ("Trägerplatte Batterie", "BT-9001", "verloren", "projekt_kunde_nicht_gewonnen", 5, 5, 780, 0, 75, 1, 30000, 3000, 210000),
         ("Frontend-Modulträger", "FM-2027-01", "verhandlung", None, 5, 1, 1450, 0, 68, 1, 180000, 6000, 640000),
         ("Gehäuseschale Wallbox", "WB-330", "angeboten", None, 4, 3, 520, 25, 52, 1, 220000, 10000, 185000),
+        ("Halter Steuergerät", "4711-221", "kalkulation", None, 1, 4, 26, 4, 30, 2, 250000, 25000, 34000),
+        ("Deckel Sicherungskasten", "4711-305", "kalkulation", None, 3, 3, 88, 9, 38, 2, 120000, 12000, 61000),
         ("Distanzscheibe M4", "DS-04", "kein_angebot", "mengen_zu_klein", 0, 0, 0.3, 0, 12, 32, 5000, 5000, 9000),
         ("Kühlergrill-Träger", "KG-900", "kein_angebot", "keine_maschine_kapazitaet", 5, 1, 2400, 0, 90, 1, 50000, 5000, 380000),
         ("Verpackungseinsatz", "PK-17", "verloren", "projekt_eingestellt", 3, 0, 95, 10, 30, 2, 200000, 20000, 35000),
@@ -174,6 +176,8 @@ def seed_calc(db):
     ]
     for idx, (art, kd, status, reason, mi, mati, g, spr, cyc, cav, vol, lot, tool) in enumerate(examples):
         acc = accounts[idx % len(accounts)] if accounts else None
+        if accounts and art in ("Halter Steuergerät", "Deckel Sicherungskasten"):
+            acc = accounts[0]  # mehrere Artikel desselben Kunden (Sammelangebot)
         m, mat = machines[mi], materials[mati]
         inp = default_inputs(db)
         inp.update(material_id=mat.id, material_name=mat.name, material_price_kg=mat.price_per_kg,
