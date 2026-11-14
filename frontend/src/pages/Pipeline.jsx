@@ -6,6 +6,7 @@ import ListPage from '../components/ListPage'
 import { confirmDelete, EntityForm, ErrorBox, Modal, RefSelect, SearchInput, useFetch } from '../components/ui'
 import { eur, fmtDate, STAGES, stageLabel } from '../constants'
 import { opportunityFields } from '../forms'
+import { bigReasons, useThresholds } from '../components/BigProject'
 
 export default function Pipeline() {
   const [view, setView] = useState('board')
@@ -38,6 +39,7 @@ export default function Pipeline() {
 
 function Board({ toggle }) {
   const { canWrite } = useAuth()
+  const t = useThresholds()
   const [owner, setOwner] = useState(null)
   const [q, setQ] = useState('')
   const { data, error, reload } = useFetch('/opportunities' + qs({ limit: 500, sort: '-amount', owner_id: owner, q }))
@@ -103,10 +105,10 @@ function Board({ toggle }) {
               </div>
               <div className="board-cards">
                 {col.map((o) => (
-                  <div key={o.id} className="deal" draggable={canWrite}
+                  <div key={o.id} className={`deal ${bigReasons(t, o.amount, 0).length ? 'deal-big' : ''}`} draggable={canWrite}
                     onDragStart={(e) => e.dataTransfer.setData('text/plain', String(o.id))}
                     onClick={() => canWrite && setEditing(o)}>
-                    <div className="deal-title">{o.name}</div>
+                    <div className="deal-title">{bigReasons(t, o.amount, 0).length > 0 && <span className="big-star" title="Großprojekt">★ </span>}{o.name}</div>
                     <Link to={`/firmen/${o.account?.id}`} className="deal-acc" onClick={(e) => e.stopPropagation()}>{o.account?.name}</Link>
                     <div className="deal-foot">
                       <strong>{eur(o.amount)}</strong>

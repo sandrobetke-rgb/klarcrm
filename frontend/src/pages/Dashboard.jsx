@@ -55,6 +55,7 @@ export default function Dashboard() {
         <section className="kpi-grid">
           <Kpi label="Anfragen / Kalkulationen offen" value={cs.data.count_open} sub={`${cs.data.overdue_calls} seit > 14 Tagen ohne Anruf`} to="/kalkulationen" />
           <Kpi label="Potenzial Jahresumsatz" value={eur(cs.data.open_revenue)} sub={`gewichtet ${eur(cs.data.open_weighted)}`} to="/kalkulationen" />
+          <Kpi label="★ Großprojekte offen" value={cs.data.big_open_count} sub={`${eur(cs.data.big_open_revenue)} p. a. · Invest ${eur(cs.data.big_open_invest)}`} to="/kalkulationen" />
           <Kpi label="Werkzeuge offen" value={eur(cs.data.open_tooling)} sub="Einmalumsatz in offenen Kalkulationen" />
           <Kpi label="Trefferquote Kalkulationen" value={cs.data.hit_rate != null ? `${cs.data.hit_rate.toLocaleString('de-DE')} %` : '–'} sub={`${cs.data.won_count} gewonnen / ${cs.data.lost_count} verloren`} />
           <Kpi label="Nachkalkulation" value={`${cs.data.traffic_lights.gruen} / ${cs.data.traffic_lights.gelb} / ${cs.data.traffic_lights.rot}`} sub="grün / gelb / rot" to="/kalkulationen" />

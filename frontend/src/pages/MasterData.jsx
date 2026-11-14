@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
+import { resetThresholds } from '../components/BigProject'
 import { useAuth } from '../auth'
 import ListPage from '../components/ListPage'
 import { Badge, ErrorBox } from '../components/ui'
@@ -34,6 +35,7 @@ const PARAMS = [
   ['Gewinn & Konditionen', [['profit_pct', 'Gewinn', '%'], ['cash_discount_pct', 'Skonto', '%'], ['rebate_pct', 'Rabatt', '%']]],
   ['Fertigung', [['productivity_pct', 'Produktivität (ohne Maschine)', '%'], ['assembly_productivity_pct', 'Produktivität Montage', '%'],
     ['setup_time_h', 'Rüstzeit je Los', 'h'], ['setup_persons', 'Einrichter je Rüstvorgang', 'Pers.'], ['startup_scrap_pcs', 'Anfahrausschuss je Los', 'Stk']]],
+  ['Großprojekte (Hervorhebung)', [['big_revenue_threshold', 'Ab Jahresumsatz', '€'], ['big_invest_threshold', 'Ab Invest (Einmalkosten)', '€']]],
   ['Nachkalkulation (Ampel)', [['nk_green_pct', 'Grün bis Abweichung Selbstkosten', '%'], ['nk_red_pct', 'Rot ab Abweichung Selbstkosten', '%']]],
 ]
 
@@ -81,7 +83,7 @@ function Params({ tabs }) {
   if (!vals) return <div className="loading">Lade…</div>
   async function save() {
     setError(null)
-    try { setVals(await api.put('/calc/settings', vals)); setMsg('Gespeichert. Gilt für neue Kalkulationen; bestehende Versionen bleiben unverändert.') }
+    try { setVals(await api.put('/calc/settings', vals)); resetThresholds(); setMsg('Gespeichert. Gilt für neue Kalkulationen; bestehende Versionen bleiben unverändert.') }
     catch (e) { setError(e) }
   }
   return (

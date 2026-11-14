@@ -5,6 +5,7 @@ import { useAuth } from '../auth'
 import { Badge, confirmDelete, ErrorBox, RefSelect } from '../components/ui'
 import { contactName, eur, fmtDate, QUOTE_STATUS } from '../constants'
 import { quoteTone } from './Quotes'
+import { BigBadge } from '../components/BigProject'
 
 const emptyItem = () => ({ description: '', quantity: 1, unit: 'Stk', unit_price: 0, discount_pct: 0 })
 const greeting = (c) => {
@@ -94,7 +95,9 @@ export default function QuoteEditor() {
         <Link to="/angebote" className="back">‹ Alle Angebote</Link>
         <header className="page-head">
           <div>
-            <h1>{isNew ? 'Neues Angebot' : q.number} {!isNew && <Badge tone={quoteTone[q.status]}>{QUOTE_STATUS.find((s) => s.value === q.status)?.label}</Badge>}</h1>
+            <h1>{isNew ? 'Neues Angebot' : q.number} {!isNew && <Badge tone={quoteTone[q.status]}>{QUOTE_STATUS.find((s) => s.value === q.status)?.label}</Badge>}
+              <BigBadge revenue={net - q.items.filter((i) => i.unit === 'psch').reduce((s, i) => s + lineTotal(i), 0)}
+                invest={q.items.filter((i) => i.unit === 'psch').reduce((s, i) => s + lineTotal(i), 0)} /></h1>
             <p className="muted">{isNew ? 'Nummer wird beim Speichern vergeben' : `Erstellt ${fmtDate(q.quote_date)} von ${q.owner?.name || '–'}`}</p>
           </div>
           <div className="toolbar">

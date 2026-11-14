@@ -4,7 +4,7 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.2 |
+| **Dokumentversion** | 1.3 |
 | **Stand** | 14.11.2026 |
 | **Status** | Testphase (GitHub Codespaces) |
 
@@ -85,6 +85,7 @@ von Standardwerten werden markiert; jede Änderung an einer Kalkulation erzeugt 
 - STM-8: Gewinn (Standard **7 %**), Skonto, Rabatt.
 - STM-9: Fertigungs-Standards: Produktivität, Montage-Produktivität, Rüstzeit, Einrichter je Rüstvorgang, Anfahrausschuss.
 - STM-10: Ampel-Schwellen der Nachkalkulation (Standard grün bis +3 %, rot ab +10 %).
+- STM-12: Schwellen für **Großprojekte**: Jahresumsatz ab 500.000 € und Invest ab 500.000 € (Standard, änderbar).
 - STM-11: Nur Administratoren ändern Parameter. Änderungen wirken auf **neue** Kalkulationen; gespeicherte Versionen
   enthalten ihre Werte selbst und bleiben reproduzierbar.
 
@@ -186,13 +187,22 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 
 ### 6.5 Kalkulationsliste (Anfragenübersicht)
 - KAL-50: Spalten: Kalk.-Nr. und Version, Artikel und eigene Art.-Nr., **Art.-Nr. Kunde**, Kunde und Ansprechpartner,
-  Status und Verlustgrund, €/Stk, Menge p. a., Umsatz p. a. (+ Einmalumsatz), Wahrscheinlichkeit und gewichteter
+  Status und Verlustgrund, €/Stk, Menge p. a., Umsatz p. a. und Invest, Wahrscheinlichkeit und gewichteter
   Umsatz, **zuletzt angerufen**, Bemerkung, Ampel der letzten Nachkalkulation.
 - KAL-51: Suche (Nummer, Artikel, Artikelnummern, Bemerkung), Filter Status und Verlustgrund, Sortierung je Spalte.
 - KAL-52: Kennzahlen: offene Anfragen, nicht angerufene > 14 Tage, Potenzial (offen, gewichtet), offene
   Werkzeugumsätze, gewonnen, verloren, Trefferquote, Ampelverteilung.
 - KAL-53: Auswertung **Verlustgründe** (verlorener Jahresumsatz und Anzahl je Grund).
 - KAL-54: Kalkulations-KPIs auch im Dashboard (für Gesellschafter).
+- KAL-55: **Großprojekte hervorheben**: Eine Kalkulation gilt als Großprojekt, wenn der Jahresumsatz ≥ Umsatz-Schwelle
+  **oder** der Invest ≥ Invest-Schwelle ist (STM-12). Invest = Summe der Einmalkosten (Kosten) der aktuellen Version
+  (Werkzeug, Bemusterung, Prüfmittel …).
+- KAL-56: Darstellung: Kennzeichen „★ Großprojekt“ mit Begründung (Umsatz und/oder Invest), farbig hinterlegte Zeile
+  bzw. Karte in Kalkulationsliste, Kalkulationskopf, Angebotsliste, Angebot, Pipeline-Board.
+- KAL-57: Filter „nur Großprojekte“ in der Kalkulationsliste; Kennzahl „Großprojekte offen“ (Anzahl, Umsatz p. a.,
+  Invest) in Kalkulationsliste und Dashboard.
+- KAL-58: Angebote: Invest = Positionen mit Einheit „psch“ (Einmalkosten), Serienumsatz = Netto − Invest.
+  Pipeline: Volumen der Verkaufschance ≥ Umsatz-Schwelle.
 
 ## 7. Nachkalkulation
 - NK-1: Zu jeder Kalkulation beliebig viele Nachkalkulationen (z. B. je Fertigungsauftrag oder Zeitraum) mit
@@ -244,3 +254,4 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | 1.0 | 13.11.2026 | Erstversion CRM: Firmen, Kontakte, Pipeline, Aktivitäten, Angebote, Dashboard, Rollen, Docker, Codespaces-Testumgebung |
 | 1.1 | 14.11.2026 | Modul **Kalkulation**: Stammdaten Maschinen/Materialien/Parameter, Zuschlagskalkulation Spritzguss (Material, MGK, Maschine, Instandhaltung, Personal, Rüsten, Montage, FGK, Ausschuss, Verwaltung, Vertrieb, Projektmanagement, Gewinn 7 % Standard), Zusatz- und Einmalkosten, Werte je Stück/100/1.000, Versionen mit Vergleich, Kalkulationsliste mit Verlustgründen und „zuletzt angerufen“, Übernahme in Verkaufschance, Angebot aus Kalkulation, Nachkalkulation mit Ampel, KPIs im Dashboard. Lastenheft eingeführt. |
 | 1.2 | 14.11.2026 | Anrufhistorie mit Ergebnis je Kalkulation (KAL-8 bis KAL-10), Anzeige „zuletzt angerufen + Ergebnis“ in Liste und Kalkulationskopf, Wiedervorlage als Aufgabe; Zuschläge **Qualität** und **Werkzeugbau** mit wählbarer Basis FEK/HK (KAL-27, STM-7, Rechenweg 6.2); Copyright-Fußzeile SB/Thinkworks (NFA-7). Neue Tabelle `calculation_calls` (wird automatisch angelegt). |
+| 1.3 | 14.11.2026 | **Großprojekte hervorheben** (KAL-55 bis KAL-58, STM-12): Jahresumsatz oder Invest ≥ 500.000 € (Schwellen änderbar), Kennzeichen in Kalkulationen, Angeboten und Pipeline, Filter und KPI. Fehlerbehebung: Verkaufschance aus Kalkulation übernimmt jetzt sofort das Volumen (vorher 0 €). |

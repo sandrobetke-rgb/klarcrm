@@ -9,6 +9,7 @@ import {
 import { Light } from './Calculations'
 import PostCalcTab from './PostCalcTab'
 import CallPanel, { LastCall } from '../components/CallPanel'
+import { BigBadge } from '../components/BigProject'
 
 export const calcMetaFields = [
   { name: 'article_name', label: 'Artikelbezeichnung', required: true, span: true },
@@ -78,7 +79,8 @@ export default function CalculationEditor() {
       <header className="page-head">
         <div>
           <h1>{calc.number} · {calc.article_name} <Badge tone={st.tone}>{st.label}</Badge>
-            {calc.last_traffic_light && <Light value={calc.last_traffic_light} />}</h1>
+            {calc.last_traffic_light && <Light value={calc.last_traffic_light} />}
+            <BigBadge revenue={calc.annual_revenue} invest={calc.invest} /></h1>
           <p className="muted">
             {calc.account ? <Link to={`/firmen/${calc.account.id}`}>{calc.account.name}</Link> : 'kein Kunde'}
             {calc.customer_article_no && ` · Kd.-Art.-Nr. ${calc.customer_article_no}`}

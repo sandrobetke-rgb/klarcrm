@@ -404,6 +404,7 @@ class CalcOut(ORM, CalcMeta):
     annual_volume: float
     annual_revenue: float
     one_time_revenue: float
+    invest: float = 0
     margin_pct: float
     last_traffic_light: str | None = None
     last_call: CallOut | None = None

@@ -161,6 +161,8 @@ def seed_calc(db):
         ("Griffschale Haushalt", "HH-2201", "verloren", "artikelpreis_zu_hoch", 1, 2, 64, 6, 35, 2, 150000, 15000, 42000),
         ("Lüftergitter", "LG-500", "verloren", "werkzeug_zu_teuer", 3, 7, 120, 12, 40, 1, 40000, 4000, 88000),
         ("Trägerplatte Batterie", "BT-9001", "verloren", "projekt_kunde_nicht_gewonnen", 5, 5, 780, 0, 75, 1, 30000, 3000, 210000),
+        ("Frontend-Modulträger", "FM-2027-01", "verhandlung", None, 5, 1, 1450, 0, 68, 1, 180000, 6000, 640000),
+        ("Gehäuseschale Wallbox", "WB-330", "angeboten", None, 4, 3, 520, 25, 52, 1, 220000, 10000, 185000),
         ("Verpackungseinsatz", "PK-17", "verloren", "projekt_eingestellt", 3, 0, 95, 10, 30, 2, 200000, 20000, 35000),
         ("Dichtungsrahmen TPE", "DR-303", "anfrage", None, 1, 8, 12, 2, 32, 4, 90000, 10000, 30000),
     ]
@@ -214,6 +216,13 @@ def seed_calc(db):
                 calc.post_calcs.append(PostCalculation(version_no=calc.current_version, reference=ref, actuals=actual,
                                                        results=pres, traffic_light=light, created_by_id=owner.id))
     db.commit()
+    # Großprojekte mit Verkaufschance und Angebot verknüpfen (zeigt Hervorhebung in Pipeline/Angeboten)
+    from .routers.calc import create_opportunity, create_quote
+    for calc in db.scalars(select(Calculation).where(Calculation.article_name.in_(
+            ["Frontend-Modulträger", "Gehäuseschale Wallbox"]))).unique().all():
+        owner = db.get(User, calc.owner_id)
+        create_opportunity(calc.id, db=db, user=owner)
+        create_quote(calc.id, version_no=None, db=db, user=owner)
     print("Kalkulations-Stammdaten und Beispielkalkulationen angelegt.")
 
 

@@ -342,6 +342,15 @@ def _last_call(self):
 Calculation.last_call = property(_last_call)
 
 
+def _invest(self):
+    """Invest = Einmalkosten (Werkzeug, Bemusterung …) der aktuellen Version."""
+    v = next((x for x in reversed(self.versions) if x.version_no == self.current_version), None)
+    return float((v.results or {}).get("one_time_cost", 0)) if v else 0.0
+
+
+Calculation.invest = property(_invest)
+
+
 def _last_light(self):
     return self.post_calcs[-1].traffic_light if self.post_calcs else None
 

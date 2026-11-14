@@ -132,9 +132,19 @@ def sync_opportunity(db: Session, calc: Calculation):
         opp.probability = round(sum((c.annual_revenue + c.one_time_revenue) * c.probability for c in linked) / total)
 
 
+def is_big(c: Calculation, st: dict) -> list[str]:
+    """Gründe, warum eine Kalkulation als Großprojekt gilt (leer = kein Großprojekt)."""
+    reasons = []
+    if c.annual_revenue >= st["big_revenue_threshold"]:
+        reasons.append("umsatz")
+    if c.invest >= st["big_invest_threshold"]:
+        reasons.append("invest")
+    return reasons
+
+
 @calcs.get("", response_model=dict)
 def list_calcs(
-    q: str | None = None, status: str | None = None, close_reason: str | None = None,
+    q: str | None = None, status: str | None = None, close_reason: str | None = None, big: bool = False,
     account_id: int | None = None, owner_id: int | None = None, opportunity_id: int | None = None,
     sort: str = "-updated_at", limit: int = Query(100, le=1000), offset: int = 0,
     db: Session = Depends(get_db), _: User = Depends(can_read),
@@ -153,11 +163,16 @@ def list_calcs(
                      (Calculation.opportunity_id, opportunity_id)):
         if val:
             stmt = stmt.where(col == val)
-    total = db.scalar(select(func.count()).select_from(stmt.subquery()))
     key = sort.lstrip("-")
     col = getattr(Calculation, key, Calculation.updated_at)
-    stmt = stmt.order_by(col.desc().nulls_last() if sort.startswith("-") else col.asc().nulls_last())
-    rows = db.scalars(stmt.offset(offset).limit(limit)).unique().all()
+    stmt = stmt.order_by(col.desc().nulls_last() if sort.startswith("-") else col.asc().nulls_last(), Calculation.id.desc())
+    if big:  # Großprojekte: Invest steckt in den Versionen, daher Filter in Python (Datenmenge klein)
+        st = get_settings(db)
+        rows = [r for r in db.scalars(stmt).unique().all() if is_big(r, st)]
+        total, rows = len(rows), rows[offset:offset + limit]
+    else:
+        total = db.scalar(select(func.count()).select_from(stmt.subquery()))
+        rows = db.scalars(stmt.offset(offset).limit(limit)).unique().all()
     return {"total": total, "items": [s.CalcOut.model_validate(r).model_dump(mode="json") for r in rows]}
 
 
@@ -182,7 +197,13 @@ def calc_stats(owner_id: int | None = None, db: Session = Depends(get_db), _: Us
         if c.last_traffic_light:
             lights[c.last_traffic_light] += 1
     decided = len(won) + len(lost)
+    st = get_settings(db)
+    big_open = [c for c in open_ if is_big(c, st)]
     return {
+        "big_open_count": len(big_open),
+        "big_open_revenue": round(sum(rev(c) for c in big_open), 2),
+        "big_open_invest": round(sum(c.invest for c in big_open), 2),
+        "big_revenue_threshold": st["big_revenue_threshold"], "big_invest_threshold": st["big_invest_threshold"],
         "count_total": len(rows), "count_open": len(open_),
         "open_revenue": round(sum(rev(c) for c in open_), 2),
         "open_weighted": round(sum(rev(c) * c.probability / 100 for c in open_), 2),
@@ -298,6 +319,7 @@ def create_opportunity(calc_id: int, db: Session = Depends(get_db), user: User =
     db.flush()
     calc.opportunity_id = opp.id
     calc.sync_opportunity = True
+    db.flush()  # Verknüpfung muss für die Summenabfrage sichtbar sein
     sync_opportunity(db, calc)
     db.commit()
     db.refresh(calc)

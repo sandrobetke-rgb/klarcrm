@@ -49,6 +49,8 @@ DEFAULT_SETTINGS = {
     "tool_markup_pct": 0.0,        # Aufschlag auf Werkzeugkosten für den Kundenpreis
     "nk_green_pct": 3.0,           # Nachkalkulation: Abweichung SK bis +3 % = grün
     "nk_red_pct": 10.0,            # ab +10 % = rot (dazwischen gelb); Verlust = immer rot
+    "big_revenue_threshold": 500000.0,  # Großprojekt: Jahresumsatz ab … €
+    "big_invest_threshold": 500000.0,   # Großprojekt: Invest (Einmalkosten Werkzeug etc.) ab … €
 }
 
 DEFAULT_INPUTS = {

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import CallPanel, { LastCall } from '../components/CallPanel'
+import { BigBadge, bigReasons, useThresholds } from '../components/BigProject'
 import { useAuth } from '../auth'
 import { BarList } from '../components/charts'
 import ListPage from '../components/ListPage'
@@ -24,6 +25,8 @@ function Stats() {
           <span className="kpi-sub">{data.overdue_calls} seit &gt; 14 Tagen nicht angerufen</span></div>
         <div className="kpi"><span className="kpi-label">Potenzial Jahresumsatz (offen)</span><span className="kpi-value">{eur(data.open_revenue)}</span>
           <span className="kpi-sub">gewichtet {eur(data.open_weighted)}</span></div>
+        <div className="kpi kpi-big"><span className="kpi-label">★ Großprojekte offen</span><span className="kpi-value">{data.big_open_count}</span>
+          <span className="kpi-sub">Umsatz p. a. {eur(data.big_open_revenue)} · Invest {eur(data.big_open_invest)}</span></div>
         <div className="kpi"><span className="kpi-label">Werkzeuge / Einmalumsatz (offen)</span><span className="kpi-value">{eur(data.open_tooling)}</span></div>
         <div className="kpi"><span className="kpi-label">Gewonnen</span><span className="kpi-value">{eur(data.won_revenue)}</span>
           <span className="kpi-sub">{data.won_count} Artikel · Trefferquote {data.hit_rate != null ? `${num(data.hit_rate, 1)} %` : '–'}</span></div>
@@ -62,6 +65,7 @@ export default function Calculations() {
   const nav = useNavigate()
   const { canWrite } = useAuth()
   const [callFor, setCallFor] = useState(null)
+  const t = useThresholds()
   const [tick, setTick] = useState(0)
   return (
     <>
@@ -71,14 +75,17 @@ export default function Calculations() {
       entityLabel="Kalkulation" defaultSort="-updated_at" limit={100}
       top={<Stats />}
       onRowClick={(r) => nav(`/kalkulationen/${r.id}`)}
+      rowClass={(r) => (bigReasons(t, r.annual_revenue, r.invest).length ? 'row-big' : '')}
       extraActions={canWrite && <button className="btn btn-primary" onClick={() => nav('/kalkulationen/neu')}>+ Neue Anfrage / Kalkulation</button>}
       filters={[
         { name: 'status', label: 'Status', options: CALC_STATUS },
         { name: 'close_reason', label: 'Verlustgrund', options: CLOSE_REASONS },
+        { name: 'big', label: 'Großprojekte', options: [{ value: 'true', label: '★ nur Großprojekte' }] },
       ]}
       columns={[
         { key: 'number', label: 'Kalk.-Nr.', sort: 'number', render: (r) => <><strong>{r.number}</strong><br /><small className="muted">V{r.current_version}</small></> },
-        { key: 'article_name', label: 'Artikel', sort: 'article_name', render: (r) => <>{r.article_name}{r.own_article_no && <><br /><small className="muted">{r.own_article_no}</small></>}</> },
+        { key: 'article_name', label: 'Artikel', sort: 'article_name', render: (r) => <>{r.article_name}{r.own_article_no && <><br /><small className="muted">{r.own_article_no}</small></>}
+          <div><BigBadge revenue={r.annual_revenue} invest={r.invest} /></div></> },
         { key: 'customer_article_no', label: 'Art.-Nr. Kunde', sort: 'customer_article_no' },
         { key: 'account', label: 'Kunde / Ansprechpartner', render: (r) => <>
           {r.account ? <Link to={`/firmen/${r.account.id}`} onClick={(e) => e.stopPropagation()}>{r.account.name}</Link> : '–'}
@@ -88,7 +95,7 @@ export default function Calculations() {
           {r.close_reason && <><br /><small className="muted">{reasonLabel(r.close_reason)}</small></>}</> },
         { key: 'unit_price', label: '€/Stk', sort: 'unit_price', className: 'num', render: (r) => eur4(r.unit_price) },
         { key: 'annual_volume', label: 'Menge p. a.', sort: 'annual_volume', className: 'num', render: (r) => num(r.annual_volume) },
-        { key: 'annual_revenue', label: 'Umsatz p. a.', sort: 'annual_revenue', className: 'num', render: (r) => <>{eur(r.annual_revenue)}{r.one_time_revenue > 0 && <><br /><small className="muted">+ {eur(r.one_time_revenue)} einm.</small></>}</> },
+        { key: 'annual_revenue', label: 'Umsatz p. a. / Invest', sort: 'annual_revenue', className: 'num', render: (r) => <>{eur(r.annual_revenue)}{r.invest > 0 && <><br /><small className="muted">Invest {eur(r.invest)}</small></>}</> },
         { key: 'probability', label: 'Wahrsch.', sort: 'probability', className: 'num', render: (r) => <>{r.probability} %<br /><small className="muted">{eur(r.annual_revenue * r.probability / 100)}</small></> },
         { key: 'last_call_at', label: 'Zuletzt angerufen / Ergebnis', sort: 'last_call_at', render: (r) => (
           <div onClick={(e) => e.stopPropagation()}>
