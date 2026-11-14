@@ -84,7 +84,8 @@ def default_inputs(db: Session) -> dict:
     inp = dict(DEFAULT_INPUTS)
     for k in ("labor_rate_h", "setup_rate_h", "assembly_rate_h", "mgk_pct", "fgk_pct", "scrap_pct", "vwgk_pct",
               "vtgk_pct", "pm_pct", "quality_pct", "toolshop_pct", "profit_pct", "cash_discount_pct", "rebate_pct", "productivity_pct",
-              "assembly_productivity_pct", "setup_time_h", "setup_persons", "startup_scrap_pcs"):
+              "assembly_productivity_pct", "setup_time_h", "setup_persons", "startup_scrap_pcs",
+              "co2_grid_kg_kwh", "co2_scope1_kg_h", "co2_masterbatch_kg_kg", "co2_transport_kg_tkm"):
         inp[k] = st[k]
     inp["extras"], inp["one_time"] = [], [{"label": "Spritzgießwerkzeug", "cost": 0, "price": 0}]
     return inp
@@ -398,6 +399,10 @@ def build_quote(db: Session, pairs: list, user: User) -> Quote:
                 (f", {_de(float(inp['pack_parts_per_unit']), 0)} Stk je VE" if inp.get("pack_parts_per_unit") else "")
         if inp.get("incoterm") or (inp.get("transport_mode") or "keine") != "keine":
             art += "\nLieferbedingung: " + (inp.get("incoterm") or ("frei Haus" if inp.get("transport_mode") != "keine" else "ab Werk"))
+        co2 = r.get("co2") or {}
+        if co2.get("active") and inp.get("co2_on_quote", True):
+            art += (f"\nCO₂-Fußabdruck (Cradle-to-Gate): {_de(co2['cradle_to_gate'] * 1000, 1)} g CO₂e/Stk · "
+                    f"{_de(co2['cradle_to_gate'] * 1000, 2)} kg je 1.000 Stk · davon Scope 1+2 {_de(co2['scope12'] * 1000, 1)} g/Stk")
         items.append(dict(description=art, quantity=r["annual_volume"], unit="Stk", unit_price=r["unit_price"]))
         for o in [o for o in r["one_time"] if o["price"]]:
             label = o["label"] if single else f"{o['label']} – {calc.article_name}"

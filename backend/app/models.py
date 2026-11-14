@@ -232,6 +232,8 @@ class Machine(TimestampMixin, Base):
     available_hours_year: Mapped[float | None] = mapped_column(Float, default=6000)  # verfügbare Std/Jahr (Schichtmodell)
     base_load_pct: Mapped[float | None] = mapped_column(Float, default=0)          # Grundauslastung Bestandsaufträge %
     base_load_decline_pct: Mapped[float | None] = mapped_column(Float, default=0)  # Auslauf Bestand je Jahr %
+    power_kw: Mapped[float | None] = mapped_column(Float)                          # mittl. Leistungsaufnahme inkl. Peripherie
+    grid_factor: Mapped[float | None] = mapped_column(Float)                       # Strom kg CO₂e/kWh (Standort), leer = Parameter
     notes: Mapped[str | None] = mapped_column(Text)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
@@ -244,6 +246,7 @@ class Material(TimestampMixin, Base):
     supplier: Mapped[str | None] = mapped_column(String(120))
     price_per_kg: Mapped[float] = mapped_column(Float, default=0)
     density: Mapped[float | None] = mapped_column(Float)
+    co2_kg_per_kg: Mapped[float | None] = mapped_column(Float)  # Emissionsfaktor Cradle-to-Gate kg CO₂e/kg (Lieferanten-PCF)
     notes: Mapped[str | None] = mapped_column(Text)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 

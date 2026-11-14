@@ -388,3 +388,10 @@ h1 .big-badge { font-size: 12.5px; margin-top: 0; }
 .bulk-bar .btn-primary { background: #fff; color: var(--brand); }
 .bulk-bar .btn-primary:disabled { opacity: .45; }
 .filter-chip { display: inline-flex; gap: 6px; align-items: center; background: var(--brand-50); color: var(--brand); padding: 4px 6px 4px 12px; border-radius: 999px; font-size: 13px; align-self: flex-start; }
+
+/* ---------- CO₂ ---------- */
+.co2-card { display: flex; flex-direction: column; gap: 10px; }
+.co2-card h3 { margin: 0; }
+.co2-big { font-size: 26px; font-weight: 750; color: #1a7a45; font-variant-numeric: tabular-nums; }
+.co2-share { display: inline-block; width: 50px; height: 6px; background: #eceef2; border-radius: 3px; margin-right: 6px; vertical-align: middle; overflow: hidden; }
+.co2-share span { display: block; height: 100%; background: #2f9e62; }

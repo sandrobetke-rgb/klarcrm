@@ -289,6 +289,8 @@ class MachineBase(BaseModel):
     available_hours_year: float | None = 6000
     base_load_pct: float | None = 0
     base_load_decline_pct: float | None = 0
+    power_kw: float | None = None
+    grid_factor: float | None = None
     notes: str | None = None
     active: bool = True
 
@@ -307,6 +309,7 @@ class MaterialBase(BaseModel):
     supplier: str | None = None
     price_per_kg: float = 0
     density: float | None = None
+    co2_kg_per_kg: float | None = None
     notes: str | None = None
     active: bool = True
 

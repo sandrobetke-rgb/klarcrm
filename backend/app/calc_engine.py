@@ -51,6 +51,11 @@ DEFAULT_SETTINGS = {
     "tool_markup_pct": 0.0,        # Aufschlag auf Werkzeugkosten für den Kundenpreis
     "nk_green_pct": 3.0,           # Nachkalkulation: Abweichung SK bis +3 % = grün
     "nk_red_pct": 10.0,            # ab +10 % = rot (dazwischen gelb); Verlust = immer rot
+    # CO₂ (Richtwerte – durch eigene Werte ersetzen)
+    "co2_grid_kg_kwh": 0.30,        # Strom kg CO₂e/kWh (Stromkennzeichnung des Versorgers; Ökostrom marktbasiert 0)
+    "co2_scope1_kg_h": 0.0,         # sonstige Werksemissionen (Heizung/Gas) kg CO₂e je Maschinenstunde
+    "co2_masterbatch_kg_kg": 3.0,   # Masterbatch kg CO₂e/kg
+    "co2_transport_kg_tkm": 0.10,   # Lkw kg CO₂e je Tonnenkilometer
     "big_revenue_threshold": 500000.0,  # Großprojekt: Jahresumsatz ab … €
     "big_invest_threshold": 500000.0,   # Großprojekt: Invest (Einmalkosten Werkzeug etc.) ab … €
 }
@@ -84,6 +89,10 @@ DEFAULT_INPUTS = {
     # Verpackung (Vorgabe leer = 0, damit ältere Versionen unverändert rechnen)
     "pack_type": "", "pack_parts_per_unit": 0, "pack_cost_per_unit": 0.0, "pack_reusable": False,
     "pack_time_s": 0.0, "pack_units_per_pallet": 0,
+    # CO₂-Fußabdruck (Vorgabe 0 = nicht berechnet; neue Kalkulationen erhalten Werte aus Stammdaten/Parametern)
+    "co2_material_kg_kg": 0.0, "co2_masterbatch_kg_kg": 0.0, "machine_power_kw": 0.0, "co2_grid_kg_kwh": 0.0,
+    "co2_scope1_kg_h": 0.0, "co2_purchased_parts": 0.0, "co2_pack_per_unit": 0.0, "transport_km": 0.0,
+    "co2_transport_kg_tkm": 0.0, "co2_on_quote": True,
     # Transport: keine (ab Werk) | palette | lieferung | prozent
     "incoterm": "", "transport_mode": "keine", "transport_cost_per_pallet": 0.0,
     "transport_cost_per_delivery": 0.0, "transport_deliveries_per_year": 0, "transport_pct": 0.0,
@@ -285,6 +294,7 @@ def _compute(raw: dict) -> dict:
         ("discounts", "Skonto / Rabatt", "ergebnis", discounts),
         ("price", "Verkaufspreis", "summe", price),
     ]
+    co2 = _co2(i, kg_piece, pph, scrap_rate, lot, annual, ppu)
     rnd = lambda v: round(v, 6)  # noqa: E731
     lots_year = annual / lot if lot > 0 else 0
     machine_hours = (annual / pph if pph > 0 else 0) + lots_year * _f(i["setup_time_h"])
@@ -324,7 +334,51 @@ def _compute(raw: dict) -> dict:
         "one_time_margin": round(ot_price - ot_cost, 2),
         "extras": extras_detail,
         "first_year_revenue": round(price * annual + ot_price, 2),
+        "co2": co2,
         "warnings": warnings,
+    }
+
+
+def _co2(i: dict, kg_piece: float, pph: float, scrap_rate: float, lot: float, annual: float, ppu: float) -> dict:
+    """CO₂-Fußabdruck je Gutteil (Cradle-to-Gate + optional Transport zum Kunden), in kg CO₂e.
+
+    Material:   Gewicht je Teil inkl. Angussanteil × Emissionsfaktor (Mischung mit Masterbatch) / (1 − Ausschuss)
+                + Anfahrausschuss je Los
+    Strom:      (Leistung kW / Stück je h / (1 − Ausschuss) + Rüstzeit × kW / Losgröße) × Stromfaktor   → Scope 2
+    Werk:       Maschinenstunden je Teil × kg CO₂e je Maschinenstunde                                   → Scope 1
+    Zukauf/Verpackung: Werte je Stück bzw. je Verpackungseinheit / Teile je VE                          → Scope 3
+    Transport:  Teilgewicht in t × km × kg CO₂e/tkm                                                     → Scope 3 (downstream)
+    """
+    good = 1 - scrap_rate if scrap_rate < 1 else 1
+    mb = _f(i["masterbatch_pct"]) / 100
+    factor = _f(i["co2_material_kg_kg"]) * (1 - mb) + _f(i["co2_masterbatch_kg_kg"]) * mb
+    startup = _f(i["startup_scrap_pcs"]) / lot if lot > 0 else 0
+    material = kg_piece * factor / good + kg_piece * factor * startup
+    hours_piece = (1 / pph / good if pph > 0 else 0) + (_f(i["setup_time_h"]) / lot if lot > 0 else 0)
+    kwh = _f(i["machine_power_kw"]) * hours_piece
+    energy = kwh * _f(i["co2_grid_kg_kwh"])
+    scope1 = hours_piece * _f(i["co2_scope1_kg_h"])
+    purchased = _f(i["co2_purchased_parts"])
+    packaging = _f(i["co2_pack_per_unit"]) / ppu if ppu > 0 else 0.0
+    transport = _f(i["part_weight_g"]) / 1e6 * _f(i["transport_km"]) * _f(i["co2_transport_kg_tkm"])
+    s12 = scope1 + energy
+    gate = s12 + material + purchased + packaging
+    total = gate + transport
+    deliveries = _f(i.get("transport_deliveries_per_year"))
+    r6 = lambda v: round(v, 6)  # noqa: E731
+    return {
+        "material": r6(material), "energy": r6(energy), "scope1": r6(scope1), "purchased": r6(purchased),
+        "packaging": r6(packaging), "transport": r6(transport),
+        "scope12": r6(s12), "cradle_to_gate": r6(gate), "total": r6(total),
+        "kwh_per_piece": r6(kwh), "kwh_year": round(kwh * annual, 1),
+        "per_1000_kg": round(total * 1000, 3),
+        "per_lot_kg": round(total * lot, 2),
+        "per_year_t": round(total * annual / 1000, 3),
+        "scope12_year_t": round(s12 * annual / 1000, 3),
+        "per_delivery_kg": round(total * annual / deliveries, 2) if deliveries > 0 else None,
+        "per_kg_part": round(total / (_f(i["part_weight_g"]) / 1000), 3) if _f(i["part_weight_g"]) > 0 else None,
+        "material_factor": round(factor, 3),
+        "active": bool(factor or _f(i["machine_power_kw"])),
     }
 
 

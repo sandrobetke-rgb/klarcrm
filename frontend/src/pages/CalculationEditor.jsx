@@ -198,6 +198,9 @@ function CalcTab({ calc, setCalc, master }) {
     pm_pct: S.pm_pct, quality_pct: S.quality_pct, toolshop_pct: S.toolshop_pct, profit_pct: S.profit_pct, cash_discount_pct: S.cash_discount_pct, rebate_pct: S.rebate_pct,
     setup_time_h: S.setup_time_h, setup_persons: S.setup_persons, startup_scrap_pcs: S.startup_scrap_pcs,
     assembly_productivity_pct: S.assembly_productivity_pct,
+    co2_material_kg_kg: material?.co2_kg_per_kg ?? undefined, machine_power_kw: machine?.power_kw ?? undefined,
+    co2_grid_kg_kwh: machine?.grid_factor ?? S.co2_grid_kg_kwh, co2_scope1_kg_h: S.co2_scope1_kg_h,
+    co2_masterbatch_kg_kg: S.co2_masterbatch_kg_kg, co2_transport_kg_tkm: S.co2_transport_kg_tkm,
   }), [machine, material, S])
 
   function pickMachine(mid) {
@@ -205,12 +208,14 @@ function CalcTab({ calc, setCalc, master }) {
     if (!m) { set('machine_id', null); return }
     setInputs((s) => ({ ...s, machine_id: m.id, machine_name: `${m.number ? m.number + ' · ' : ''}${m.name}`,
       machine_rate_h: m.hourly_rate, maintenance_rate_h: m.maintenance_rate,
-      productivity_pct: m.productivity_pct, operator_factor: m.operator_factor }))
+      productivity_pct: m.productivity_pct, operator_factor: m.operator_factor,
+      machine_power_kw: m.power_kw ?? s.machine_power_kw, co2_grid_kg_kwh: m.grid_factor ?? master.settings.co2_grid_kg_kwh ?? s.co2_grid_kg_kwh }))
   }
   function pickMaterial(mid) {
     const m = master.materials.find((x) => x.id === Number(mid))
     if (!m) { set('material_id', null); return }
-    setInputs((s) => ({ ...s, material_id: m.id, material_name: m.name, material_price_kg: m.price_per_kg }))
+    setInputs((s) => ({ ...s, material_id: m.id, material_name: m.name, material_price_kg: m.price_per_kg,
+      co2_material_kg_kg: m.co2_kg_per_kg ?? s.co2_material_kg_kg }))
   }
   async function saveVersion() {
     setSaving(true); setError(null)
@@ -341,6 +346,20 @@ function CalcTab({ calc, setCalc, master }) {
             {inputs.transport_mode === 'lieferung' && F({ k: 'transport_deliveries_per_year', label: 'Lieferungen pro Jahr', unit: '', step: 1 })}
             {inputs.transport_mode === 'prozent' && F({ k: 'transport_pct', label: 'Transport', unit: '% auf HK', step: 0.5 })}
             {(inputs.transport_mode || 'keine') !== 'keine' && <Info>Transport: <b>{fix4(r.values?.transport)} €/Stk</b> · {eur(r.transport_cost_year)} p. a.</Info>}
+          </Section>
+
+          <Section title="CO₂-Fußabdruck">
+            {F({ k: 'co2_material_kg_kg', label: 'Emissionsfaktor Material', unit: 'kg CO₂e/kg', step: 0.1, hint: 'Cradle-to-Gate, am besten Lieferanten-PCF' })}
+            {F({ k: 'co2_masterbatch_kg_kg', label: 'Emissionsfaktor Masterbatch', unit: 'kg CO₂e/kg', step: 0.1 })}
+            {F({ k: 'machine_power_kw', label: 'Leistungsaufnahme Maschine inkl. Peripherie', unit: 'kW', step: 1, hint: 'Mittelwert, z. B. aus Energiemessung' })}
+            {F({ k: 'co2_grid_kg_kwh', label: 'Strom-Emissionsfaktor', unit: 'kg CO₂e/kWh', step: 0.01, hint: 'Stromkennzeichnung des Versorgers; Ökostrom = 0' })}
+            {F({ k: 'co2_scope1_kg_h', label: 'Werksemissionen Scope 1', unit: 'kg CO₂e/Masch.-h', step: 0.1, hint: 'Heizung, Gas – anteilig je Maschinenstunde' })}
+            {F({ k: 'co2_purchased_parts', label: 'Zukaufteile', unit: 'kg CO₂e/Stk', step: 0.001 })}
+            {F({ k: 'co2_pack_per_unit', label: 'Verpackung je VE', unit: 'kg CO₂e', step: 0.05, hint: 'Einweg je VE, Mehrweg je Umlauf' })}
+            {F({ k: 'transport_km', label: 'Transportentfernung zum Kunden', unit: 'km', step: 10, hint: '0 = ab Werk, nicht bilanziert' })}
+            {F({ k: 'co2_transport_kg_tkm', label: 'Transport-Emissionsfaktor', unit: 'kg CO₂e/tkm', step: 0.01 })}
+            <div className="field field-check span-3"><label htmlFor="in-co2_on_quote">CO₂-Fußabdruck im Angebot ausweisen</label>
+              <input id="in-co2_on_quote" type="checkbox" checked={inputs.co2_on_quote !== false} onChange={(e) => set('co2_on_quote', e.target.checked)} /></div>
           </Section>
 
           <Section title="Zuschläge & Gewinn">
@@ -482,6 +501,8 @@ function Results({ r, inputs, set, canWrite, calc, versionNo }) {
         </table>
       </div>
 
+      <Co2Card co2={r.co2} lot={inputs.lot_size} annual={inputs.annual_volume} />
+
       {r.lot_tiers?.length > 0 && (
         <div className="card">
           <h3>Staffelpreise nach Losgröße</h3>
@@ -520,6 +541,44 @@ function Results({ r, inputs, set, canWrite, calc, versionNo }) {
           </table>
         </div>
       )}
+    </div>
+  )
+}
+
+const CO2_PARTS = [
+  ['material', 'Material', 'Scope 3 · vorgelagert'], ['purchased', 'Zukaufteile', 'Scope 3 · vorgelagert'],
+  ['energy', 'Strom Fertigung', 'Scope 2'], ['scope1', 'Werksemissionen', 'Scope 1'],
+  ['packaging', 'Verpackung', 'Scope 3 · vorgelagert'], ['transport', 'Transport zum Kunden', 'Scope 3 · nachgelagert'],
+]
+function Co2Card({ co2, lot, annual }) {
+  if (!co2) return null
+  if (!co2.active) {
+    return <div className="card"><h3>CO₂-Fußabdruck</h3><div className="empty small">Emissionsfaktor Material oder Maschinenleistung eintragen (Bereich „CO₂-Fußabdruck“).</div></div>
+  }
+  const g = (kg) => num(kg * 1000, 1)
+  return (
+    <div className="card co2-card">
+      <h3>CO₂-Fußabdruck</h3>
+      <div className="co2-head">
+        <div><span className="co2-big">{g(co2.total)}</span> <span className="muted">g CO₂e je Stück</span></div>
+        <div className="muted small">Cradle-to-Gate {g(co2.cradle_to_gate)} g · davon Scope 1+2 {g(co2.scope12)} g</div>
+      </div>
+      <div className="result-kpis">
+        <div><span>je 1.000 Stk</span><b>{num(co2.per_1000_kg, 2)} kg</b></div>
+        <div><span>je Los ({num(lot)} Stk)</span><b>{num(co2.per_lot_kg, 1)} kg</b></div>
+        <div><span>Jahresmenge ({num(annual)} Stk)</span><b>{num(co2.per_year_t, 2)} t</b></div>
+        {co2.per_delivery_kg != null && <div><span>je Lieferung</span><b>{num(co2.per_delivery_kg, 1)} kg</b></div>}
+        <div><span>je kg Teil</span><b>{co2.per_kg_part != null ? `${num(co2.per_kg_part, 2)} kg` : '–'}</b></div>
+        <div><span>Strom</span><b>{num(co2.kwh_per_piece * 1000, 1)} Wh/Stk</b></div>
+      </div>
+      <table className="table table-compact">
+        <thead><tr><th>Quelle</th><th>Scope</th><th className="num">g/Stk</th><th className="num">Anteil</th></tr></thead>
+        <tbody>{CO2_PARTS.filter(([k]) => co2[k] > 0).map(([k, l, sc]) => (
+          <tr key={k}><td>{l}</td><td className="muted small">{sc}</td><td className="num">{g(co2[k])}</td>
+            <td className="num"><span className="co2-share"><span style={{ width: `${(co2[k] / co2.total) * 100}%` }} /></span>{num((co2[k] / co2.total) * 100, 0)} %</td></tr>
+        ))}</tbody>
+      </table>
+      <p className="hint" style={{ marginBottom: 0 }}>Strom p. a. {num(co2.kwh_year)} kWh · Scope 1+2 p. a. {num(co2.scope12_year_t, 2)} t. Richtwerte – Faktoren unter Stammdaten pflegen.</p>
     </div>
   )
 }

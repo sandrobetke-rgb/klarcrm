@@ -129,12 +129,13 @@ MACHINES = [  # Nr, Name, t, €/h, IH €/h, Prod %, Bedienfaktor
     ("M05", "Spritzgießmaschine 420 t", 420, 89, 9, 84, 0.5),
     ("M06", "Spritzgießmaschine 650 t", 650, 118, 12, 83, 0.5),
 ]
-MATERIALS = [  # Name, Familie, €/kg, Dichte
-    ("PP Homopolymer natur", "PP", 1.65, 0.91), ("PP T20 schwarz", "PP", 2.10, 1.05),
-    ("ABS schwarz", "ABS", 2.90, 1.05), ("PC/ABS schwarz", "PC/ABS", 3.80, 1.15),
-    ("PA6 GF30 schwarz", "PA6", 3.40, 1.36), ("PA66 GF30 schwarz", "PA66", 4.20, 1.37),
-    ("POM natur", "POM", 2.95, 1.41), ("PBT GF30 schwarz", "PBT", 3.70, 1.53), ("TPE 60 Shore A", "TPE", 4.90, 1.10),
+MATERIALS = [  # Name, Familie, €/kg, Dichte, kg CO₂e/kg (Richtwert)
+    ("PP Homopolymer natur", "PP", 1.65, 0.91, 1.7), ("PP T20 schwarz", "PP", 2.10, 1.05, 1.9),
+    ("ABS schwarz", "ABS", 2.90, 1.05, 3.5), ("PC/ABS schwarz", "PC/ABS", 3.80, 1.15, 4.0),
+    ("PA6 GF30 schwarz", "PA6", 3.40, 1.36, 6.5), ("PA66 GF30 schwarz", "PA66", 4.20, 1.37, 7.0),
+    ("POM natur", "POM", 2.95, 1.41, 2.8), ("PBT GF30 schwarz", "PBT", 3.70, 1.53, 4.3), ("TPE 60 Shore A", "TPE", 4.90, 1.10, 3.5),
 ]
+MACHINE_POWER = {"M01": 9, "M02": 14, "M03": 22, "M04": 28, "M05": 42, "M06": 60}
 
 
 def seed_calc(db):
@@ -147,10 +148,12 @@ def seed_calc(db):
         return
     machines = [Machine(number=n, name=nm, clamping_force_t=t, hourly_rate=r, maintenance_rate=ih,
                         productivity_pct=p, operator_factor=bf, location="Werk 1", available_hours_year=MACHINE_HOURS.get(n, 6000),
-                        base_load_pct=MACHINE_BASE[n][0], base_load_decline_pct=MACHINE_BASE[n][1])
+                        base_load_pct=MACHINE_BASE[n][0], base_load_decline_pct=MACHINE_BASE[n][1],
+                        power_kw=MACHINE_POWER.get(n))
                 for n, nm, t, r, ih, p, bf in MACHINES]
-    materials = [Material(name=nm, family=fam, price_per_kg=pr, density=d, supplier="Rahmenvertrag")
-                 for nm, fam, pr, d in MATERIALS]
+    materials = [Material(name=nm, family=fam, price_per_kg=pr, density=d, supplier="Rahmenvertrag", co2_kg_per_kg=c,
+                          notes="CO₂-Faktor ist ein Richtwert – durch Lieferanten-PCF ersetzen")
+                 for nm, fam, pr, d, c in MATERIALS]
     db.add_all(machines + materials)
     db.flush()
     st = get_settings(db)
@@ -185,6 +188,8 @@ def seed_calc(db):
                    machine_rate_h=m.hourly_rate, maintenance_rate_h=m.maintenance_rate,
                    productivity_pct=m.productivity_pct, operator_factor=m.operator_factor,
                    cycle_time_s=cyc, cavities=cav, annual_volume=vol, lot_size=lot,
+                   co2_material_kg_kg=mat.co2_kg_per_kg or 0, machine_power_kw=m.power_kw or 0,
+                   co2_pack_per_unit=0.15 if g < 200 else 2.5, transport_km=0 if idx % 3 else 320,
                    one_time=[{"label": "Spritzgießwerkzeug", "cost": tool, "price": tool},
                              {"label": "Erstbemusterung / EMPB", "cost": 1800, "price": 1800}],
                    extras=[],

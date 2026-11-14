@@ -18,6 +18,8 @@ const machineFields = [
   { name: 'available_hours_year', label: 'Verfügbare Stunden / Jahr', type: 'number', step: 'any', hint: 'Schichtmodell, z. B. 3-Schicht ≈ 6.000 h' },
   { name: 'base_load_pct', label: 'Grundauslastung Bestandsaufträge %', type: 'number', step: 'any', hint: 'für die Auslastungsvorschau' },
   { name: 'base_load_decline_pct', label: 'Auslauf Bestand % je Jahr', type: 'number', step: 'any', hint: 'z. B. 10 = Bestand sinkt jährlich um 10 %' },
+  { name: 'power_kw', label: 'Leistungsaufnahme inkl. Peripherie (kW)', type: 'number', step: 'any', hint: 'für den CO₂-Fußabdruck' },
+  { name: 'grid_factor', label: 'Strom-Emissionsfaktor Standort (kg CO₂e/kWh)', type: 'number', step: 'any', hint: 'leer = Parameter; z. B. eigener Wert für Werk Krupka' },
   { name: 'active', label: 'Aktiv (in Kalkulation auswählbar)', type: 'checkbox' },
   { name: 'notes', label: 'Notizen', type: 'textarea', span: true },
 ]
@@ -27,6 +29,7 @@ const materialFields = [
   { name: 'supplier', label: 'Lieferant' },
   { name: 'price_per_kg', label: 'Preis €/kg', type: 'number', step: 'any', required: true },
   { name: 'density', label: 'Dichte g/cm³', type: 'number', step: 'any' },
+  { name: 'co2_kg_per_kg', label: 'CO₂-Emissionsfaktor kg CO₂e/kg', type: 'number', step: 'any', hint: 'Cradle-to-Gate, möglichst Lieferanten-PCF' },
   { name: 'active', label: 'Aktiv', type: 'checkbox' },
   { name: 'notes', label: 'Notizen', type: 'textarea', span: true },
 ]
@@ -38,6 +41,8 @@ const PARAMS = [
   ['Gewinn & Konditionen', [['profit_pct', 'Gewinn', '%'], ['cash_discount_pct', 'Skonto', '%'], ['rebate_pct', 'Rabatt', '%']]],
   ['Fertigung', [['productivity_pct', 'Produktivität (ohne Maschine)', '%'], ['assembly_productivity_pct', 'Produktivität Montage', '%'],
     ['setup_time_h', 'Rüstzeit je Los', 'h'], ['setup_persons', 'Einrichter je Rüstvorgang', 'Pers.'], ['startup_scrap_pcs', 'Anfahrausschuss je Los', 'Stk']]],
+  ['CO₂-Fußabdruck', [['co2_grid_kg_kwh', 'Strom-Emissionsfaktor', 'kg CO₂e/kWh'], ['co2_scope1_kg_h', 'Werksemissionen Scope 1', 'kg CO₂e/Masch.-h'],
+    ['co2_masterbatch_kg_kg', 'Masterbatch', 'kg CO₂e/kg'], ['co2_transport_kg_tkm', 'Lkw-Transport', 'kg CO₂e/tkm']]],
   ['Großprojekte (Hervorhebung)', [['big_revenue_threshold', 'Ab Jahresumsatz', '€'], ['big_invest_threshold', 'Ab Invest (Einmalkosten)', '€']]],
   ['Nachkalkulation (Ampel)', [['nk_green_pct', 'Grün bis Abweichung Selbstkosten', '%'], ['nk_red_pct', 'Rot ab Abweichung Selbstkosten', '%']]],
 ]
@@ -58,6 +63,7 @@ export default function MasterData() {
         { key: 'supplier', label: 'Lieferant' },
         { key: 'price_per_kg', label: '€/kg', sort: 'price_per_kg', className: 'num', render: (r) => num2(r.price_per_kg) },
         { key: 'density', label: 'Dichte', className: 'num', render: (r) => (r.density ? num(r.density, 2) : '–') },
+        { key: 'co2_kg_per_kg', label: 'kg CO₂e/kg', className: 'num', render: (r) => (r.co2_kg_per_kg != null ? num(r.co2_kg_per_kg, 2) : '–') },
         { key: 'active', label: 'Status', render: (r) => (r.active ? <Badge tone="good">aktiv</Badge> : <Badge>inaktiv</Badge>) },
       ]} />
   }
@@ -74,6 +80,7 @@ export default function MasterData() {
       { key: 'operator_factor', label: 'Bedienfaktor', className: 'num', render: (r) => num(r.operator_factor, 2) },
       { key: 'available_hours_year', label: 'h/Jahr', className: 'num', render: (r) => num(r.available_hours_year) },
       { key: 'base_load_pct', label: 'Grundlast', className: 'num', render: (r) => `${num(r.base_load_pct, 0)} % (−${num(r.base_load_decline_pct, 0)} %/J.)` },
+      { key: 'power_kw', label: 'kW', className: 'num', render: (r) => (r.power_kw != null ? num(r.power_kw, 1) : '–') },
       { key: 'location', label: 'Standort' },
       { key: 'active', label: 'Status', render: (r) => (r.active ? <Badge tone="good">aktiv</Badge> : <Badge>inaktiv</Badge>) },
     ]} />

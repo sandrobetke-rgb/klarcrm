@@ -4,7 +4,7 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.6 |
+| **Dokumentversion** | 1.7 |
 | **Stand** | 14.11.2026 |
 | **Status** | Testphase (GitHub Codespaces) |
 
@@ -76,6 +76,10 @@ von Standardwerten werden markiert; jede Änderung an einer Kalkulation erzeugt 
   Bedienfaktor sofort übernommen und der Preis neu berechnet.
 - STM-13: Je Maschine zusätzlich: **verfügbare Stunden/Jahr** (Schichtmodell, Standard 6.000 h), **Grundauslastung
   aus Bestandsaufträgen %** und **Auslauf des Bestands % je Jahr** – Basis der Auslastungsvorschau (Kap. 6.7).
+- STM-14: CO₂-Stammdaten: je Material **Emissionsfaktor kg CO₂e/kg** (Cradle-to-Gate, Ziel: Lieferanten-PCF);
+  je Maschine **Leistungsaufnahme kW inkl. Peripherie** und optional **Strom-Emissionsfaktor des Standorts**
+  (z. B. Werk Krupka); Parameter: Strom-Emissionsfaktor (Standard 0,30 kg CO₂e/kWh), Werksemissionen Scope 1 je
+  Maschinenstunde, Masterbatch, Lkw-Transport (Standard 0,10 kg CO₂e/tkm). Alle Standardwerte sind Richtwerte.
 - STM-3: Inaktive Maschinen sind in neuen Kalkulationen nicht auswählbar; bestehende Kalkulationen bleiben unverändert.
 
 ### 5.2 Materialien
@@ -274,6 +278,27 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 - AUS-5: Farbstufen < 60 %, 60–85 %, 85–100 %, ≥ 100 % (mit Warnsymbol); Aufklappen je Maschine zeigt die
   beteiligten Kalkulationen mit Stunden je Jahr; Gesamtzeile; KPI „Auslastung Folgejahr“ im Dashboard.
 
+### 6.8 CO₂-Fußabdruck je Teil (Product Carbon Footprint)
+- CO2-1: Eingaben in der Kalkulation (aus Stammdaten vorbelegt, überschreibbar): Emissionsfaktor Material und
+  Masterbatch, Leistungsaufnahme Maschine, Strom-Emissionsfaktor, Werksemissionen Scope 1, CO₂ Zukaufteile je Stück,
+  CO₂ Verpackung je VE (Einweg je VE, Mehrweg je Umlauf), Transportentfernung und -faktor.
+- CO2-2: Rechenweg je Gutteil (kg CO₂e):
+  | Quelle | Formel | Scope |
+  |---|---|---|
+  | Material | kg je Teil inkl. Angussanteil × Faktor (Mischung Masterbatch) / (1 − Ausschuss) + Anfahrausschuss je Los | 3 vorgelagert |
+  | Strom | (kW / Stück je h / (1 − Ausschuss) + Rüstzeit × kW / Losgröße) × kg CO₂e/kWh | 2 |
+  | Werksemissionen | Maschinenstunden je Teil × kg CO₂e je Maschinenstunde | 1 |
+  | Zukaufteile | Wert je Stück | 3 vorgelagert |
+  | Verpackung | kg CO₂e je VE / Teile je VE | 3 vorgelagert |
+  | Transport | Teilgewicht t × km × kg CO₂e/tkm (0 bei ab Werk) | 3 nachgelagert |
+- CO2-3: Ausgaben: **je Stück (g), je 1.000 Stück (kg), je Los (kg), Jahresmenge (t)**, je Lieferung, je kg Teil,
+  Strom Wh je Stück und kWh p. a.; Summen **Cradle-to-Gate** und **Scope 1+2**; Aufteilung nach Quelle mit Anteil.
+- CO2-4: **Ausweis im Angebot** (je Kalkulation abschaltbar): Cradle-to-Gate g CO₂e/Stück, kg je 1.000 Stück,
+  davon Scope 1+2.
+- CO2-5: Ältere Versionen ohne CO₂-Angaben zeigen keinen Fußabdruck; der Preis ist davon unabhängig.
+- CO2-6: Abgrenzung: vereinfachter PCF ohne Zertifizierung (keine vollständige ISO 14067-Bilanz); Nutzungs- und
+  End-of-Life-Phase nicht enthalten. Ausrichtung auf das bestehende F&R-Konzept (Scope 1–2 je Bauteil/Auftrag/Lieferung).
+
 ## 7. Nachkalkulation
 - NK-1: Zu jeder Kalkulation beliebig viele Nachkalkulationen (z. B. je Fertigungsauftrag oder Zeitraum) mit
   Referenz, Zeitraum, Bemerkung und Bezug auf eine Version.
@@ -317,6 +342,7 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 - [ ] CSV-/Excel-Import und -Export (Firmen, Kontakte, Kalkulationsliste).
 - [ ] Wiedervorlage-Automatik ohne manuelles Datum (Aufgabe, wenn > 14 Tage kein Anruf).
 - [ ] Zuschlagsbasis für weitere Zuschläge wählbar machen, falls die F&R-Excel-Kalkulation das erfordert.
+- [ ] CO₂: Ist-Energiewerte aus BDE/Energiemonitoring in die Nachkalkulation übernehmen; CO₂-Summen je Kunde/Jahr.
 - [ ] Rechte: Kalkulation nur für bestimmte Rollen sichtbar machen (z. B. Gewinnsätze).
 
 ## 12. Änderungshistorie
@@ -330,3 +356,4 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | 1.4 | 14.11.2026 | **Machbarkeit** (4 Stufen + Anmerkung), Status **„Kein Angebot abgegeben“** mit Gründen und Freitext (KAL-4a/4b, KAL-59), **Artikelanalyse** mit Schließkraft, Fließweg/Wandstärke, Kühlzeit-Richtwert, passenden Maschinen, Checkliste und Machbarkeitsvorschlag (ANA-1 bis ANA-6), **Staffelpreise** für bis zu 3 Losgrößen inkl. Übernahme ins Angebot (KAL-28), **Auslastung kommende Jahre** je Maschine mit Bestand, fest, gewichtet, potenziell (AUS-1 bis AUS-5, STM-13), automatische Ergänzung neuer DB-Spalten (NFA-8). |
 | 1.5 | 14.11.2026 | **Sammelangebot** aus mehreren Kalkulationen (KAL-43 bis KAL-45): Mehrfachauswahl in der Kalkulationsliste, Prüfung gleicher Kunde, ein Angebot mit allen Serienteilen und Einmalkosten; **Herkunft** Angebot ↔ Kalkulation in beide Richtungen sichtbar (KAL-46). Neue Spalte `quotes.calculation_ids` (automatisch ergänzt). Angebotspositionen zeigen mehrzeilige Texte vollständig. |
 | 1.6 | 14.11.2026 | Eigener Bereich **Verpackung & Transport** mit echten Beträgen (KAL-29, Rechenweg 6.2): Kosten je VE/Umlauf, Teile je VE, Packzeit, VE je Palette; Transport ab Werk, je Palette, je Lieferung oder % auf HK; Lieferbedingung; Übernahme ins Angebot; Ist-Werte in der Nachkalkulation. |
+| 1.7 | 14.11.2026 | **CO₂-Fußabdruck je Teil** (Kap. 6.8, CO2-1 bis CO2-6, STM-14): Material, Strom (Scope 2), Werksemissionen (Scope 1), Zukaufteile, Verpackung, Transport; je Stück, 1.000, Los, Jahresmenge, Lieferung; Ausweis im Angebot. Neue Stammdatenfelder (Materialfaktor, Maschinenleistung, Standort-Stromfaktor) werden automatisch ergänzt. |
