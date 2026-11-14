@@ -8,11 +8,12 @@ from sqlalchemy.orm import Session
 from .. import schemas as s
 from ..auth import admin_only, can_read, can_write
 from ..analysis import analyze
-from ..calc_engine import DEFAULT_INPUTS, DEFAULT_SETTINGS, compute, normalize, post_calculate
+from ..calc_engine import DEFAULT_INPUTS, DEFAULT_SETTINGS, compute, machine_rate, normalize, post_calculate
 from ..crud import make_crud_router
 from ..database import get_db
 from ..models import (
-    STAGE_PROBABILITY, Activity, CalcSettings, Calculation, CalculationCall, CalculationVersion, Machine, Material,
+    STAGE_PROBABILITY, Activity, CalcSettings, CalcTemplate, Calculation, CalculationCall, CalculationVersion, Machine,
+    Material, MaterialPrice,
     Opportunity, PostCalculation, Quote, QuoteItem, User,
 )
 from .quotes import next_number as next_quote_number
@@ -391,8 +392,23 @@ def build_quote(db: Session, pairs: list, user: User) -> Quote:
     for calc, ver in pairs:
         r, inp = ver.results, ver.inputs
         art = calc.article_name + (f"\nIhre Art.-Nr.: {calc.customer_article_no}" if calc.customer_article_no else "")
-        art += f"\nMaterial: {inp.get('material_name') or '–'} · Kalkulation {calc.number} V{ver.version_no}"
+        mats = [inp.get('material_name') or '–'] + [c.get("material_name") or c.get("label") or "" for c in inp.get("components") or []]
+        art += f"\nMaterial: {' + '.join(m for m in mats if m)}" + (f" ({len(mats)}K)" if len(mats) > 1 else "") + \
+            f" · Kalkulation {calc.number} V{ver.version_no}"
         art += f"\nPreis je 1.000 Stk: {_de(r['price_per_1000'])} € · Losgröße {_de(float(inp.get('lot_size') or 0), 0)} Stk"
+        if float(inp.get("material_price_kg") or 0) > 0:
+            st_ = get_settings(db)
+            mat = db.get(Material, inp.get("material_id")) if inp.get("material_id") else None
+            stand = mat.price_valid_from.strftime("%d.%m.%Y") if mat and mat.price_valid_from else ver.created_at.strftime("%d.%m.%Y")
+            art += (f"\nPreisgleitklausel: Materialbasis {_de(float(inp['material_price_kg']))} €/kg (Stand {stand}"
+                    + (f", Index {mat.price_index}" if mat and mat.price_index else "")
+                    + f"); Anpassung bei Änderung um mehr als ± {_de(st_['escalation_threshold_pct'], 0)} %")
+        if r.get("amortization_per_piece"):
+            art += (f"\nInkl. Werkzeugamortisation {_de(r['amortization_per_piece'] * 1000)} € je 1.000 Stk "
+                    f"(über {_de(r['amortization_quantity'], 0)} Stk)")
+        if r.get("volume_tiers"):
+            art += "\nPreise je 1.000 Stk nach Jahresmenge: " + " · ".join(
+                f"{_de(t['annual_volume'], 0)} Stk/Jahr: {_de(t['price_per_1000'])} €" for t in r["volume_tiers"])
         if r.get("lot_tiers"):
             art += "\nStaffelpreise je 1.000 Stk: " + " · ".join(
                 f"Los {_de(t['lot_size'], 0)}: {_de(t['price_per_1000'])} €" for t in r["lot_tiers"])
@@ -660,3 +676,175 @@ def utilization(years: int = Query(5, ge=1, le=10), db: Session = Depends(get_db
                        "pct_expected": round((f + w) / cap_total * 100, 1) if cap_total else None,
                        "pct_max": round((f + p) / cap_total * 100, 1) if cap_total else None})
     return {"years": year_list, "machines": out, "totals": totals}
+
+
+
+# ---------------- Herleitung Maschinenstundensatz ----------------
+def _machine_dict(m: Machine) -> dict:
+    return {c.name: getattr(m, c.name) for c in Machine.__table__.columns}
+
+
+@router.get("/machine-rates")
+def machine_rates(db: Session = Depends(get_db), _: User = Depends(can_read)):
+    st = get_settings(db)
+    return [{"machine": {"id": m.id, "number": m.number, "name": m.name}, **machine_rate(_machine_dict(m), st)}
+            for m in db.scalars(select(Machine).order_by(Machine.number, Machine.name))]
+
+
+@router.post("/machine-rates/{machine_id}/apply")
+def apply_machine_rate(machine_id: int, db: Session = Depends(get_db), _: User = Depends(admin_only)):
+    m = db.get(Machine, machine_id)
+    if not m:
+        raise HTTPException(404, "Maschine nicht gefunden")
+    r = machine_rate(_machine_dict(m), get_settings(db))
+    if not r["complete"]:
+        raise HTTPException(400, "Wiederbeschaffungswert und Nutzungsdauer fehlen")
+    m.hourly_rate, m.maintenance_rate = r["hourly_rate"], r["maintenance_rate"]
+    db.commit()
+    return machine_rate(_machine_dict(m), get_settings(db))
+
+
+# ---------------- Rohstoffpreise / Preisgleitung ----------------
+@router.get("/material-prices/{material_id}")
+def material_price_history(material_id: int, db: Session = Depends(get_db), _: User = Depends(can_read)):
+    rows = db.scalars(select(MaterialPrice).where(MaterialPrice.material_id == material_id)
+                      .order_by(MaterialPrice.valid_from.desc(), MaterialPrice.id.desc())).unique().all()
+    return [{"id": p.id, "price_per_kg": p.price_per_kg, "valid_from": p.valid_from.isoformat(), "note": p.note,
+             "user": p.user.name if p.user else None} for p in rows]
+
+
+def _uses_material(inp: dict, mid: int) -> str | None:
+    if inp.get("material_id") == mid:
+        return "main"
+    for n, c in enumerate(inp.get("components") or []):
+        if c.get("material_id") == mid:
+            return f"comp{n}"
+    return None
+
+
+def _with_new_price(inp: dict, where: str, price: float) -> dict:
+    new = normalize(dict(inp))
+    if where == "main":
+        new["material_price_kg"] = price
+    else:
+        n = int(where[4:])
+        comps = [dict(c) for c in new["components"]]
+        comps[n]["price_kg"] = price
+        new["components"] = comps
+    return new
+
+
+@router.get("/escalation")
+def escalation(material_id: int, db: Session = Depends(get_db), _: User = Depends(can_read)):
+    """Betroffene Kalkulationen bei Materialpreisänderung: Preisbasis der Version vs. aktueller Materialpreis."""
+    mat = db.get(Material, material_id)
+    if not mat:
+        raise HTTPException(404, "Material nicht gefunden")
+    st = get_settings(db)
+    out = []
+    for c in db.scalars(select(Calculation).where(Calculation.status.notin_(("verloren", "kein_angebot")))).unique():
+        ver = next((v for v in c.versions if v.version_no == c.current_version), None)
+        where = ver and _uses_material(ver.inputs, mat.id)
+        if not where:
+            continue
+        old_price = float(ver.inputs.get("material_price_kg") if where == "main"
+                          else ver.inputs["components"][int(where[4:])].get("price_kg") or 0)
+        new_res = compute(_with_new_price(ver.inputs, where, mat.price_per_kg))
+        dmat = (mat.price_per_kg - old_price) / old_price * 100 if old_price else 0
+        out.append({"id": c.id, "number": c.number, "article_name": c.article_name, "status": c.status,
+                    "account": c.account.name if c.account else None, "version": ver.version_no,
+                    "component": "Hauptmaterial" if where == "main" else "weitere Komponente",
+                    "old_material_price": old_price, "new_material_price": mat.price_per_kg,
+                    "material_delta_pct": round(dmat, 2),
+                    "old_unit_price": ver.results["unit_price"], "new_unit_price": new_res["unit_price"],
+                    "unit_price_delta_pct": round((new_res["unit_price"] - ver.results["unit_price"])
+                                                  / ver.results["unit_price"] * 100, 2) if ver.results["unit_price"] else 0,
+                    "annual_impact": round((new_res["unit_price"] - ver.results["unit_price"]) * ver.results["annual_volume"], 2),
+                    "exceeds_threshold": abs(dmat) >= st["escalation_threshold_pct"]})
+    out.sort(key=lambda x: -abs(x["annual_impact"]))
+    return {"material": {"id": mat.id, "name": mat.name, "price_per_kg": mat.price_per_kg,
+                         "price_valid_from": mat.price_valid_from.isoformat() if mat.price_valid_from else None,
+                         "price_index": mat.price_index},
+            "threshold_pct": st["escalation_threshold_pct"], "items": out}
+
+
+@router.post("/escalation/apply")
+def escalation_apply(data: dict, db: Session = Depends(get_db), user: User = Depends(can_write)):
+    """Neue Kalkulationsversion mit aktuellem Materialpreis für ausgewählte Kalkulationen."""
+    mat = db.get(Material, int(data.get("material_id") or 0))
+    if not mat:
+        raise HTTPException(404, "Material nicht gefunden")
+    done = []
+    for cid in data.get("calc_ids") or []:
+        c = db.get(Calculation, int(cid))
+        ver = c and next((v for v in c.versions if v.version_no == c.current_version), None)
+        where = ver and _uses_material(ver.inputs, mat.id)
+        if not where:
+            continue
+        old = ver.inputs.get("material_price_kg") if where == "main" else ver.inputs["components"][int(where[4:])].get("price_kg")
+        inputs = _with_new_price(ver.inputs, where, mat.price_per_kg)
+        res = compute(inputs)
+        no = ver.version_no + 1
+        c.versions.append(CalculationVersion(
+            version_no=no, inputs=inputs, results=res, created_by_id=user.id,
+            change_note=f"Preisgleitung {mat.name}: {float(old or 0):.2f} → {mat.price_per_kg:.2f} €/kg".replace(".", ",")))
+        c.current_version = no
+        apply_results(c, res)
+        db.flush()
+        sync_opportunity(db, c)
+        done.append(c.number)
+    db.commit()
+    return {"updated": done}
+
+
+# ---------------- Kopieren / Vorlagen ----------------
+@calcs.post("/{calc_id}/copy", response_model=s.CalcDetail, status_code=201)
+def copy_calc(calc_id: int, data: dict, db: Session = Depends(get_db), user: User = Depends(can_write)):
+    src = db.get(Calculation, calc_id)
+    if not src:
+        raise HTTPException(404, "Kalkulation nicht gefunden")
+    ver = next(v for v in src.versions if v.version_no == src.current_version)
+    calc = Calculation(number=next_calc_number(db), article_name=data.get("article_name") or f"{src.article_name} (Kopie)",
+                       account_id=data.get("account_id", src.account_id), contact_id=src.contact_id if data.get("account_id") in (None, src.account_id) else None,
+                       status="anfrage", probability=STATUS_PROBABILITY["anfrage"], owner_id=user.id,
+                       inquiry_date=date.today(), remark=f"Kopie von {src.number} V{ver.version_no}")
+    inputs = normalize(dict(ver.inputs))
+    res = compute(inputs)
+    calc.versions.append(CalculationVersion(version_no=1, inputs=inputs, results=res, created_by_id=user.id,
+                                            change_note=f"Kopie von {src.number} V{ver.version_no}"))
+    calc.current_version = 1
+    apply_results(calc, res)
+    db.add(calc)
+    db.commit()
+    db.refresh(calc)
+    return calc
+
+
+@router.get("/templates")
+def list_templates(db: Session = Depends(get_db), _: User = Depends(can_read)):
+    return [{"id": t.id, "name": t.name, "description": t.description, "source_calc": t.source_calc,
+             "created_by": t.created_by.name if t.created_by else None, "created_at": t.created_at.isoformat(),
+             "inputs": t.inputs}
+            for t in db.scalars(select(CalcTemplate).order_by(CalcTemplate.name)).unique()]
+
+
+@router.post("/templates", status_code=201)
+def create_template(data: dict, db: Session = Depends(get_db), user: User = Depends(can_write)):
+    c = db.get(Calculation, int(data.get("calc_id") or 0))
+    if not c or not (data.get("name") or "").strip():
+        raise HTTPException(400, "Name und Kalkulation angeben")
+    ver = next(v for v in c.versions if v.version_no == c.current_version)
+    t = CalcTemplate(name=data["name"].strip(), description=data.get("description"), inputs=ver.inputs,
+                     source_calc=f"{c.number} V{ver.version_no}", created_by_id=user.id)
+    db.add(t)
+    db.commit()
+    return {"id": t.id, "name": t.name}
+
+
+@router.delete("/templates/{template_id}", status_code=204)
+def delete_template(template_id: int, db: Session = Depends(get_db), _: User = Depends(can_write)):
+    t = db.get(CalcTemplate, template_id)
+    if not t:
+        raise HTTPException(404, "Vorlage nicht gefunden")
+    db.delete(t)
+    db.commit()

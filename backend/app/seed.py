@@ -136,6 +136,9 @@ MATERIALS = [  # Name, Familie, €/kg, Dichte, kg CO₂e/kg (Richtwert)
     ("POM natur", "POM", 2.95, 1.41, 2.8), ("PBT GF30 schwarz", "PBT", 3.70, 1.53, 4.3), ("TPE 60 Shore A", "TPE", 4.90, 1.10, 3.5),
 ]
 MACHINE_POWER = {"M01": 9, "M02": 14, "M03": 22, "M04": 28, "M05": 42, "M06": 60}
+# Herleitung Stundensatz: Wiederbeschaffungswert, m², Instandhaltung €/Jahr, sonstige Fixkosten €/Jahr
+MACHINE_COST = {"M01": (120000, 18, 18000, 2500), "M02": (190000, 24, 24000, 3500), "M03": (420000, 36, 33000, 6000),
+                "M04": (330000, 34, 42000, 5000), "M05": (520000, 48, 43000, 7000), "M06": (800000, 70, 58000, 9000)}
 
 
 def seed_calc(db):
@@ -149,13 +152,21 @@ def seed_calc(db):
     machines = [Machine(number=n, name=nm, clamping_force_t=t, hourly_rate=r, maintenance_rate=ih,
                         productivity_pct=p, operator_factor=bf, location="Werk 1", available_hours_year=MACHINE_HOURS.get(n, 6000),
                         base_load_pct=MACHINE_BASE[n][0], base_load_decline_pct=MACHINE_BASE[n][1],
-                        power_kw=MACHINE_POWER.get(n))
+                        power_kw=MACHINE_POWER.get(n), acquisition_value=MACHINE_COST[n][0], useful_life_years=10,
+                        interest_pct=6, floor_space_m2=MACHINE_COST[n][1], maintenance_cost_year=MACHINE_COST[n][2],
+                        other_fixed_cost_year=MACHINE_COST[n][3])
                 for n, nm, t, r, ih, p, bf in MACHINES]
     materials = [Material(name=nm, family=fam, price_per_kg=pr, density=d, supplier="Rahmenvertrag", co2_kg_per_kg=c,
                           notes="CO₂-Faktor ist ein Richtwert – durch Lieferanten-PCF ersetzen")
                  for nm, fam, pr, d, c in MATERIALS]
     db.add_all(machines + materials)
     db.flush()
+    # Umlage so ansetzen, dass der hergeleitete Satz nahe am eingetragenen liegt (Demo)
+    from .calc_engine import DEFAULT_SETTINGS, machine_rate
+    for m in machines:
+        md = {c.name: getattr(m, c.name) for c in Machine.__table__.columns}
+        base = machine_rate(md, DEFAULT_SETTINGS)["hourly_rate"]
+        m.allocation_cost_year = round(max(0, (m.hourly_rate * 0.97 - base) * (m.available_hours_year or 6000)), -2)
     st = get_settings(db)
     accounts = db.scalars(select(Account).order_by(Account.id)).unique().all()
     users = db.scalars(select(User).where(User.role == "vertrieb")).all() or db.scalars(select(User)).all()
@@ -204,6 +215,17 @@ def seed_calc(db):
         if art.startswith("Frontend"):
             inp["project_years"] = 6
         if art.startswith("Gehäuse Sensor"):
+            tpe = materials[8]
+            inp["components"] = [{"label": "Dichtung TPE", "material_id": tpe.id, "material_name": tpe.name,
+                                  "price_kg": tpe.price_per_kg, "co2_kg_kg": tpe.co2_kg_per_kg, "part_weight_g": 6,
+                                  "sprue_weight_g": 2, "regrind_pct": 0}]
+        if art in ("Halter Steuergerät", "Abdeckkappe Steuergerät"):
+            inp["family_group"], inp["family_share_pct"] = "WZ-4711 Familie Steuergerät", 50
+        if art == "Deckel Sicherungskasten":
+            inp["one_time"][0]["amortize"] = True
+        if art == "Clip-Halter Kabelbaum":
+            inp["volume_tiers"] = [600000, 1200000, 2500000]
+        if art.startswith("Gehäuse Sensor"):
             inp["assembly_time_s"] = 6
             inp["purchased_parts"] = 0.12
             inp["extras"].append({"label": "Bedrucken Tampondruck", "amount": 0.035, "basis": "stueck", "category": "fertigung"})
@@ -247,6 +269,15 @@ def seed_calc(db):
                 pres, light = post_calculate(final[0], r, actual, st)
                 calc.post_calcs.append(PostCalculation(version_no=calc.current_version, reference=ref, actuals=actual,
                                                        results=pres, traffic_light=light, created_by_id=owner.id))
+    db.commit()
+    # Preisgleitung demonstrieren: PA6 GF30 nach der Kalkulation teurer (Historie wird automatisch geschrieben)
+    from .models import MaterialPrice
+    pa6 = next(m for m in materials if m.name.startswith("PA6"))
+    db.add(MaterialPrice(material_id=pa6.id, price_per_kg=3.10, valid_from=date.today() - timedelta(days=200),
+                         note="Rahmenvertrag 1. Halbjahr"))
+    pa6.price_index = "Marktbericht PA6 GF30 (Monatsmittel)"
+    db.commit()
+    pa6.price_per_kg = 3.65
     db.commit()
     # Großprojekte mit Verkaufschance und Angebot verknüpfen (zeigt Hervorhebung in Pipeline/Angeboten)
     from .routers.calc import create_opportunity, create_quote

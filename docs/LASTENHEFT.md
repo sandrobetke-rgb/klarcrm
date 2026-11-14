@@ -4,7 +4,7 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.8 |
+| **Dokumentversion** | 1.9 |
 | **Stand** | 14.11.2026 |
 | **Status** | Testphase (GitHub Codespaces) |
 
@@ -80,6 +80,16 @@ von Standardwerten werden markiert; jede Änderung an einer Kalkulation erzeugt 
   je Maschine **Leistungsaufnahme kW inkl. Peripherie** und optional **Strom-Emissionsfaktor des Standorts**
   (z. B. Werk Krupka); Parameter: Strom-Emissionsfaktor (Standard 0,30 kg CO₂e/kWh), Werksemissionen Scope 1 je
   Maschinenstunde, Masterbatch, Lkw-Transport (Standard 0,10 kg CO₂e/tkm). Alle Standardwerte sind Richtwerte. CO₂ der Verpackung nur, wenn Teile je VE angegeben sind.
+- STM-15: **Herleitung Maschinenstundensatz** je Maschine aus Wiederbeschaffungswert, Nutzungsdauer, kalk. Zins,
+  Platzbedarf × Raumkosten, Leistungsaufnahme × Strompreis, sonstigen Fixkosten und **Umlage Kostenstelle**
+  (Meister, Logistik, Peripherie …) je verfügbare Stunde; Instandhaltung €/h = Instandhaltungskosten p. a. / Stunden.
+  Übersicht hergeleitet vs. aktuell mit Abweichung; Übernahme durch Administrator (wirkt auf neue Kalkulationen).
+  Umlagen nur hier oder über FGK – nicht doppelt.
+- STM-16: **Rohstoffpreis-Historie**: jede Preisänderung eines Materials wird mit Datum und Benutzer automatisch
+  protokolliert; je Material Bezugsindex und „Preis gültig ab“.
+- STM-17: **Preisgleitung**: je Material alle offenen/gewonnenen Kalkulationen (Haupt- oder weitere Komponente) mit
+  Preisbasis der Version vs. aktuellem Preis, Δ Material %, €/Stk alt → neu, Wirkung p. a.; Markierung über Schwelle;
+  „Neue Versionen anlegen“ erzeugt je Kalkulation eine Version mit aktuellem Preis und automatischer Änderungsnotiz.
 - STM-3: Inaktive Maschinen sind in neuen Kalkulationen nicht auswählbar; bestehende Kalkulationen bleiben unverändert.
 
 ### 5.2 Materialien
@@ -135,15 +145,15 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | Bereich | Felder |
 |---|---|
 | Mengen | Jahresmenge, Losgröße, Projektlaufzeit (Jahre) |
-| Material | Material (Stammdaten), Preis €/kg, Teilgewicht g, Anguss je Schuss g, Mahlgut-Rückführung %, Masterbatch-Anteil % und -Preis, Zukaufteile €/Stk |
-| Maschine & Fertigung | Maschine (Stammdaten), Maschinenstundensatz €/h, Instandhaltung €/h, **Zykluszeit s**, **Fachzahl**, **Produktivität %**, Bedienfaktor, Lohnsatz Bediener |
+| Material | Material (Stammdaten), Preis €/kg, Teilgewicht g, Anguss je Schuss g, Mahlgut-Rückführung %, Masterbatch-Anteil % und -Preis, Zukaufteile €/Stk; **weitere Komponenten (2K/3K …)** je mit Material, €/kg, Teilgewicht, Anguss, Mahlgut, CO₂-Faktor |
+| Maschine & Fertigung | Maschine (Stammdaten), Maschinenstundensatz €/h, Instandhaltung €/h, **Zykluszeit s**, **Fachzahl**, **Produktivität %**, Bedienfaktor, Lohnsatz Bediener; **Familienwerkzeug**: Werkzeuggruppe und Anteil dieses Artikels an Maschinenzeit/Rüsten % |
 | Rüsten | Rüstzeit je Los h, Einrichter, Lohnsatz Einrichter, Anfahrausschuss je Los Stk |
 | Montage | Montagezeit je Stück s, Personen, Lohnsatz, Produktivität Montage % |
 | Zuschläge | MGK, FGK, Ausschuss, Verwaltung, Vertrieb, Projektmanagement, **Qualität**, **Werkzeugbau**, Gewinn, Skonto, Rabatt (%); für Qualität und Werkzeugbau ist die **Basis wählbar**: FEK oder HK |
 | **Verpackung** | Auswahl **pauschal in % auf HK** (wenn Details unbekannt; Standard aus Parametern) **oder detailliert**: Verpackungsart (Vorschläge KLT, Karton, Gitterbox, Sonderladungsträger …), Teile je Verpackungseinheit (VE), Kosten je VE bzw. bei Mehrweg je Umlauf (Reinigung, Miete), Packzeit je VE, VE je Palette |
 | **Transport** | Lieferbedingung (Incoterm, frei wählbar), Art: keine (ab Werk) · € je Palette · € je Lieferung (mit Lieferungen p. a.) · **pauschal in % auf Herstellkosten** (Standard aus Parametern) |
 | Zusatzpositionen | frei: Bezeichnung, Betrag, Bezug (je Stück / je 1.000 / je Los / je Jahr), Art (Fertigung oder Vertrieb) – z. B. Peripherie, Nacharbeit, Bedrucken, Sonderkosten |
-| Einmalkosten | frei: Bezeichnung, Kosten, Preis an Kunde – z. B. Werkzeug, Erstbemusterung, Prüfmittel |
+| Einmalkosten | frei: Bezeichnung, Kosten, Preis an Kunde – z. B. Werkzeug, Erstbemusterung, Prüfmittel; je Position wählbar **„auf Stückpreis umlegen“** (Amortisation) mit Stückzahl (Standard Jahresmenge × Laufzeit) |
 | Verkaufspreis | optional manuell festgelegt (Gewinn ergibt sich dann als Rest) |
 
 **Rechenweg je Stück** (KAL-21)
@@ -151,9 +161,9 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | Schritt | Formel |
 |---|---|
 | Ausbringung | Stück/h = 3600 / Zykluszeit × Fachzahl × Produktivität |
-| Material (MEK) | (Teilgewicht + Anguss/Fachzahl × (1 − Mahlgut %)) / 1000 × Mischpreis €/kg + Zukaufteile; Mischpreis = Materialpreis × (1 − MB %) + MB-Preis × MB % |
+| Material (MEK) | (Teilgewicht + Anguss/Fachzahl × (1 − Mahlgut %)) / 1000 × Mischpreis €/kg + Σ weitere Komponenten (gleiche Formel je Komponente) + Zukaufteile; Mischpreis = Materialpreis × (1 − MB %) + MB-Preis × MB % |
 | MGK | MEK × MGK % |
-| Maschine | Maschinenstundensatz / Stück/h |
+| Maschine | Maschinenstundensatz / Stück/h × Familienanteil (Instandhaltung, Personal, Rüsten ebenso) |
 | Instandhaltung | Instandhaltung €/h / Stück/h |
 | Personal | Lohnsatz × Bedienfaktor / Stück/h |
 | Rüsten | [Rüstzeit × (Maschinensatz + Instandhaltung + Lohnsatz Einrichter × Einrichter) + Anfahrausschuss × (Material + Maschine + Instandhaltung + Personal je Stück)] / Losgröße |
@@ -172,7 +182,8 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | SEK Vertrieb | Zusatzpositionen „Vertrieb“ |
 | Selbstkosten | HK + Verwaltung + Vertrieb + PM + Qualität/Werkzeugbau (Basis HK) + Verpackung + Transport + SEK Vertrieb |
 | Gewinn | SK × Gewinn % (bzw. Rest bei manuellem Preis) |
-| Verkaufspreis | (SK + Gewinn) / (1 − Skonto) / (1 − Rabatt) |
+| Werkzeugamortisation | Σ Preise der umzulegenden Einmalkosten / Amortisationsstückzahl – **ohne Gewinnaufschlag** zum Preis addiert |
+| Verkaufspreis | (SK + Gewinn + Werkzeugamortisation) / (1 − Skonto) / (1 − Rabatt) |
 
 - KAL-28: **Staffelpreise**: bis zu 3 weitere Losgrößen je Kalkulation (Vorschlag ½×, 2×, 5× der Basis-Losgröße).
   Je Staffel: Rüstkosten je Stück, Preis je Stück und je 1.000, Δ % zum kalkulierten Preis der Basis-Losgröße.
@@ -184,6 +195,17 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 - KAL-29: Ausgaben Verpackung/Transport: Kosten je Stück und p. a., VE p. a., Stück je Palette, Paletten p. a.
   Verpackungsart, Teile je VE und Lieferbedingung werden in die Artikelposition des Angebots übernommen.
   Ältere Versionen ohne diese Angaben rechnen unverändert (Verpackung bisher über Zusatzpositionen).
+- KAL-28a: **Staffelpreise nach Jahresmenge** (bis zu 3): gleiche Abrufhäufigkeit, d. h. Lose pro Jahr bleiben
+  gleich und die Losgröße wächst mit der Menge; Ausweis Losgröße, €/Stk, €/1.000, Umsatz p. a., Δ %; im Angebot.
+- KAL-28b: **Mehrkomponenten**: Material, CO₂, Gewicht und Schussgewicht aller Komponenten; im Angebot „A + B (2K)“.
+- KAL-28c: **Familienwerkzeug**: Maschinen-, Instandhaltungs-, Personal- und Rüstkosten, Maschinenstunden
+  (Auslastung) und Energie-CO₂ anteilig; Summe der Anteile aller Artikel der Gruppe = 100 % (Hinweis).
+- KAL-28d: **Werkzeugamortisation**: umgelegte Einmalkosten erscheinen nicht als Einmalumsatz, zählen aber zum
+  Invest; Ausweis €/Stk, € je 1.000, Gesamtbetrag, Stückzahl; im Angebot „inkl. Werkzeugamortisation …“.
+- KAL-28e: **Kopieren** einer Kalkulation (aktuelle Version → neue Kalkulation, Status Anfrage, Herkunft vermerkt)
+  und **Vorlagen** („Als Vorlage speichern“; bei „Neue Anfrage“ auswählbar; Verwaltung unter Stammdaten).
+- KAL-28f: **Preisgleitklausel** im Angebot: Materialbasis €/kg mit Stand und Index; Anpassung bei Änderung über
+  der Schwelle (Parameter, Standard ± 5 %).
 - KAL-27: Standard: Qualität 1,5 % auf HK, Werkzeugbau 2 % auf FEK (Parameter). Ältere Versionen ohne diese Werte
   rechnen unverändert mit 0 % weiter (Reproduzierbarkeit, KAL-31).
 
@@ -321,8 +343,11 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 - NFA-4: Betrieb hinter HTTPS-Reverse-Proxy; tägliches Datenbank-Backup.
 - NFA-5: Automatischer Build- und Starttest bei jedem Push (GitHub Actions).
 - NFA-6: API vollständig dokumentiert (Swagger unter /docs).
-- NFA-8: Datenbank-Erweiterungen werden beim Start automatisch ergänzt (neue Tabellen und neue Spalten in bestehenden
-  Tabellen); Umbenennen/Löschen von Spalten bleibt ein manueller Schritt.
+- NFA-8: Datenbank-Erweiterungen werden beim Start automatisch ergänzt (neue Tabellen, neue Spalten, Verbreitern von
+  Textfeldern); Umbenennen/Löschen/Verkleinern bleibt ein manueller Schritt.
+- NFA-9: **Rechentests**: jeder Rechenweg (Schema, Zuschläge, Staffeln, Mehrkomponenten, Familienwerkzeug,
+  Amortisation, Verpackung/Transport, CO₂, Nachkalkulation, Stundensatz, Artikelanalyse) ist gegen eine
+  Handrechnung automatisiert getestet; Tests laufen bei jedem Push, ein Fehler stoppt den Build.
 - NFA-7: Fußzeile auf allen Seiten inkl. Anmeldung: „© <Jahr> SB/Thinkworks · KlarCRM · built with clarity“ (nicht im Druck).
 
 ## 9. Technik
@@ -338,8 +363,8 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 
 ## 11. Offene Punkte / Ideen für die finale Version
 - [ ] Abgleich des Kalkulationsschemas mit der bestehenden F&R-Excel-Kalkulation (Positionen, Zuschlagsbasen).
-- [x] Staffelpreise je Losgröße (v1.4). Offen: Staffeln nach Jahresmenge.
-- [ ] Werkzeugamortisation über Stückzahl als Option.
+- [x] Staffelpreise je Losgröße (v1.4) und nach Jahresmenge (v1.9).
+- [x] Werkzeugamortisation über Stückzahl als Option (v1.9).
 - [ ] Mehrere Artikel je Anfrage in einer Kalkulationsmappe.
 - [ ] Übernahme von Ist-Werten aus BDE/MES für die Nachkalkulation.
 - [ ] CSV-/Excel-Import und -Export (Firmen, Kontakte, Kalkulationsliste).
@@ -361,3 +386,4 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | 1.6 | 14.11.2026 | Eigener Bereich **Verpackung & Transport** mit echten Beträgen (KAL-29, Rechenweg 6.2): Kosten je VE/Umlauf, Teile je VE, Packzeit, VE je Palette; Transport ab Werk, je Palette, je Lieferung oder % auf HK; Lieferbedingung; Übernahme ins Angebot; Ist-Werte in der Nachkalkulation. |
 | 1.7 | 14.11.2026 | **CO₂-Fußabdruck je Teil** (Kap. 6.8, CO2-1 bis CO2-6, STM-14): Material, Strom (Scope 2), Werksemissionen (Scope 1), Zukaufteile, Verpackung, Transport; je Stück, 1.000, Los, Jahresmenge, Lieferung; Ausweis im Angebot. Neue Stammdatenfelder (Materialfaktor, Maschinenleistung, Standort-Stromfaktor) werden automatisch ergänzt. |
 | 1.8 | 14.11.2026 | Verpackung wahlweise **pauschal in % auf HK** oder detailliert; Transport pauschal in % weiterhin wählbar; Standardsätze Verpackung 1,5 % / Transport 2,0 % in den Parametern (KAL-29a). |
+| 1.9 | 14.11.2026 | **Etappe 1 Profi-Kalkulation**: Mehrkomponenten 2K/3K (KAL-28b), Familienwerkzeug (KAL-28c), Werkzeugamortisation (KAL-28d), Staffeln nach Jahresmenge (KAL-28a), Kopieren und Vorlagen (KAL-28e), Preisgleitklausel im Angebot (KAL-28f), Herleitung Maschinenstundensatz inkl. Umlage Kostenstelle (STM-15), Rohstoffpreis-Historie und Preisgleitung (STM-16/17), Rechentests im Build (NFA-9). Angebotspositionen ohne Längenbegrenzung. |

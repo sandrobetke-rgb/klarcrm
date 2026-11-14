@@ -1,13 +1,16 @@
 from contextlib import asynccontextmanager
 
+import jwt
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func, select
 
 from .auth import hash_password
 from .config import settings
+from .context import current_user_id
 from .database import Base, SessionLocal, engine, ensure_columns
 from .models import User
+from . import events  # noqa: F401  (Session-Ereignisse registrieren)
 from .routers import calc, dashboard, entities, quotes, users
 
 
@@ -30,6 +33,23 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="KlarCRM API", version="1.0.0", lifespan=lifespan)
+@app.middleware("http")
+async def user_context(request, call_next):
+    """Angemeldeten Benutzer für Protokolle setzen (gilt für die ganze Anfrage, auch in Threads)."""
+    uid = None
+    auth = request.headers.get("authorization", "")
+    if auth.lower().startswith("bearer "):
+        try:
+            uid = int(jwt.decode(auth[7:], settings.SECRET_KEY, algorithms=["HS256"])["sub"])
+        except Exception:  # ungültiges Token: Prüfung erfolgt in get_current_user
+            uid = None
+    token = current_user_id.set(uid)
+    try:
+        return await call_next(request)
+    finally:
+        current_user_id.reset(token)
+
+
 app.add_middleware(
     CORSMiddleware, allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True, allow_methods=["*"], allow_headers=["*"],

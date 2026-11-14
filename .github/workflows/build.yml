@@ -10,6 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Rechentests (Kalkulation, CO₂, Analyse, Stundensatz)
+        run: |
+          python3 -m pip install -q -r backend/requirements.txt pytest
+          cd backend && python3 -m pytest -q tests
       - name: Docker-Images bauen
         run: docker compose build
       - name: Stack starten und API prüfen

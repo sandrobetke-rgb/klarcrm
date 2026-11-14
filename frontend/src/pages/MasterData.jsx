@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { resetThresholds } from '../components/BigProject'
+import { Escalation, MachineRates, Templates } from './MasterExtras'
 import { useAuth } from '../auth'
 import ListPage from '../components/ListPage'
 import { Badge, ErrorBox } from '../components/ui'
@@ -20,6 +21,13 @@ const machineFields = [
   { name: 'base_load_decline_pct', label: 'Auslauf Bestand % je Jahr', type: 'number', step: 'any', hint: 'z. B. 10 = Bestand sinkt jährlich um 10 %' },
   { name: 'power_kw', label: 'Leistungsaufnahme inkl. Peripherie (kW)', type: 'number', step: 'any', hint: 'für den CO₂-Fußabdruck' },
   { name: 'grid_factor', label: 'Strom-Emissionsfaktor Standort (kg CO₂e/kWh)', type: 'number', step: 'any', hint: 'leer = Parameter; z. B. eigener Wert für Werk Krupka' },
+  { name: 'acquisition_value', label: 'Wiederbeschaffungswert €', type: 'number', step: 'any', hint: 'Herleitung Stundensatz' },
+  { name: 'useful_life_years', label: 'Nutzungsdauer Jahre', type: 'number', step: 'any' },
+  { name: 'interest_pct', label: 'Kalkulatorischer Zins %', type: 'number', step: 'any' },
+  { name: 'floor_space_m2', label: 'Platzbedarf m²', type: 'number', step: 'any' },
+  { name: 'maintenance_cost_year', label: 'Instandhaltungskosten €/Jahr', type: 'number', step: 'any' },
+  { name: 'other_fixed_cost_year', label: 'Sonstige Fixkosten €/Jahr', type: 'number', step: 'any', hint: 'Versicherung, Software, Wartungsverträge' },
+  { name: 'allocation_cost_year', label: 'Umlage Kostenstelle €/Jahr', type: 'number', step: 'any', hint: 'Meister, Logistik, Peripherie, Druckluft – nicht zusätzlich im FGK-Zuschlag' },
   { name: 'active', label: 'Aktiv (in Kalkulation auswählbar)', type: 'checkbox' },
   { name: 'notes', label: 'Notizen', type: 'textarea', span: true },
 ]
@@ -30,6 +38,7 @@ const materialFields = [
   { name: 'price_per_kg', label: 'Preis €/kg', type: 'number', step: 'any', required: true },
   { name: 'density', label: 'Dichte g/cm³', type: 'number', step: 'any' },
   { name: 'co2_kg_per_kg', label: 'CO₂-Emissionsfaktor kg CO₂e/kg', type: 'number', step: 'any', hint: 'Cradle-to-Gate, möglichst Lieferanten-PCF' },
+  { name: 'price_index', label: 'Bezugsindex Preisgleitung', hint: 'z. B. Marktbericht / Börsennotierung' },
   { name: 'active', label: 'Aktiv', type: 'checkbox' },
   { name: 'notes', label: 'Notizen', type: 'textarea', span: true },
 ]
@@ -44,6 +53,7 @@ const PARAMS = [
     ['setup_time_h', 'Rüstzeit je Los', 'h'], ['setup_persons', 'Einrichter je Rüstvorgang', 'Pers.'], ['startup_scrap_pcs', 'Anfahrausschuss je Los', 'Stk']]],
   ['CO₂-Fußabdruck', [['co2_grid_kg_kwh', 'Strom-Emissionsfaktor', 'kg CO₂e/kWh'], ['co2_scope1_kg_h', 'Werksemissionen Scope 1', 'kg CO₂e/Masch.-h'],
     ['co2_masterbatch_kg_kg', 'Masterbatch', 'kg CO₂e/kg'], ['co2_transport_kg_tkm', 'Lkw-Transport', 'kg CO₂e/tkm']]],
+  ['Stundensatz & Preisgleitung', [['space_cost_m2_year', 'Raumkosten', '€/m² · Jahr'], ['energy_price_kwh', 'Strompreis', '€/kWh'], ['escalation_threshold_pct', 'Preisgleitklausel ab Änderung', '± %']]],
   ['Großprojekte (Hervorhebung)', [['big_revenue_threshold', 'Ab Jahresumsatz', '€'], ['big_invest_threshold', 'Ab Invest (Einmalkosten)', '€']]],
   ['Nachkalkulation (Ampel)', [['nk_green_pct', 'Grün bis Abweichung Selbstkosten', '%'], ['nk_red_pct', 'Rot ab Abweichung Selbstkosten', '%']]],
 ]
@@ -51,10 +61,13 @@ const PARAMS = [
 export default function MasterData() {
   const [tab, setTab] = useState('machines')
   const tabs = <div className="seg">
-    {[['machines', 'Maschinen'], ['materials', 'Materialien'], ['params', 'Parameter']].map(([k, l]) =>
+    {[['machines', 'Maschinen'], ['rates', 'Stundensätze'], ['materials', 'Materialien'], ['prices', 'Preisgleitung'], ['templates', 'Vorlagen'], ['params', 'Parameter']].map(([k, l]) =>
       <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}
   </div>
   if (tab === 'params') return <Params tabs={tabs} />
+  if (tab === 'rates') return <MachineRates tabs={tabs} />
+  if (tab === 'prices') return <Escalation tabs={tabs} />
+  if (tab === 'templates') return <Templates tabs={tabs} />
   if (tab === 'materials') {
     return <ListPage key="mat" title="Stammdaten · Materialien" subtitle="Preise werden in der Kalkulation vorbelegt und sind dort überschreibbar"
       path="/materials" entityLabel="Material" fields={materialFields} defaultSort="name" newDefaults={{ active: true }} extraActions={tabs}
@@ -62,7 +75,7 @@ export default function MasterData() {
         { key: 'name', label: 'Material', sort: 'name', render: (r) => <strong>{r.name}</strong> },
         { key: 'family', label: 'Gruppe', sort: 'family' },
         { key: 'supplier', label: 'Lieferant' },
-        { key: 'price_per_kg', label: '€/kg', sort: 'price_per_kg', className: 'num', render: (r) => num2(r.price_per_kg) },
+        { key: 'price_per_kg', label: '€/kg', sort: 'price_per_kg', className: 'num', render: (r) => <>{num2(r.price_per_kg)}{r.price_valid_from && <><br /><small className="muted">ab {new Date(r.price_valid_from).toLocaleDateString('de-DE')}</small></>}</> },
         { key: 'density', label: 'Dichte', className: 'num', render: (r) => (r.density ? num(r.density, 2) : '–') },
         { key: 'co2_kg_per_kg', label: 'kg CO₂e/kg', className: 'num', render: (r) => (r.co2_kg_per_kg != null ? num(r.co2_kg_per_kg, 2) : '–') },
         { key: 'active', label: 'Status', render: (r) => (r.active ? <Badge tone="good">aktiv</Badge> : <Badge>inaktiv</Badge>) },

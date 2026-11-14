@@ -56,20 +56,7 @@ export default function CalculationEditor() {
   }, [id])
 
   if (id === 'neu') {
-    return (
-      <div className="page page-narrow">
-        <Link to="/kalkulationen" className="back">‹ Alle Kalkulationen</Link>
-        <h1>Neue Anfrage / Kalkulation</h1>
-        <p className="muted">Kalkulationsnummer wird automatisch vergeben. Danach öffnet sich das Kalkulationsschema.</p>
-        <div className="card card-flush">
-          <EntityForm fields={calcMetaFields.filter((f) => !['close_reason', 'last_call_at'].includes(f.name))}
-            initial={{ status: 'anfrage', sync_opportunity: true, inquiry_date: new Date().toISOString().slice(0, 10) }}
-            submitLabel="Anlegen und kalkulieren"
-            onSubmit={async (v) => { const c = await api.post('/calculations', v); nav(`/kalkulationen/${c.id}`, { replace: true }) }}
-            onCancel={() => nav('/kalkulationen')} />
-        </div>
-      </div>
-    )
+    return <NewCalc />
   }
   if (error) return <ErrorBox error={error} />
   if (!calc) return <div className="loading">Lade Kalkulation…</div>
@@ -143,6 +130,41 @@ function QuoteLinks({ calc }) {
   )
 }
 
+function NewCalc() {
+  const nav = useNavigate()
+  const [templates, setTemplates] = useState([])
+  const [tpl, setTpl] = useState('')
+  useEffect(() => { api.get('/calc/templates').then(setTemplates).catch(() => {}) }, [])
+  return (
+    <div className="page page-narrow">
+      <Link to="/kalkulationen" className="back">‹ Alle Kalkulationen</Link>
+      <h1>Neue Anfrage / Kalkulation</h1>
+      <p className="muted">Kalkulationsnummer wird automatisch vergeben. Danach öffnet sich das Kalkulationsschema.</p>
+      {templates.length > 0 && (
+        <div className="card">
+          <div className="field"><label>Vorlage verwenden (optional)</label>
+            <select value={tpl} onChange={(e) => setTpl(e.target.value)}>
+              <option value="">– ohne Vorlage (Standardwerte aus Parametern) –</option>
+              {templates.map((t) => <option key={t.id} value={t.id}>{t.name} · {t.source_calc}</option>)}
+            </select>
+            <small className="hint">Übernimmt alle Eingaben (Maschine, Material, Zykluszeit, Zuschläge …) – danach anpassen.</small></div>
+        </div>
+      )}
+      <div className="card card-flush">
+        <EntityForm fields={calcMetaFields.filter((f) => !['close_reason', 'last_call_at', 'no_bid_reason', 'no_bid_note', 'feasibility', 'feasibility_note'].includes(f.name))}
+          initial={{ status: 'anfrage', sync_opportunity: true, inquiry_date: new Date().toISOString().slice(0, 10) }}
+          submitLabel="Anlegen und kalkulieren"
+          onSubmit={async (v) => {
+            const t = templates.find((x) => String(x.id) === tpl)
+            const c = await api.post('/calculations', { ...v, inputs: t ? t.inputs : undefined })
+            nav(`/kalkulationen/${c.id}`, { replace: true })
+          }}
+          onCancel={() => nav('/kalkulationen')} />
+      </div>
+    </div>
+  )
+}
+
 function HeaderActions({ calc, setCalc, onDelete, onCall }) {
   const nav = useNavigate()
   const [err, setErr] = useState(null)
@@ -152,6 +174,14 @@ function HeaderActions({ calc, setCalc, onDelete, onCall }) {
       {!calc.opportunity_id && <button className="btn btn-ghost" onClick={async () => {
         try { setCalc(await api.post(`/calculations/${calc.id}/opportunity`)) } catch (e) { setErr(e) }
       }}>→ Verkaufschance anlegen</button>}
+      <button className="btn btn-ghost" onClick={async () => {
+        const name = window.prompt('Artikelbezeichnung der Kopie:', `${calc.article_name} (Kopie)`)
+        if (name) { const c = await api.post(`/calculations/${calc.id}/copy`, { article_name: name }); nav(`/kalkulationen/${c.id}`) }
+      }}>Kopieren</button>
+      <button className="btn btn-ghost" onClick={async () => {
+        const name = window.prompt('Name der Vorlage (z. B. „Abdeckkappe PA6 4-fach 110 t“):', calc.article_name)
+        if (name) { try { await api.post('/calc/templates', { name, calc_id: calc.id }); setErr(null); window.alert('Vorlage gespeichert.') } catch (e) { setErr(e) } }
+      }}>Als Vorlage</button>
       <button className="btn btn-ghost" onClick={() => window.print()}>Drucken</button>
       <button className="btn btn-ghost" onClick={async () => {
         const r = await api.post(`/calculations/${calc.id}/quote`)
@@ -272,6 +302,24 @@ function CalcTab({ calc, setCalc, master }) {
               </div>
               <small className="hint">Preis je Losgröße wird rechts angezeigt und ins Angebot übernommen.</small>
             </div>
+            <div className="field span-3"><label>Staffelpreise – Jahresmengen <span className="unit">Stk/Jahr (bis zu 3)</span></label>
+              <div className="tier-inputs">
+                {[0, 1, 2].map((n) => (
+                  <input key={n} type="number" step="any" className="num" placeholder={`Menge ${n + 1}`}
+                    value={(inputs.volume_tiers || [])[n] ?? ''}
+                    onChange={(e) => {
+                      const t = [...(inputs.volume_tiers || [])]
+                      t[n] = e.target.value === '' ? '' : Number(e.target.value)
+                      set('volume_tiers', t)
+                    }} />
+                ))}
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => {
+                  const v = Number(inputs.annual_volume) || 100000
+                  set('volume_tiers', [Math.round(v / 2), v * 2, v * 3])
+                }}>Vorschlag ½× · 2× · 3×</button>
+              </div>
+              <small className="hint">Gleiche Abrufhäufigkeit: Lose pro Jahr bleiben gleich, die Losgröße wächst mit der Menge.</small>
+            </div>
           </Section>
 
           <Section title="Material">
@@ -287,6 +335,7 @@ function CalcTab({ calc, setCalc, master }) {
             {F({ k: 'masterbatch_pct', label: 'Masterbatch-Anteil', unit: '%', step: 0.5 })}
             {F({ k: 'masterbatch_price_kg', label: 'Masterbatch-Preis', unit: '€/kg', step: 0.1 })}
             {F({ k: 'purchased_parts', label: 'Zukaufteile je Stück', unit: '€', step: 0.01, hint: 'z. B. Einlegeteile, Buchsen' })}
+            <ComponentsEditor rows={inputs.components || []} materials={master.materials} onChange={(v) => set('components', v)} result={r} />
             <Info>Gewicht je Stück inkl. Angussanteil: <b>{num(r.kg_per_piece * 1000, 2)} g</b> · Schussgewicht {num(r.shot_weight_g, 1)} g · Material p. a. {num(r.material_kg_year)} kg</Info>
           </Section>
 
@@ -299,10 +348,14 @@ function CalcTab({ calc, setCalc, master }) {
             {F({ k: 'machine_rate_h', label: 'Maschinenstundensatz', unit: '€/h', hint: 'ohne Personal' })}
             {F({ k: 'maintenance_rate_h', label: 'Instandhaltung', unit: '€/h' })}
             {F({ k: 'cycle_time_s', label: 'Zykluszeit', unit: 's', step: 0.5 })}
-            {F({ k: 'cavities', label: 'Fachzahl', unit: 'Kav.', step: 1 })}
+            {F({ k: 'cavities', label: inputs.family_group ? 'Fachzahl dieses Artikels' : 'Fachzahl', unit: 'Kav.', step: 1 })}
             {F({ k: 'productivity_pct', label: 'Produktivität / Nutzungsgrad', unit: '%' })}
             {F({ k: 'operator_factor', label: 'Bedienfaktor', unit: 'Pers./M.', step: 0.05 })}
             {F({ k: 'labor_rate_h', label: 'Lohnsatz Bediener', unit: '€/h' })}
+            {F({ k: 'family_share_pct', label: 'Familienwerkzeug: Anteil dieses Artikels', unit: '% der Maschinenzeit', step: 5, hint: '100 % = eigenes Werkzeug' })}
+            <div className="field span-2"><label htmlFor="in-family_group">Familienwerkzeug / Werkzeuggruppe</label>
+              <input id="in-family_group" value={inputs.family_group || ''} placeholder="z. B. WZ-4711 Familie Steuergerät (leer = kein Familienwerkzeug)" onChange={(e) => set('family_group', e.target.value)} />
+              <small className="hint">Anteil z. B. nach Kavitäten oder Schussgewicht aufteilen; Summe aller Artikel der Gruppe = 100 %.</small></div>
             <Info>Ausbringung: <b>{num(r.pieces_per_hour, 0)} Stk/h</b> (theoretisch {num(r.pieces_per_hour_theoretical, 0)}) · Maschinenstunden p. a. <b>{num(r.machine_hours_year, 0)} h</b></Info>
           </Section>
 
@@ -402,14 +455,22 @@ function CalcTab({ calc, setCalc, master }) {
               { k: 'category', label: 'Art', type: 'select', options: [['fertigung', 'Fertigung (vor Ausschuss)'], ['vertrieb', 'Vertrieb (nach HK)']] },
             ]} />
 
-          <ListSection title="Einmalkosten" hint="Werkzeug, Bemusterung, Prüfmittel, Vorrichtungen – separat ausgewiesen"
+          <ListSection title="Einmalkosten" hint="Werkzeug, Bemusterung, Prüfmittel, Vorrichtungen – separat ausgewiesen oder auf den Stückpreis umgelegt (Amortisation)"
             rows={inputs.one_time} onChange={(v) => set('one_time', v)}
-            empty={{ label: '', cost: 0, price: 0 }}
+            empty={{ label: '', cost: 0, price: 0, amortize: false }}
             cols={[
-              { k: 'label', label: 'Bezeichnung', w: '45%' },
+              { k: 'label', label: 'Bezeichnung', w: '40%' },
               { k: 'cost', label: 'Kosten €', type: 'number' },
               { k: 'price', label: 'Preis an Kunde €', type: 'number' },
-            ]} />
+              { k: 'amortize', label: 'auf Stückpreis umlegen', type: 'checkbox' },
+            ]}>
+            {(inputs.one_time || []).some((o) => o.amortize) && (
+              <div className="form-grid form-grid-3" style={{ marginTop: 10 }}>
+                {F({ k: 'amort_quantity', label: 'Amortisation über', unit: 'Stk', step: 1000, hint: `leer/0 = Jahresmenge × Laufzeit (${num((Number(inputs.annual_volume) || 0) * (Number(inputs.project_years) || 1))} Stk)` })}
+                <Info>Werkzeugamortisation: <b>{fix4(r.amortization_per_piece)} €/Stk</b> ({num2(r.amortization_per_piece * 1000)} € je 1.000) · {eur(r.amortization_total)} über {num(r.amortization_quantity)} Stk · ohne Gewinnaufschlag</Info>
+              </div>
+            )}
+          </ListSection>
         </fieldset>
       </div>
 
@@ -451,7 +512,7 @@ function NumField({ k, label, unit, value, def, onChange, step = 'any', hint }) 
   )
 }
 
-function ListSection({ title, hint, rows, onChange, cols, empty }) {
+function ListSection({ title, hint, rows, onChange, cols, empty, children }) {
   const upd = (i, k, v) => onChange(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)))
   return (
     <div className="card">
@@ -464,7 +525,9 @@ function ListSection({ title, hint, rows, onChange, cols, empty }) {
           <tbody>{rows.map((row, i) => (
             <tr key={i}>
               {cols.map((c) => (
-                <td key={c.k}>{c.type === 'select'
+                <td key={c.k}>{c.type === 'checkbox'
+                  ? <input type="checkbox" checked={!!row[c.k]} onChange={(e) => upd(i, c.k, e.target.checked)} />
+                  : c.type === 'select'
                   ? <select value={row[c.k]} onChange={(e) => upd(i, c.k, e.target.value)}>{c.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
                   : <input type={c.type || 'text'} step="any" className={c.type === 'number' ? 'num' : ''} value={row[c.k] ?? ''}
                     onChange={(e) => upd(i, c.k, c.type === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value)} />}
@@ -474,6 +537,38 @@ function ListSection({ title, hint, rows, onChange, cols, empty }) {
           </tbody>
         </table>
       ) : <div className="empty small">Keine Positionen</div>}
+      {children}
+    </div>
+  )
+}
+
+function ComponentsEditor({ rows, materials, onChange, result }) {
+  const upd = (i, patch) => onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)))
+  const pick = (i, id) => {
+    const m = materials.find((x) => x.id === Number(id))
+    upd(i, m ? { material_id: m.id, material_name: m.name, price_kg: m.price_per_kg, co2_kg_kg: m.co2_kg_per_kg ?? 0, label: rows[i].label || m.family || m.name }
+      : { material_id: null })
+  }
+  return (
+    <div className="field span-3">
+      <div className="section-head"><label>Weitere Komponenten (2K / 3K …)</label>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => onChange([...rows, { label: `Komponente ${String.fromCharCode(66 + rows.length)}`, part_weight_g: 0, sprue_weight_g: 0, regrind_pct: 0, price_kg: 0, co2_kg_kg: 0 }])}>+ Komponente</button></div>
+      {rows.length > 0 ? (
+        <table className="table items-table comp-table">
+          <thead><tr><th>Bezeichnung</th><th>Material</th><th className="num">€/kg</th><th className="num">Teilgewicht g</th><th className="num">Anguss/Schuss g</th><th className="num">Mahlgut %</th><th className="num">kg CO₂e/kg</th><th className="num">€/Stk</th><th /></tr></thead>
+          <tbody>{rows.map((c, i) => (
+            <tr key={i}>
+              <td><input value={c.label || ''} onChange={(e) => upd(i, { label: e.target.value })} /></td>
+              <td><select value={c.material_id ?? ''} onChange={(e) => pick(i, e.target.value)}>
+                <option value="">– frei –</option>{materials.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></td>
+              {['price_kg', 'part_weight_g', 'sprue_weight_g', 'regrind_pct', 'co2_kg_kg'].map((k) => (
+                <td key={k}><input type="number" step="any" className="num" value={c[k] ?? ''} onChange={(e) => upd(i, { [k]: e.target.value === '' ? '' : Number(e.target.value) })} /></td>
+              ))}
+              <td className="num">{fix4(result?.components?.[i]?.cost)}</td>
+              <td><button type="button" className="icon-btn" onClick={() => onChange(rows.filter((_, j) => j !== i))}>×</button></td>
+            </tr>))}</tbody>
+        </table>
+      ) : <small className="hint">Für Mehrkomponenten-Teile weitere Materialien hinzufügen. Komponente A = Material oben.</small>}
     </div>
   )
 }
@@ -517,6 +612,22 @@ function Results({ r, inputs, set, canWrite, calc, versionNo }) {
 
       <Co2Card co2={r.co2} lot={inputs.lot_size} annual={inputs.annual_volume} />
 
+      {r.volume_tiers?.length > 0 && (
+        <div className="card">
+          <h3>Staffelpreise nach Jahresmenge</h3>
+          <table className="table table-compact">
+            <thead><tr><th className="num">Menge p. a.</th><th className="num">Losgröße</th><th className="num">€/Stk</th><th className="num">€/1.000</th><th className="num">Umsatz p. a.</th><th className="num">Δ</th></tr></thead>
+            <tbody>{r.volume_tiers.map((t) => (
+              <tr key={t.annual_volume} className={Number(t.annual_volume) === Number(inputs.annual_volume) ? 'row-latest' : ''}>
+                <td className="num">{num(t.annual_volume)}</td><td className="num">{num(t.lot_size)}</td>
+                <td className="num"><b>{fix4(t.unit_price)}</b></td><td className="num">{num2(t.price_per_1000)}</td>
+                <td className="num">{eur(t.annual_revenue)}</td>
+                <td className={`num ${t.delta_pct > 0 ? 'delta-up' : t.delta_pct < 0 ? 'delta-down' : 'muted'}`}>{t.delta_pct > 0 ? '+' : ''}{num(t.delta_pct, 1)} %</td>
+              </tr>))}</tbody>
+          </table>
+        </div>
+      )}
+
       {r.lot_tiers?.length > 0 && (
         <div className="card">
           <h3>Staffelpreise nach Losgröße</h3>
@@ -549,7 +660,7 @@ function Results({ r, inputs, set, canWrite, calc, versionNo }) {
           <table className="table table-compact">
             <thead><tr><th>Position</th><th className="num">Kosten</th><th className="num">Preis</th></tr></thead>
             <tbody>
-              {r.one_time.map((o, i) => <tr key={i}><td>{o.label}</td><td className="num">{eur(o.cost)}</td><td className="num">{eur(o.price)}</td></tr>)}
+              {r.one_time.map((o, i) => <tr key={i}><td>{o.label}{o.amortize && <small className="muted"> · amortisiert</small>}</td><td className="num">{eur(o.cost)}</td><td className="num">{o.amortize ? <span className="muted">im Stückpreis</span> : eur(o.price)}</td></tr>)}
               <tr className="calc-row-summe"><td>Summe · Ergebnis {eur(r.one_time_margin)}</td><td className="num">{eur(r.one_time_cost)}</td><td className="num">{eur(r.one_time_price)}</td></tr>
             </tbody>
           </table>

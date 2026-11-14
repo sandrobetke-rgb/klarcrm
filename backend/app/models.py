@@ -186,7 +186,7 @@ class QuoteItem(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     quote_id: Mapped[int] = mapped_column(ForeignKey("quotes.id", ondelete="CASCADE"), index=True)
     position: Mapped[int] = mapped_column(Integer, default=1)
-    description: Mapped[str] = mapped_column(String(500))
+    description: Mapped[str] = mapped_column(Text)
     quantity: Mapped[float] = mapped_column(Float, default=1)
     unit: Mapped[str] = mapped_column(String(20), default="Stk")
     unit_price: Mapped[float] = mapped_column(Numeric(14, 4), default=0)
@@ -233,6 +233,14 @@ class Machine(TimestampMixin, Base):
     base_load_pct: Mapped[float | None] = mapped_column(Float, default=0)          # Grundauslastung Bestandsaufträge %
     base_load_decline_pct: Mapped[float | None] = mapped_column(Float, default=0)  # Auslauf Bestand je Jahr %
     power_kw: Mapped[float | None] = mapped_column(Float)                          # mittl. Leistungsaufnahme inkl. Peripherie
+    # Herleitung Maschinenstundensatz
+    acquisition_value: Mapped[float | None] = mapped_column(Float)     # Wiederbeschaffungswert €
+    useful_life_years: Mapped[float | None] = mapped_column(Float)     # Nutzungsdauer Jahre
+    interest_pct: Mapped[float | None] = mapped_column(Float)          # kalkulatorischer Zins %
+    floor_space_m2: Mapped[float | None] = mapped_column(Float)        # Platzbedarf m²
+    maintenance_cost_year: Mapped[float | None] = mapped_column(Float)  # Instandhaltung €/Jahr
+    other_fixed_cost_year: Mapped[float | None] = mapped_column(Float)  # Versicherung, Sonstiges €/Jahr
+    allocation_cost_year: Mapped[float | None] = mapped_column(Float)  # Umlage Kostenstelle (Meister, Logistik, Peripherie …) €/Jahr
     grid_factor: Mapped[float | None] = mapped_column(Float)                       # Strom kg CO₂e/kWh (Standort), leer = Parameter
     notes: Mapped[str | None] = mapped_column(Text)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -247,6 +255,8 @@ class Material(TimestampMixin, Base):
     price_per_kg: Mapped[float] = mapped_column(Float, default=0)
     density: Mapped[float | None] = mapped_column(Float)
     co2_kg_per_kg: Mapped[float | None] = mapped_column(Float)  # Emissionsfaktor Cradle-to-Gate kg CO₂e/kg (Lieferanten-PCF)
+    price_index: Mapped[str | None] = mapped_column(String(120))  # Bezugsindex Preisgleitung (z. B. Marktbericht)
+    price_valid_from: Mapped[date | None] = mapped_column(Date)    # Stand des aktuellen Preises
     notes: Mapped[str | None] = mapped_column(Text)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
@@ -387,3 +397,30 @@ def _last_light(self):
 
 
 Calculation.last_traffic_light = property(_last_light)
+
+
+class MaterialPrice(Base):
+    """Preishistorie je Material (Rohstoffpreis-Index für Preisgleitung)."""
+    __tablename__ = "material_prices"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    material_id: Mapped[int] = mapped_column(ForeignKey("materials.id", ondelete="CASCADE"), index=True)
+    price_per_kg: Mapped[float] = mapped_column(Float)
+    valid_from: Mapped[date] = mapped_column(Date, default=date.today)
+    note: Mapped[str | None] = mapped_column(String(255))
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    user = relationship("User", lazy="joined")
+    material = relationship("Material")
+
+
+class CalcTemplate(Base):
+    """Kalkulationsvorlage (Eingaben einer Kalkulation zur Wiederverwendung)."""
+    __tablename__ = "calc_templates"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(150))
+    description: Mapped[str | None] = mapped_column(Text)
+    inputs: Mapped[dict] = mapped_column(JSON)
+    source_calc: Mapped[str | None] = mapped_column(String(30))
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    created_by = relationship("User", lazy="joined")

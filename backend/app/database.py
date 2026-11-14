@@ -20,8 +20,8 @@ def get_db():
 
 
 def ensure_columns():
-    """Ergänzt fehlende Spalten in bestehenden Tabellen (einfache Migration ohne Alembic).
-    Nur additive Änderungen: neue, nullable Spalten. Umbenennen/Löschen bleibt manuell."""
+    """Ergänzt fehlende Spalten in bestehenden Tabellen und verbreitert Textfelder (einfache Migration ohne Alembic).
+    Nur additive/verbreiternde Änderungen. Umbenennen/Löschen/Verkleinern bleibt manuell."""
     from sqlalchemy import inspect, text
     insp = inspect(engine)
     existing_tables = set(insp.get_table_names())
@@ -29,9 +29,19 @@ def ensure_columns():
         for table in Base.metadata.sorted_tables:
             if table.name not in existing_tables:
                 continue
-            have = {c["name"] for c in insp.get_columns(table.name)}
+            cols = {c["name"]: c for c in insp.get_columns(table.name)}
+            have = set(cols)
             for col in table.columns:
                 if col.name in have:
+                    # Textfelder nur verbreitern (nie verkleinern): VARCHAR(n) -> größer oder TEXT
+                    old = cols[col.name]["type"]
+                    old_len = getattr(old, "length", None)
+                    new_len = getattr(col.type, "length", "n/a")
+                    is_text = col.type.__class__.__name__ == "Text"
+                    if old_len and ((is_text) or (isinstance(new_len, int) and new_len > old_len)):
+                        ddl = col.type.compile(dialect=engine.dialect)
+                        conn.execute(text(f'ALTER TABLE {table.name} ALTER COLUMN "{col.name}" TYPE {ddl}'))
+                        print(f"DB: Spalte {table.name}.{col.name} verbreitert ({old_len} -> {ddl})")
                     continue
                 ddl = col.type.compile(dialect=engine.dialect)
                 conn.execute(text(f'ALTER TABLE {table.name} ADD COLUMN "{col.name}" {ddl}'))

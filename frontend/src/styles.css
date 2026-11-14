@@ -397,3 +397,10 @@ h1 .big-badge { font-size: 12.5px; margin-top: 0; }
 .co2-share span { display: block; height: 100%; background: #2f9e62; }
 
 .mode-seg { align-self: flex-start; }
+
+.comp-table input, .comp-table select { padding: 5px 6px; font-size: 12.5px; }
+.comp-table td:nth-child(1) input { min-width: 120px; }
+.comp-table td:nth-child(2) select { min-width: 130px; }
+.comp-table td:nth-child(3) input { min-width: 64px; }
+.grid-2-wide { grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); }
+@media (max-width: 1100px) { .grid-2-wide { grid-template-columns: 1fr; } }

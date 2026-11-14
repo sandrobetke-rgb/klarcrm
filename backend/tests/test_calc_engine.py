@@ -1,0 +1,137 @@
+"""Rechentests: jeder Rechenweg gegen eine Handrechnung. Läuft bei jedem Push (GitHub Actions)."""
+import math
+
+import pytest
+
+from app.analysis import analyze
+from app.calc_engine import compute, machine_rate, post_calculate
+
+BASE = {
+    "annual_volume": 100000, "lot_size": 10000, "material_price_kg": 3.0, "part_weight_g": 20, "sprue_weight_g": 4,
+    "machine_rate_h": 45, "maintenance_rate_h": 5, "cycle_time_s": 30, "cavities": 4, "productivity_pct": 85,
+    "operator_factor": 0.3, "labor_rate_h": 38, "setup_time_h": 2, "setup_persons": 1, "setup_rate_h": 48,
+    "startup_scrap_pcs": 0, "scrap_pct": 3,
+}
+PPH = 3600 / 30 * 4 * 0.85  # 408 Stk/h
+
+
+def hand_price(extra_hk=0.0, extra_sk=0.0, profit=0.07):
+    mat = (20 + 4 / 4) / 1000 * 3.0
+    fek = (45 + 5 + 38 * 0.3) / PPH + 2 * (45 + 5 + 48) / 10000
+    hk = (mat * 1.06 + fek * 1.12 + extra_hk) / 0.97
+    sk = hk * (1 + 0.06 + 0.03 + 0.02) + extra_sk
+    return hk, sk, sk * (1 + profit)
+
+
+def test_referenzkalkulation():
+    r = compute(BASE)
+    _, sk, price = hand_price()
+    assert r["pieces_per_hour"] == pytest.approx(PPH, abs=0.1)
+    assert r["self_cost"] == pytest.approx(sk, abs=1e-4)
+    assert r["unit_price"] == pytest.approx(price, abs=1e-4)
+    assert r["unit_price"] == 0.315  # muss zur Referenz im CI-Workflow passen
+    assert r["price_per_1000"] == pytest.approx(r["unit_price"] * 1000, abs=0.1)
+
+
+def test_manueller_preis_gewinn_als_rest():
+    r = compute({**BASE, "price_override": 0.30})
+    assert r["unit_price"] == 0.30
+    assert r["profit_per_piece"] == pytest.approx(0.30 - r["self_cost"], abs=1e-6)
+    assert r["price_source"] == "manuell"
+
+
+def test_qualitaet_und_werkzeugbau_basis():
+    r = compute({**BASE, "quality_pct": 1.5, "quality_base": "hk", "toolshop_pct": 2, "toolshop_base": "fek"})
+    fek = (45 + 5 + 38 * 0.3) / PPH + 2 * (45 + 5 + 48) / 10000
+    hk, _, _ = hand_price(extra_hk=fek * 0.02)
+    assert r["values"]["toolshop_f"] == pytest.approx(fek * 0.02, abs=1e-6)
+    assert r["values"]["quality_h"] == pytest.approx(hk * 0.015, abs=1e-6)
+
+
+def test_staffeln_losgroesse_und_jahresmenge():
+    inp = {**BASE, "startup_scrap_pcs": 50, "lot_tiers": [2000, 50000], "volume_tiers": [50000, 250000],
+           "project_years": 5, "one_time": [{"label": "WZ", "cost": 30000, "price": 30000, "amortize": True}]}
+    r = compute(inp)
+    lots = {t["lot_size"]: t for t in r["lot_tiers"]}
+    assert lots[2000]["unit_price"] > r["unit_price"] > lots[50000]["unit_price"]
+    vols = {t["annual_volume"]: t for t in r["volume_tiers"]}
+    assert vols[50000]["lot_size"] == 5000 and vols[250000]["lot_size"] == 25000  # Lose/Jahr konstant
+    assert vols[50000]["unit_price"] > r["unit_price"] > vols[250000]["unit_price"]
+
+
+def test_mehrkomponenten():
+    r = compute({**BASE, "components": [{"label": "TPE", "price_kg": 4.9, "part_weight_g": 5, "sprue_weight_g": 0}]})
+    assert r["values"]["mek_components"] == pytest.approx(0.005 * 4.9, abs=2e-6)
+    assert r["kg_per_piece"] == pytest.approx(0.026, abs=2e-6)
+
+
+def test_familienwerkzeug_halbiert_maschinenanteil():
+    a, b = compute(BASE), compute({**BASE, "family_share_pct": 50})
+    for k in ("machine", "maintenance", "labor"):
+        assert b["values"][k] == pytest.approx(a["values"][k] / 2, abs=2e-6)
+    assert b["machine_hours_year"] == pytest.approx(a["machine_hours_year"] / 2, abs=0.2)
+
+
+def test_werkzeugamortisation():
+    r = compute({**BASE, "project_years": 5, "one_time": [
+        {"label": "WZ", "cost": 30000, "price": 32000, "amortize": True}, {"label": "EMPB", "cost": 1800, "price": 1800}]})
+    assert r["amortization_per_piece"] == pytest.approx(32000 / 500000, abs=2e-6)
+    assert r["one_time_price"] == 1800 and r["one_time_cost"] == 31800
+    _, _, price = hand_price()
+    assert r["unit_price"] == pytest.approx(price + 32000 / 500000, abs=1e-4)  # ohne Gewinnaufschlag
+
+
+def test_verpackung_und_transport():
+    det = compute({**BASE, "pack_parts_per_unit": 500, "pack_cost_per_unit": 1.2, "pack_time_s": 30,
+                   "pack_units_per_pallet": 24, "transport_mode": "palette", "transport_cost_per_pallet": 68})
+    assert det["values"]["packaging"] == pytest.approx(1.2 / 500 + 30 / 3600 * 38 / 500, abs=2e-6)
+    assert det["values"]["transport"] == pytest.approx(68 / 12000, abs=2e-6)
+    lief = compute({**BASE, "transport_mode": "lieferung", "transport_cost_per_delivery": 180, "transport_deliveries_per_year": 24})
+    assert lief["values"]["transport"] == pytest.approx(180 * 24 / 100000, abs=2e-6)
+    pct = compute({**BASE, "pack_mode": "prozent", "pack_pct": 1.5, "transport_mode": "prozent", "transport_pct": 2})
+    hk = pct["values"]["hk"]
+    assert pct["values"]["packaging"] == pytest.approx(hk * 0.015, abs=2e-6)
+    assert pct["values"]["transport"] == pytest.approx(hk * 0.02, abs=2e-6)
+
+
+def test_co2_fussabdruck():
+    r = compute({**BASE, "startup_scrap_pcs": 50, "co2_material_kg_kg": 6.5, "machine_power_kw": 14,
+                 "co2_grid_kg_kwh": 0.3, "transport_km": 300, "co2_transport_kg_tkm": 0.1})
+    c, kg = r["co2"], 0.021
+    assert c["material"] == pytest.approx(kg * 6.5 / 0.97 + kg * 6.5 * 50 / 10000, abs=1e-6)
+    kwh = 14 * (1 / PPH / 0.97 + 2 / 10000)
+    assert c["kwh_per_piece"] == pytest.approx(kwh, abs=1e-6)
+    assert c["energy"] == pytest.approx(kwh * 0.3, abs=1e-6)
+    assert c["transport"] == pytest.approx(20 / 1e6 * 300 * 0.1, abs=2e-6)
+    assert c["per_lot_kg"] == pytest.approx(c["total"] * 10000, abs=0.01)
+    assert r["unit_price"] == compute({**BASE, "startup_scrap_pcs": 50})["unit_price"]  # CO₂ ändert den Preis nicht
+
+
+def test_nachkalkulation_ampel():
+    plan = compute(BASE)
+    settings = {"nk_green_pct": 3, "nk_red_pct": 10}
+    _, gruen = post_calculate(BASE, plan, {"cycle_time_s": 30}, settings)
+    assert gruen == "gruen"
+    res, rot = post_calculate(BASE, plan, {"cycle_time_s": 40, "scrap_pct": 8}, settings)
+    assert rot == "rot" and res["deviation_sk_pct"] > 10
+
+
+def test_maschinenstundensatz_herleitung():
+    m = {"available_hours_year": 6000, "acquisition_value": 190000, "useful_life_years": 10, "interest_pct": 6,
+         "floor_space_m2": 24, "power_kw": 14, "other_fixed_cost_year": 3500, "allocation_cost_year": 60000,
+         "maintenance_cost_year": 24000}
+    r = machine_rate(m, {"space_cost_m2_year": 90, "energy_price_kwh": 0.2})
+    hand = (19000 + 190000 / 2 * 0.06 + 24 * 90 + 3500 + 60000) / 6000 + 14 * 0.2
+    assert r["hourly_rate"] == pytest.approx(hand, abs=0.01)
+    assert r["maintenance_rate"] == pytest.approx(4.0, abs=0.01)
+
+
+def test_artikelanalyse_schliesskraft():
+    r = analyze({"material_family": "PA6", "projected_area_cm2": 40, "wall_max_mm": 2.5, "wall_min_mm": 1.5,
+                 "flow_length_mm": 120}, {"cavities": 4, "machine_id": 1},
+                [{"id": 1, "name": "110t", "clamping_force_t": 110}, {"id": 2, "name": "250t", "clamping_force_t": 250}])
+    assert r["clamping_force_t"] == pytest.approx(40 * 4 * 500 / 1000 * 1.2, abs=0.1)
+    assert r["suitable_machines"][0]["id"] == 1
+    a = 0.12
+    cool = 2.5 ** 2 / (math.pi ** 2 * a) * math.log(8 / math.pi ** 2 * (270 - 80) / (160 - 80))
+    assert r["cooling_time_s"] == pytest.approx(cool, abs=0.1)

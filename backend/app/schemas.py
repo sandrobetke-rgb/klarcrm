@@ -291,6 +291,13 @@ class MachineBase(BaseModel):
     base_load_decline_pct: float | None = 0
     power_kw: float | None = None
     grid_factor: float | None = None
+    acquisition_value: float | None = None
+    useful_life_years: float | None = None
+    interest_pct: float | None = None
+    floor_space_m2: float | None = None
+    maintenance_cost_year: float | None = None
+    other_fixed_cost_year: float | None = None
+    allocation_cost_year: float | None = None
     notes: str | None = None
     active: bool = True
 
@@ -310,6 +317,8 @@ class MaterialBase(BaseModel):
     price_per_kg: float = 0
     density: float | None = None
     co2_kg_per_kg: float | None = None
+    price_index: str | None = None
+    price_valid_from: date | None = None
     notes: str | None = None
     active: bool = True
 
