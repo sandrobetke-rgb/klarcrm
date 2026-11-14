@@ -315,6 +315,34 @@ function CalcTab({ calc, setCalc, master }) {
             {F({ k: 'assembly_productivity_pct', label: 'Produktivität Montage', unit: '%' })}
           </Section>
 
+          <Section title="Verpackung & Transport">
+            <div className="field"><label htmlFor="in-pack_type">Verpackungsart</label>
+              <input id="in-pack_type" list="pack-types" value={inputs.pack_type || ''} placeholder="z. B. KLT 6280" onChange={(e) => set('pack_type', e.target.value)} />
+              <datalist id="pack-types">{['KLT 4280 Mehrweg', 'KLT 6280 Mehrweg', 'Karton Einweg', 'Gitterbox mit Zwischenlagen', 'Sonderladungsträger Kunde', 'Beutel + Karton'].map((t) => <option key={t} value={t} />)}</datalist></div>
+            {F({ k: 'pack_parts_per_unit', label: 'Teile je Verpackungseinheit (VE)', unit: 'Stk', step: 1 })}
+            {F({ k: 'pack_cost_per_unit', label: inputs.pack_reusable ? 'Kosten je Umlauf (Reinigung, Miete)' : 'Kosten je VE (inkl. Zwischenlagen)', unit: '€', step: 0.05 })}
+            <div className="field field-check"><label htmlFor="in-pack_reusable">Mehrweg-Verpackung</label>
+              <input id="in-pack_reusable" type="checkbox" checked={!!inputs.pack_reusable} onChange={(e) => set('pack_reusable', e.target.checked)} /></div>
+            {F({ k: 'pack_time_s', label: 'Packzeit je VE', unit: 's', step: 5, hint: 'bewertet mit Lohnsatz Bediener' })}
+            {F({ k: 'pack_units_per_pallet', label: 'VE je Palette', unit: 'VE', step: 1 })}
+            <Info>Verpackung: <b>{fix4(r.values?.packaging)} €/Stk</b> · {num(r.packaging_units_year)} VE p. a. · {num(r.pieces_per_pallet)} Stk/Palette · {num(r.pallets_year, 1)} Paletten p. a. · {eur(r.packaging_cost_year)} p. a.</Info>
+            <div className="field"><label htmlFor="in-incoterm">Lieferbedingung (Incoterm)</label>
+              <input id="in-incoterm" list="incoterms" value={inputs.incoterm || ''} placeholder="z. B. FCA Werk, DAP Kunde" onChange={(e) => set('incoterm', e.target.value)} />
+              <datalist id="incoterms">{['EXW ab Werk', 'FCA Werk', 'DAP Kunde', 'DDP Kunde', 'CPT', 'frei Haus'].map((t) => <option key={t} value={t} />)}</datalist></div>
+            <div className="field"><label htmlFor="in-transport_mode">Transportkosten</label>
+              <select id="in-transport_mode" value={inputs.transport_mode || 'keine'} onChange={(e) => set('transport_mode', e.target.value)}>
+                <option value="keine">keine (ab Werk / Kunde holt ab)</option>
+                <option value="palette">€ je Palette</option>
+                <option value="lieferung">€ je Lieferung</option>
+                <option value="prozent">% auf Herstellkosten</option>
+              </select></div>
+            {inputs.transport_mode === 'palette' && F({ k: 'transport_cost_per_pallet', label: 'Frachtkosten je Palette', unit: '€', step: 1, hint: 'Teile je VE × VE je Palette werden genutzt' })}
+            {inputs.transport_mode === 'lieferung' && F({ k: 'transport_cost_per_delivery', label: 'Kosten je Lieferung', unit: '€', step: 5 })}
+            {inputs.transport_mode === 'lieferung' && F({ k: 'transport_deliveries_per_year', label: 'Lieferungen pro Jahr', unit: '', step: 1 })}
+            {inputs.transport_mode === 'prozent' && F({ k: 'transport_pct', label: 'Transport', unit: '% auf HK', step: 0.5 })}
+            {(inputs.transport_mode || 'keine') !== 'keine' && <Info>Transport: <b>{fix4(r.values?.transport)} €/Stk</b> · {eur(r.transport_cost_year)} p. a.</Info>}
+          </Section>
+
           <Section title="Zuschläge & Gewinn">
             {F({ k: 'mgk_pct', label: 'Materialgemeinkosten', unit: '%', step: 0.5 })}
             {F({ k: 'fgk_pct', label: 'Fertigungsgemeinkosten', unit: '%', step: 0.5 })}
@@ -331,7 +359,7 @@ function CalcTab({ calc, setCalc, master }) {
             {F({ k: 'rebate_pct', label: 'Rabatt', unit: '%', step: 0.5 })}
           </Section>
 
-          <ListSection title="Zusatzpositionen" hint="Peripherie, Nacharbeit, Bedrucken, Verpackung, Transport …"
+          <ListSection title="Zusatzpositionen" hint="Peripherie, Nacharbeit, Bedrucken, Sonderkosten … (Verpackung und Transport oben im eigenen Bereich)"
             rows={inputs.extras} onChange={(v) => set('extras', v)}
             empty={{ label: '', amount: 0, basis: 'stueck', category: 'fertigung' }}
             cols={[

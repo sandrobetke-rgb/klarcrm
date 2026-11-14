@@ -187,7 +187,13 @@ def seed_calc(db):
                    cycle_time_s=cyc, cavities=cav, annual_volume=vol, lot_size=lot,
                    one_time=[{"label": "Spritzgießwerkzeug", "cost": tool, "price": tool},
                              {"label": "Erstbemusterung / EMPB", "cost": 1800, "price": 1800}],
-                   extras=[{"label": "Verpackung KLT", "amount": round(max(2.0, g * 0.12), 2), "basis": "tausend", "category": "vertrieb"}])
+                   extras=[],
+                   pack_type="KLT 6280 Mehrweg" if g < 200 else "Gitterbox mit Zwischenlagen",
+                   pack_parts_per_unit=max(1, int((2500 if g < 200 else 120000) / max(g, 0.5))) if g < 200 else max(1, int(120000 / g)),
+                   pack_cost_per_unit=1.20 if g < 200 else 9.50, pack_reusable=g < 200, pack_time_s=25 if g < 200 else 60,
+                   pack_units_per_pallet=24 if g < 200 else 1,
+                   incoterm="FCA Werk" if idx % 3 else "DAP Kunde",
+                   transport_mode="keine" if idx % 3 else "palette", transport_cost_per_pallet=68.0)
         if art in ("Abdeckkappe Steuergerät", "Frontend-Modulträger", "Clip-Halter Kabelbaum"):
             inp["lot_tiers"] = [round(lot / 2), lot, lot * 3]
         if art.startswith("Frontend"):

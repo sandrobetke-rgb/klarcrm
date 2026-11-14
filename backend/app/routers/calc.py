@@ -393,6 +393,11 @@ def build_quote(db: Session, pairs: list, user: User) -> Quote:
         if r.get("lot_tiers"):
             art += "\nStaffelpreise je 1.000 Stk: " + " · ".join(
                 f"Los {_de(t['lot_size'], 0)}: {_de(t['price_per_1000'])} €" for t in r["lot_tiers"])
+        if inp.get("pack_type") or inp.get("pack_parts_per_unit"):
+            art += f"\nVerpackung: {inp.get('pack_type') or '–'}" + \
+                (f", {_de(float(inp['pack_parts_per_unit']), 0)} Stk je VE" if inp.get("pack_parts_per_unit") else "")
+        if inp.get("incoterm") or (inp.get("transport_mode") or "keine") != "keine":
+            art += "\nLieferbedingung: " + (inp.get("incoterm") or ("frei Haus" if inp.get("transport_mode") != "keine" else "ab Werk"))
         items.append(dict(description=art, quantity=r["annual_volume"], unit="Stk", unit_price=r["unit_price"]))
         for o in [o for o in r["one_time"] if o["price"]]:
             label = o["label"] if single else f"{o['label']} – {calc.article_name}"

@@ -8,8 +8,9 @@ import { Light } from './Calculations'
 const ACTUAL_FIELDS = [
   'cycle_time_s', 'cavities', 'productivity_pct', 'scrap_pct', 'material_price_kg', 'part_weight_g', 'sprue_weight_g',
   'setup_time_h', 'lot_size', 'assembly_time_s', 'labor_rate_h', 'operator_factor', 'machine_rate_h', 'maintenance_rate_h', 'purchased_parts',
+  'pack_cost_per_unit', 'pack_parts_per_unit', 'transport_cost_per_pallet', 'transport_cost_per_delivery', 'transport_deliveries_per_year',
 ]
-const COMPARE = ['mek_material', 'machine', 'maintenance', 'labor', 'setup', 'assembly', 'quality_f', 'toolshop_f', 'scrap', 'hk', 'quality_h', 'toolshop_h', 'sk', 'profit']
+const COMPARE = ['mek_material', 'machine', 'maintenance', 'labor', 'setup', 'assembly', 'quality_f', 'toolshop_f', 'scrap', 'hk', 'quality_h', 'toolshop_h', 'packaging', 'transport', 'sk', 'profit']
 
 export default function PostCalcTab({ calc, setCalc }) {
   const { canWrite } = useAuth()

@@ -4,7 +4,7 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.5 |
+| **Dokumentversion** | 1.6 |
 | **Stand** | 14.11.2026 |
 | **Status** | Testphase (GitHub Codespaces) |
 
@@ -136,7 +136,9 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | Rüsten | Rüstzeit je Los h, Einrichter, Lohnsatz Einrichter, Anfahrausschuss je Los Stk |
 | Montage | Montagezeit je Stück s, Personen, Lohnsatz, Produktivität Montage % |
 | Zuschläge | MGK, FGK, Ausschuss, Verwaltung, Vertrieb, Projektmanagement, **Qualität**, **Werkzeugbau**, Gewinn, Skonto, Rabatt (%); für Qualität und Werkzeugbau ist die **Basis wählbar**: FEK oder HK |
-| Zusatzpositionen | frei: Bezeichnung, Betrag, Bezug (je Stück / je 1.000 / je Los / je Jahr), Art (Fertigung oder Vertrieb) – z. B. Peripherie, Nacharbeit, Bedrucken, Verpackung, Transport |
+| **Verpackung** | Verpackungsart (Vorschläge KLT, Karton, Gitterbox, Sonderladungsträger …), Teile je Verpackungseinheit (VE), Kosten je VE bzw. bei Mehrweg je Umlauf (Reinigung, Miete), Packzeit je VE, VE je Palette – **echte Beträge, keine Prozente** |
+| **Transport** | Lieferbedingung (Incoterm, frei wählbar), Art: keine (ab Werk) · € je Palette · € je Lieferung (mit Lieferungen p. a.) · % auf Herstellkosten |
+| Zusatzpositionen | frei: Bezeichnung, Betrag, Bezug (je Stück / je 1.000 / je Los / je Jahr), Art (Fertigung oder Vertrieb) – z. B. Peripherie, Nacharbeit, Bedrucken, Sonderkosten |
 | Einmalkosten | frei: Bezeichnung, Kosten, Preis an Kunde – z. B. Werkzeug, Erstbemusterung, Prüfmittel |
 | Verkaufspreis | optional manuell festgelegt (Gewinn ergibt sich dann als Rest) |
 
@@ -161,8 +163,10 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | Herstellkosten | HK vor Ausschuss + Ausschuss |
 | Verwaltung / Vertrieb / PM | je HK × % |
 | Qualität / Werkzeugbau (Basis HK) | HK × Qualität % bzw. HK × Werkzeugbau % |
+| Verpackung | Kosten je VE / Teile je VE + Packzeit je VE / 3600 × Lohnsatz Bediener / Teile je VE |
+| Transport | je Palette: Fracht je Palette / (Teile je VE × VE je Palette) · je Lieferung: Kosten je Lieferung × Lieferungen p. a. / Jahresmenge · Prozent: HK × % · ab Werk: 0 |
 | SEK Vertrieb | Zusatzpositionen „Vertrieb“ |
-| Selbstkosten | HK + Verwaltung + Vertrieb + PM + Qualität/Werkzeugbau (Basis HK) + SEK Vertrieb |
+| Selbstkosten | HK + Verwaltung + Vertrieb + PM + Qualität/Werkzeugbau (Basis HK) + Verpackung + Transport + SEK Vertrieb |
 | Gewinn | SK × Gewinn % (bzw. Rest bei manuellem Preis) |
 | Verkaufspreis | (SK + Gewinn) / (1 − Skonto) / (1 − Rabatt) |
 
@@ -170,6 +174,9 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
   Je Staffel: Rüstkosten je Stück, Preis je Stück und je 1.000, Δ % zum kalkulierten Preis der Basis-Losgröße.
   Staffeln werden immer kalkuliert (ein manuell festgelegter Preis gilt nur für die Basis-Losgröße). Staffelpreise
   werden in die Artikelposition des Angebots übernommen.
+- KAL-29: Ausgaben Verpackung/Transport: Kosten je Stück und p. a., VE p. a., Stück je Palette, Paletten p. a.
+  Verpackungsart, Teile je VE und Lieferbedingung werden in die Artikelposition des Angebots übernommen.
+  Ältere Versionen ohne diese Angaben rechnen unverändert (Verpackung bisher über Zusatzpositionen).
 - KAL-27: Standard: Qualität 1,5 % auf HK, Werkzeugbau 2 % auf FEK (Parameter). Ältere Versionen ohne diese Werte
   rechnen unverändert mit 0 % weiter (Reproduzierbarkeit, KAL-31).
 
@@ -270,7 +277,7 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 ## 7. Nachkalkulation
 - NK-1: Zu jeder Kalkulation beliebig viele Nachkalkulationen (z. B. je Fertigungsauftrag oder Zeitraum) mit
   Referenz, Zeitraum, Bemerkung und Bezug auf eine Version.
-- NK-2: Erfasst werden nur abweichende **Ist-Werte**: Zykluszeit, Fachzahl, Produktivität, Ausschuss, Materialpreis,
+- NK-2: Erfasst werden nur abweichende **Ist-Werte** (auch Verpackungs- und Frachtkosten): Zykluszeit, Fachzahl, Produktivität, Ausschuss, Materialpreis,
   Teil- und Angussgewicht, Rüstzeit, Losgröße, Montagezeit, Lohnsatz, Bedienfaktor, Maschinen- und
   Instandhaltungssatz, Zukaufteile, produzierte Menge, zusätzliche Ist-Kosten gesamt, erzielter Preis.
 - NK-3: Die Ist-Rechnung nutzt **dasselbe Schema** wie die Vorkalkulation (vergleichbar).
@@ -322,3 +329,4 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | 1.3 | 14.11.2026 | **Großprojekte hervorheben** (KAL-55 bis KAL-58, STM-12): Jahresumsatz oder Invest ≥ 500.000 € (Schwellen änderbar), Kennzeichen in Kalkulationen, Angeboten und Pipeline, Filter und KPI. Fehlerbehebung: Verkaufschance aus Kalkulation übernimmt jetzt sofort das Volumen (vorher 0 €). |
 | 1.4 | 14.11.2026 | **Machbarkeit** (4 Stufen + Anmerkung), Status **„Kein Angebot abgegeben“** mit Gründen und Freitext (KAL-4a/4b, KAL-59), **Artikelanalyse** mit Schließkraft, Fließweg/Wandstärke, Kühlzeit-Richtwert, passenden Maschinen, Checkliste und Machbarkeitsvorschlag (ANA-1 bis ANA-6), **Staffelpreise** für bis zu 3 Losgrößen inkl. Übernahme ins Angebot (KAL-28), **Auslastung kommende Jahre** je Maschine mit Bestand, fest, gewichtet, potenziell (AUS-1 bis AUS-5, STM-13), automatische Ergänzung neuer DB-Spalten (NFA-8). |
 | 1.5 | 14.11.2026 | **Sammelangebot** aus mehreren Kalkulationen (KAL-43 bis KAL-45): Mehrfachauswahl in der Kalkulationsliste, Prüfung gleicher Kunde, ein Angebot mit allen Serienteilen und Einmalkosten; **Herkunft** Angebot ↔ Kalkulation in beide Richtungen sichtbar (KAL-46). Neue Spalte `quotes.calculation_ids` (automatisch ergänzt). Angebotspositionen zeigen mehrzeilige Texte vollständig. |
+| 1.6 | 14.11.2026 | Eigener Bereich **Verpackung & Transport** mit echten Beträgen (KAL-29, Rechenweg 6.2): Kosten je VE/Umlauf, Teile je VE, Packzeit, VE je Palette; Transport ab Werk, je Palette, je Lieferung oder % auf HK; Lieferbedingung; Übernahme ins Angebot; Ist-Werte in der Nachkalkulation. |

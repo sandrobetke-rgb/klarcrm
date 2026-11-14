@@ -16,7 +16,9 @@ Schema je Stück:
   Ausschuss                    = HK vor Ausschuss / (1 − Ausschuss-%) − HK vor Ausschuss
   Herstellkosten (HK)
   + Verwaltungsgemeinkosten, Vertriebsgemeinkosten, Projektmanagement (je % auf HK)
-  + Sondereinzelkosten Vertrieb (Verpackung, Transport …)
+  + Verpackung (Kosten je Verpackungseinheit / Teile je VE + Packzeit) und Transport (je Palette, je Lieferung
+    oder % auf HK; „ab Werk“ = 0) als Sondereinzelkosten des Vertriebs
+  + weitere Sondereinzelkosten Vertrieb (Zusatzpositionen)
   = Selbstkosten (SK)
   + Gewinn (% auf SK)          = Barverkaufspreis
   ÷ (1 − Skonto) ÷ (1 − Rabatt) = Angebotspreis je Stück
@@ -79,6 +81,12 @@ DEFAULT_INPUTS = {
     "extras": [],     # [{label, amount, basis: stueck|tausend|los|jahr, category: fertigung|vertrieb}]
     "one_time": [],   # [{label, cost, price}]
     "lot_tiers": [],  # Staffelpreise: weitere Losgrößen, z. B. [2000, 5000, 20000]
+    # Verpackung (Vorgabe leer = 0, damit ältere Versionen unverändert rechnen)
+    "pack_type": "", "pack_parts_per_unit": 0, "pack_cost_per_unit": 0.0, "pack_reusable": False,
+    "pack_time_s": 0.0, "pack_units_per_pallet": 0,
+    # Transport: keine (ab Werk) | palette | lieferung | prozent
+    "incoterm": "", "transport_mode": "keine", "transport_cost_per_pallet": 0.0,
+    "transport_cost_per_delivery": 0.0, "transport_deliveries_per_year": 0, "transport_pct": 0.0,
 }
 
 
@@ -200,7 +208,30 @@ def _compute(raw: dict) -> dict:
     pm = hk * _f(i["pm_pct"]) / 100
     quality_h = hk * _f(i["quality_pct"]) / 100 if q_base == "hk" else 0.0
     toolshop_h = hk * _f(i["toolshop_pct"]) / 100 if t_base == "hk" else 0.0
-    sk = hk + vwgk + vtgk + pm + quality_h + toolshop_h + sek_v
+    # --- Verpackung & Transport (Sondereinzelkosten Vertrieb)
+    ppu = _f(i["pack_parts_per_unit"])
+    pack_material = _f(i["pack_cost_per_unit"]) / ppu if ppu > 0 else 0.0
+    pack_labor = _f(i["pack_time_s"]) / 3600 * _f(i["labor_rate_h"]) / ppu if ppu > 0 else 0.0
+    packaging = pack_material + pack_labor
+    if (_f(i["pack_cost_per_unit"]) or _f(i["pack_time_s"])) and ppu <= 0:
+        warnings.append("Verpackung: Teile je Verpackungseinheit fehlen – Verpackungskosten nicht umgelegt.")
+    units_year = annual / ppu if ppu > 0 else 0
+    upp = _f(i["pack_units_per_pallet"])
+    pcs_pallet = ppu * upp
+    pallets_year = annual / pcs_pallet if pcs_pallet > 0 else 0
+    mode = i.get("transport_mode") or "keine"
+    transport = 0.0
+    if mode == "palette":
+        if pcs_pallet > 0:
+            transport = _f(i["transport_cost_per_pallet"]) / pcs_pallet
+        else:
+            warnings.append("Transport je Palette: Teile je VE und VE je Palette angeben.")
+    elif mode == "lieferung":
+        if annual > 0:
+            transport = _f(i["transport_cost_per_delivery"]) * _f(i["transport_deliveries_per_year"]) / annual
+    elif mode == "prozent":
+        transport = hk * _f(i["transport_pct"]) / 100
+    sk = hk + vwgk + vtgk + pm + quality_h + toolshop_h + packaging + transport + sek_v
 
     sd = _f(i["cash_discount_pct"]) / 100
     rb = _f(i["rebate_pct"]) / 100
@@ -245,6 +276,9 @@ def _compute(raw: dict) -> dict:
         ("pm", f"Projektmanagement {_p(i['pm_pct'])} %", "gemeinkosten", pm),
         ("quality_h", f"Qualität {_p(i['quality_pct'])} % auf HK", "gemeinkosten", quality_h),
         ("toolshop_h", f"Werkzeugbau {_p(i['toolshop_pct'])} % auf HK", "gemeinkosten", toolshop_h),
+        ("packaging", "Verpackung" + (f" ({i.get('pack_type')})" if i.get("pack_type") else ""), "gemeinkosten", packaging),
+        ("transport", {"palette": "Transport je Palette", "lieferung": "Transport je Lieferung",
+                       "prozent": f"Transport {_p(i['transport_pct'])} % auf HK"}.get(mode, "Transport"), "gemeinkosten", transport),
         ("sek_v", "Sondereinzelkosten Vertrieb", "gemeinkosten", sek_v),
         ("sk", "Selbstkosten", "summe", sk),
         ("profit", "Gewinn" + (f" {_p(i['profit_pct'])} %" if price_source == "kalkuliert" else " (Rest)"), "ergebnis", profit),
@@ -274,6 +308,11 @@ def _compute(raw: dict) -> dict:
         "lots_per_year": round(lots_year, 2),
         "machine_hours_year": round(machine_hours, 1),
         "material_kg_year": round(kg_piece * annual / (1 - scrap_rate), 1),
+        "packaging_units_year": round(units_year, 1),
+        "pieces_per_pallet": round(pcs_pallet, 1),
+        "pallets_year": round(pallets_year, 1),
+        "packaging_cost_year": round(packaging * annual, 2),
+        "transport_cost_year": round(transport * annual, 2),
         "annual_volume": annual,
         "annual_revenue": round(price * annual, 2),
         "annual_profit": round(profit * annual, 2),
@@ -294,6 +333,8 @@ ACTUAL_FIELDS = (
     "cycle_time_s", "cavities", "productivity_pct", "scrap_pct", "material_price_kg", "part_weight_g",
     "sprue_weight_g", "setup_time_h", "lot_size", "assembly_time_s", "labor_rate_h", "operator_factor",
     "machine_rate_h", "maintenance_rate_h", "purchased_parts",
+    "pack_cost_per_unit", "pack_parts_per_unit", "transport_cost_per_pallet", "transport_cost_per_delivery",
+    "transport_deliveries_per_year",
 )
 
 

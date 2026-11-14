@@ -107,6 +107,10 @@ export const INPUT_LABELS = {
   quality_pct: ['Qualität', '%'], quality_base: ['Basis Qualität', ''], toolshop_pct: ['Werkzeugbau', '%'], toolshop_base: ['Basis Werkzeugbau', ''],
   profit_pct: ['Gewinn', '%'], cash_discount_pct: ['Skonto', '%'], rebate_pct: ['Rabatt', '%'], price_override: ['Verkaufspreis manuell', '€/Stk'],
   lot_tiers: ['Staffel-Losgrößen', 'Stk'],
+  pack_type: ['Verpackungsart', ''], pack_parts_per_unit: ['Teile je VE', 'Stk'], pack_cost_per_unit: ['Kosten je VE', '€'],
+  pack_reusable: ['Mehrweg', ''], pack_time_s: ['Packzeit je VE', 's'], pack_units_per_pallet: ['VE je Palette', ''],
+  incoterm: ['Lieferbedingung', ''], transport_mode: ['Transportkosten-Art', ''], transport_cost_per_pallet: ['Fracht je Palette', '€'],
+  transport_cost_per_delivery: ['Kosten je Lieferung', '€'], transport_deliveries_per_year: ['Lieferungen p. a.', ''], transport_pct: ['Transport', '% auf HK'],
   extras: ['Zusatzpositionen', ''], one_time: ['Einmalkosten (Werkzeug …)', ''],
 }
 export const fix4 = (v) => n4.format(Number(v || 0))
