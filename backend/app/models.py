@@ -541,3 +541,53 @@ class PurchasedPart(TimestampMixin, Base):
     price_valid_from: Mapped[date | None] = mapped_column(Date)
     notes: Mapped[str | None] = mapped_column(Text)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class ProcurementRequest(TimestampMixin, Base):
+    """Beschaffungsvorgang für Werkzeug, Montagelinie, Vorrichtung, Prüfmittel … mit Lieferantenangeboten."""
+    __tablename__ = "procurement_requests"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[str | None] = mapped_column(String(30), index=True)       # BA-2026-0001
+    calculation_id: Mapped[int | None] = mapped_column(ForeignKey("calculations.id", ondelete="SET NULL"), index=True)
+    kind: Mapped[str] = mapped_column(String(30), default="werkzeug")       # werkzeug | montagelinie | vorrichtung | pruefmittel | sonstiges
+    title: Mapped[str] = mapped_column(String(200))
+    status: Mapped[str] = mapped_column(String(20), default="offen")        # offen | angefragt | entschieden | bestellt | abgebrochen
+    spec: Mapped[dict | None] = mapped_column(JSON)                         # technische Eckdaten der Anfrage
+    reply_by: Mapped[date | None] = mapped_column(Date)                     # Angebotsabgabe bis
+    needed_by: Mapped[date | None] = mapped_column(Date)                    # benötigt bis (z. B. Bemusterung)
+    note: Mapped[str | None] = mapped_column(Text)
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    decided_offer_id: Mapped[int | None] = mapped_column(Integer)
+    decision_note: Mapped[str | None] = mapped_column(Text)
+    decided_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    applied_version: Mapped[int | None] = mapped_column(Integer)            # in Kalkulationsversion übernommen
+    offers: Mapped[list["ProcurementOffer"]] = relationship(back_populates="request", cascade="all, delete-orphan",
+                                                            order_by="ProcurementOffer.id", lazy="selectin")
+    calculation: Mapped["Calculation | None"] = relationship(lazy="joined")
+
+
+class ProcurementOffer(TimestampMixin, Base):
+    """Angefragter Lieferant und sein Angebot."""
+    __tablename__ = "procurement_offers"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    request_id: Mapped[int] = mapped_column(ForeignKey("procurement_requests.id", ondelete="CASCADE"), index=True)
+    account_id: Mapped[int | None] = mapped_column(ForeignKey("accounts.id", ondelete="SET NULL"))
+    supplier_name: Mapped[str] = mapped_column(String(200))
+    contact_email: Mapped[str | None] = mapped_column(String(200))
+    status: Mapped[str] = mapped_column(String(20), default="angefragt")    # angefragt | angebot | abgesagt | gewaehlt | abgelehnt
+    requested_at: Mapped[date | None] = mapped_column(Date)
+    offer_no: Mapped[str | None] = mapped_column(String(60))
+    offer_date: Mapped[date | None] = mapped_column(Date)
+    price: Mapped[float | None] = mapped_column(Float)                      # Angebotspreis netto €
+    lead_time_weeks: Mapped[float | None] = mapped_column(Float)            # Lieferzeit bis T0/Abnahme
+    cavities: Mapped[int | None] = mapped_column(Integer)
+    hot_runner: Mapped[str | None] = mapped_column(String(120))             # z. B. „HK 4-fach, Synventive“
+    steel: Mapped[str | None] = mapped_column(String(120))
+    tool_life_shots: Mapped[float | None] = mapped_column(Float)
+    warranty: Mapped[str | None] = mapped_column(String(120))
+    payment_terms: Mapped[str | None] = mapped_column(String(120))
+    location: Mapped[str | None] = mapped_column(String(120))               # Fertigungsort / Land
+    rating: Mapped[int | None] = mapped_column(Integer)                     # technische Bewertung 1 … 5
+    note: Mapped[str | None] = mapped_column(Text)
+    request: Mapped["ProcurementRequest"] = relationship(back_populates="offers")

@@ -521,3 +521,15 @@ h1 .big-badge { font-size: 12.5px; margin-top: 0; }
 .year-table td, .year-table th { padding: 6px 4px; }
 .year-table th:last-child, .year-table td:last-child { width: 62px; }
 .card .year-table { margin: 0; width: 100%; }
+.offer-table td, .offer-table th { white-space: nowrap; }
+.offer-table .btn { margin-left: 4px; }
+.row-chosen td { background: var(--good-bg); }
+.best-price { color: var(--good); }
+.stars { color: #d49a00; letter-spacing: 1px; white-space: nowrap; }
+.spec-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; margin: 0; font-size: 13px; }
+.spec-list div { display: flex; flex-direction: column; }
+.spec-list dt { color: var(--muted); font-size: 12px; }
+.spec-list dd { margin: 0; }
+.supplier-pick { width: auto; max-width: 260px; }
+.offer-actions { display: flex; gap: 4px; margin-top: 6px; }
+.offer-actions .btn { margin-left: 0; padding: 3px 8px; font-size: 12px; }

@@ -19,6 +19,7 @@ import CalculationEditor from './pages/CalculationEditor'
 import MasterData from './pages/MasterData'
 import Utilization from './pages/Utilization'
 import Reports from './pages/Reports'
+import ProcurementList, { ProcurementDetail } from './pages/Procurement'
 import PageHelp from './components/PageHelp'
 import AuditLog from './pages/AuditLog'
 import CompanySettings from './pages/CompanySettings'
@@ -39,6 +40,7 @@ function Layout() {
     ['/auslastung', 'Auslastung', '▤'],
     ['/auswertungen', 'Auswertungen', '◔'],
     ['/angebote', 'Angebote', '€'],
+    ['/beschaffung', 'Beschaffung', '⚒'],
     ['/stammdaten', 'Stammdaten', '≡'],
   ]
   if (isAdmin || user.role === 'gesellschafter' || user.can_approve) nav.push(['/protokoll', 'Protokoll', '⎙'])
@@ -95,6 +97,8 @@ function App() {
             <Route path="/stammdaten" element={<MasterData />} />
             <Route path="/auslastung" element={<Utilization />} />
             <Route path="/auswertungen" element={<Reports />} />
+            <Route path="/beschaffung" element={<ProcurementList />} />
+            <Route path="/beschaffung/:id" element={<ProcurementDetail />} />
             <Route path="/protokoll" element={<AuditLog />} />
             <Route path="/einstellungen" element={<CompanySettings />} />
             <Route path="/benutzer" element={<Users />} />

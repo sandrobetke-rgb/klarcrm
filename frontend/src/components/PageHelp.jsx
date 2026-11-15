@@ -43,6 +43,16 @@ const HELP = [
   ['/kontakte', 'Kontakte', 'Ansprechpartner bei den Firmen.', ['E-Mail-Adresse pflegen – sie wird für Angebots-E-Mails verwendet.']],
   ['/aktivitaeten', 'Aktivitäten', 'Aufgaben, Anrufe, Termine und Wiedervorlagen.', ['Filter „Überfällig“ und „Heute“ nutzen; Termine lassen sich als .ics in Outlook übernehmen.']],
   ['/pipeline', 'Pipeline', 'Verkaufschancen nach Phase.', ['Karten zeigen Volumen und Wahrscheinlichkeit; Chancen aus Kalkulationen werden automatisch aktualisiert.']],
+  ['/beschaffung/', 'Beschaffungsvorgang', 'Lieferanten anfragen, Angebote vergleichen, vergeben und in die Kalkulation übernehmen.', [
+    'Eckdaten prüfen („Bearbeiten“): bei Werkzeugen Fachzahl, Heißkanal, Stahl, Standzeit … – vorbelegt aus der Kalkulation.',
+    'Lieferanten hinzufügen (Firmen mit Typ „Lieferant“) oder „+ anderer Lieferant“. Je Lieferant „Anfrage“ druckt die Werkzeuganfrage im Firmenlayout (als PDF speichern), „E-Mail“ öffnet einen Entwurf – Zeichnung/3D-Daten anhängen.',
+    'Eingehende Angebote mit „Erfassen“ eintragen (Preis, Lieferzeit, Stahl, Standzeit, Bewertung) und das PDF unten ablegen.',
+    'Im Vergleich „Wählen“ und die Vergabe begründen. „In Kalkulation übernehmen“ setzt den Preis als Einmalkosten in einer neuen Kalkulationsversion.',
+  ]],
+  ['/beschaffung', 'Beschaffung', 'Alle Anfragen für Werkzeuge, Montagelinien, Vorrichtungen und Prüfmittel.', [
+    'Neuer Vorgang über „+ Beschaffung anlegen“ oder direkt in der Kalkulation im Reiter „Beschaffung“ (dann mit Eckdaten aus der Kalkulation).',
+    'Liste zeigt je Vorgang Anzahl Angebote, günstigstes Angebot und die Vergabeentscheidung.',
+  ]],
   ['/protokoll', 'Änderungsprotokoll', 'Wer hat wann was geändert (IATF/ISO-Nachweis).', ['Nach Objekt, Benutzer oder Zeitraum filtern. Einträge sind nicht änderbar.']],
   ['/benutzer', 'Benutzer', 'Zugänge und Rollen verwalten.', ['Rollen: Administrator, Vertrieb, Gesellschafter (nur lesen). „Freigabeberechtigt“ für das Vier-Augen-Prinzip.']],
   ['/einstellungen', 'Firma & Layout', 'Logo, Angebotstexte und Fußzeile für das Angebots-PDF.', ['Texte für Deutsch und Englisch getrennt pflegen.']],

@@ -51,6 +51,7 @@ def run():
         print("Es existieren bereits CRM-Daten – Basis-Seed übersprungen.")
         seed_calc(db)
         seed_calls(db)
+        seed_procurement(db)
         return
     users = []
     for email, name, role in USERS:
@@ -116,6 +117,7 @@ def run():
     db.commit()
     seed_calc(db)
     seed_calls(db)
+    seed_procurement(db)
     print("Demo-Daten angelegt. Logins: anna.berg@firma.de / demo1234, gesellschafter@firma.de / demo1234")
 
 
@@ -371,6 +373,95 @@ def seed_calls(db):
             calc.last_call_at = last
     db.commit()
     print("Demo-Anrufe angelegt.")
+
+
+
+
+TOOLMAKERS = [  # Name, Ort, Ansprechpartner, E-Mail, Land
+    ("Formenbau Ostwestfalen GmbH", "Bünde", "Herr Brandt", "angebote@formenbau-owl.example", "DE"),
+    ("Werkzeugbau Lippe KG", "Lemgo", "Frau Sommer", "vertrieb@wzb-lippe.example", "DE"),
+    ("Precision Moulds s.r.o.", "Most", "Herr Dvořák", "sales@precision-moulds.example", "CZ"),
+    ("Sauerland Formtechnik GmbH", "Lüdenscheid", "Herr Kaiser", "info@sauerland-form.example", "DE"),
+    ("Alpen Werkzeugbau AG", "Kufstein", "Frau Huber", "offers@alpen-wzb.example", "AT"),
+    ("Mould Tech Portugal Lda.", "Marinha Grande", "Sr. Costa", "quotes@mouldtech.example", "PT"),
+    ("Automation Weser GmbH", "Minden", "Herr Vogt", "projekte@automation-weser.example", "DE"),
+    ("Anlagenbau Teutoburg GmbH", "Detmold", "Frau Lenz", "anfrage@ab-teutoburg.example", "DE"),
+]
+
+
+def seed_procurement(db):
+    from .models import ProcurementOffer, ProcurementRequest
+    from .routers.procurement import _num, _prefill
+
+    if db.scalar(select(func.count()).select_from(ProcurementRequest)):
+        return
+    owner = db.scalars(select(User).where(User.role == "admin")).first() or db.scalars(select(User)).first()
+    sup = {}
+    for name, city, contact, email, country in TOOLMAKERS:
+        acc = db.scalars(select(Account).where(Account.name == name)).first()
+        if not acc:
+            acc = Account(name=name, industry="Werkzeug- und Anlagenbau", city=city, type="lieferant", owner_id=owner.id)
+            db.add(acc)
+            db.flush()
+            ln = contact.split(" ", 1)[1]
+            db.add(Contact(account_id=acc.id, salutation=contact.split(" ")[0].replace("Sr.", "Herr"), first_name="",
+                           last_name=ln, position="Vertrieb", email=email))
+        sup[name] = (acc, email, country)
+    db.flush()
+    from .models import Calculation
+    calcs = {c.article_name: c for c in db.scalars(select(Calculation)).unique()}
+    today = date.today()
+
+    def req(calc, kind, offers, decide=None, note=None):
+        title, spec = _prefill(db, kind, calc)
+        r = ProcurementRequest(number=_num(db), calculation_id=calc.id, kind=kind, title=title, spec=spec,
+                               reply_by=today + timedelta(days=10), needed_by=today + timedelta(days=120),
+                               owner_id=owner.id, status="angefragt")
+        db.add(r)
+        db.flush()
+        for n, (name, price, weeks, cav, hr, steel, life, rating, loc) in enumerate(offers):
+            acc, email, country = sup[name]
+            r.offers.append(ProcurementOffer(
+                account_id=acc.id, supplier_name=name, contact_email=email, requested_at=today - timedelta(days=21),
+                status="angebot" if price else "angefragt", offer_no=f"A-{2600 + n * 7}" if price else None,
+                offer_date=today - timedelta(days=7 - n) if price else None, price=price, lead_time_weeks=weeks,
+                cavities=cav, hot_runner=hr, steel=steel, tool_life_shots=life, rating=rating,
+                location=loc or country, payment_terms="30/40/30 (Bestellung/T0/Abnahme)" if price else None,
+                warranty="1.000.000 Schuss / 24 Monate" if price else None))
+        db.flush()
+        if decide:
+            o = next(x for x in r.offers if x.supplier_name == decide)
+            r.decided_offer_id, r.decision_note, r.status = o.id, note, "entschieden"
+            r.decided_by_id, r.decided_at = owner.id, datetime.now(timezone.utc)
+            for x in r.offers:
+                x.status = "gewaehlt" if x.id == o.id else ("abgelehnt" if x.price else x.status)
+
+    sensor = calcs.get("Gehäuse Sensor 2K")
+    if sensor:
+        req(sensor, "werkzeug", [
+            ("Formenbau Ostwestfalen GmbH", 98500, 14, 2, "HK 2-fach, Synventive", "1.2343 gehärtet", 1000000, 5, "DE"),
+            ("Werkzeugbau Lippe KG", 104000, 12, 2, "HK 2-fach, Mold-Masters", "1.2343 / 1.2738", 1000000, 4, "DE"),
+            ("Precision Moulds s.r.o.", 79800, 16, 2, "HK 2-fach, Yudo", "1.2343", 800000, 4, "CZ"),
+            ("Sauerland Formtechnik GmbH", 112500, 11, 2, "HK 2-fach, Synventive", "1.2343 ESU", 1500000, 5, "DE"),
+            ("Alpen Werkzeugbau AG", 121000, 13, 2, "HK 2-fach, Husky", "1.2343 ESU", 1500000, 5, "AT"),
+            ("Mould Tech Portugal Lda.", 72400, 18, 2, "HK 2-fach, Yudo", "1.2311", 600000, 3, "PT"),
+            ("Werkzeugbau Lippe KG", None, None, None, None, None, None, None, "DE"),
+        ][:6], decide="Formenbau Ostwestfalen GmbH",
+            note="Bestes Preis-Leistungs-Verhältnis bei 1 Mio. Schuss, kurze Wege für Änderungen, gute Erfahrung bei 2K.")
+        req(sensor, "montagelinie", [
+            ("Automation Weser GmbH", 186000, 20, None, None, None, None, 4, "DE"),
+            ("Anlagenbau Teutoburg GmbH", 171500, 24, None, None, None, None, 4, "DE"),
+            ("Precision Moulds s.r.o.", None, None, None, None, None, None, None, "CZ"),
+        ])
+    blende = calcs.get("Gehäuseschale Wallbox")
+    if blende:
+        req(blende, "werkzeug", [
+            ("Formenbau Ostwestfalen GmbH", 176000, 16, 1, "HK 1-fach Nadelverschluss", "1.2738 / 1.2343", 1000000, 5, "DE"),
+            ("Precision Moulds s.r.o.", 149000, 18, 1, "HK 1-fach Nadelverschluss", "1.2738", 800000, 4, "CZ"),
+            ("Mould Tech Portugal Lda.", 138500, 20, 1, "HK 1-fach offen", "1.2311", 500000, 3, "PT"),
+            ("Alpen Werkzeugbau AG", None, None, None, None, None, None, None, "AT"),
+        ])
+    db.commit()
 
 
 if __name__ == "__main__":

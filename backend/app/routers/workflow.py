@@ -17,7 +17,7 @@ from ..models import Activity, AppSettings, Attachment, Calculation, Notificatio
 
 router = APIRouter()
 
-ENTITIES = {"calculations", "accounts", "quotes", "opportunities", "app"}
+ENTITIES = {"calculations", "accounts", "quotes", "opportunities", "procurement", "app"}
 BLOCKED = {".exe", ".bat", ".cmd", ".com", ".msi", ".ps1", ".vbs", ".js", ".jar", ".scr", ".sh", ".dll"}
 DOC_TYPES = {"zeichnung": "Zeichnung", "3d": "3D-Daten", "anfrage": "Kundenanfrage", "lastenheft": "Lastenheft Kunde",
              "pruefplan": "Prüfplan / Messkonzept", "muster": "Musterbericht / EMPB", "sonstiges": "Sonstiges", "logo": "Logo"}

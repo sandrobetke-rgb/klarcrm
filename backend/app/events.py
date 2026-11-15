@@ -19,6 +19,7 @@ ENTITY_LABELS = {
     "calculations": "Kalkulation", "calculation_versions": "Kalkulationsversion", "calculation_calls": "Anruf",
     "post_calculations": "Nachkalkulation", "calc_templates": "Vorlage", "attachments": "Dokument",
     "app_settings": "Firmeneinstellungen", "notifications": "Benachrichtigung",
+    "procurement_requests": "Beschaffung", "procurement_offers": "Lieferantenangebot", "purchased_parts": "Zukaufteil",
 }
 
 
@@ -43,7 +44,7 @@ def _plain(v):
 
 
 def _label(obj) -> str | None:
-    for attr in ("number", "article_name", "name", "subject", "title", "email", "description", "label"):
+    for attr in ("number", "article_name", "name", "supplier_name", "subject", "title", "email", "description", "label"):
         v = getattr(obj, attr, None)
         if v:
             return str(v)[:250]
@@ -53,7 +54,8 @@ def _label(obj) -> str | None:
 
 
 def _ref(obj, table: str) -> str:
-    for parent, fk in (("calculations", "calculation_id"), ("quotes", "quote_id"), ("materials", "material_id")):
+    for parent, fk in (("procurement_requests", "request_id"), ("calculations", "calculation_id"), ("quotes", "quote_id"),
+                       ("materials", "material_id")):
         if getattr(obj, fk, None) and table != parent:
             return f"{parent}:{getattr(obj, fk)}"
     return f"{table}:{getattr(obj, 'id', None)}"

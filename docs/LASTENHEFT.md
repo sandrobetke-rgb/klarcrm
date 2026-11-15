@@ -4,7 +4,7 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.17 |
+| **Dokumentversion** | 1.18 |
 | **Stand** | 15.11.2026 |
 | **Status** | Testphase (GitHub Codespaces); Zielbetrieb: interner Server F&R |
 
@@ -400,6 +400,33 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 - AUSW-4: Export je Bericht als CSV (Excel, deutsches Zahlenformat), Druck/PDF der Seite (auch „Alle Berichte“).
 - AUSW-5: Lesezugriff für alle Rollen inkl. Gesellschafter.
 
+### 6.10 Beschaffung Werkzeuge, Montagelinien, Vorrichtungen, Prüfmittel
+- BES-1: Menüpunkt „Beschaffung“ und Reiter „Beschaffung“ in jeder Kalkulation. Je Vorgang: Nummer (BA-Jahr-lfd. Nr.),
+  Art (Spritzgießwerkzeug, Montagelinie, Vorrichtung, Prüfmittel, Sonstiges), Bezeichnung, Kalkulation, Status
+  (offen, angefragt, entschieden, bestellt, abgebrochen), Angebotsabgabe bis, benötigt bis, Hinweise.
+- BES-2: **Eckdaten der Anfrage**, aus der Kalkulation vorbelegt und änderbar. Werkzeug: Artikel, Kunden-/eigene
+  Art.-Nr., Werkstoff (inkl. weiterer Komponenten), Teilgewicht, **Fachzahl**, **Werkzeugart** (1K/2K/Familie),
+  **Heißkanal/Kaltkanal** (aus Angussgewicht), Düsen, Heißkanal-Fabrikat, Anschnitt, Ziel-Zykluszeit, Maschine und
+  Schließkraft, Jahresmenge, Laufzeit, **Standzeit** (Jahresmenge × Laufzeit / Fachzahl × 1,2, gerundet), Stahl,
+  Normalien, Schieber, Temperierung, Entformung, Oberfläche, Bemusterung, Unterlagen, Lieferbedingung, SOP.
+  Montagelinie/Vorrichtung/Prüfmittel: Leistungsumfang, Arbeitsgänge/Stationen, Taktzeit, Verfügbarkeit, Abnahme.
+- BES-3: **Werkzeuganfrage** je Lieferant als Druck/PDF im Firmenlayout (Logo, Fußzeile) mit Eckdaten, Abgabetermin
+  und geforderten Angebotsangaben; **E-Mail-Entwurf** an den Ansprechpartner des Lieferanten (Zeichnung/3D-Daten
+  anhängen).
+- BES-4: Lieferanten aus „Firmen“ (Typ Lieferant, E-Mail des Ansprechpartners wird übernommen) oder frei erfasst;
+  beliebig viele Anfragen je Vorgang (z. B. 5 – 7 Werkzeugmacher).
+- BES-5: **Angebot je Lieferant**: Status, Angebots-Nr./-Datum, Preis netto, Lieferzeit bis T0/Abnahme, Fachzahl,
+  Heißkanal, Stahl, Standzeit, Gewährleistung, Zahlungsbedingungen, Fertigungsort, technische Bewertung 1 – 5,
+  Bemerkung.
+- BES-6: **Angebotsvergleich**: Balkendiagramm und Tabelle, günstigstes Angebot markiert, Δ % zum günstigsten,
+  Spanne; Kennzahlen Anzahl angefragt/mit Preis, günstigstes, gewählt.
+- BES-7: **Vergabeentscheidung** mit Begründung, Datum und Entscheider (Nachweis im Protokoll); übrige Angebote
+  „nicht gewählt“; Entscheidung rücknehmbar.
+- BES-8: **In Kalkulation übernehmen**: Preis des gewählten Angebots wird als Kosten der passenden Einmalkosten-
+  Position (sonst neue Position) in eine **neue Kalkulationsversion** übernommen, mit automatischer Änderungsnotiz
+  (alt → neu, Vorgang, Lieferant, Angebot); Preis an Kunde bleibt unverändert, sofern gesetzt.
+- BES-9: Dokumente je Vorgang (Zeichnung, 3D, Lieferantenangebote, Bestellung); alle Änderungen im Änderungsprotokoll.
+
 ## 7. Nachkalkulation
 - NK-1: Zu jeder Kalkulation beliebig viele Nachkalkulationen (z. B. je Fertigungsauftrag oder Zeitraum) mit
   Referenz, Zeitraum, Bemerkung und Bezug auf eine Version.
@@ -560,3 +587,4 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.15 | 15.11.2026 | **Auswertungen** (Kap. 6.9, AUSW-1 … 5): Berichte nach Maschinengröße, Kunde (Anteil an Anfragen und Umsatz), Absage- und Verlustgründen, Maschine, Werkstoff, Vertrieb, Status, Machbarkeit und Monat mit Filtern, CSV und Druck. **Seitenhilfe** auf jeder Seite (NFA-10). **Jahresabschläge** mit Vorab-Einrechnung und eigenen Abschlägen für Zukaufteile der Nebenkalkulation (KAL-28k). **Vorserienpreis** für Kleinstmengen inkl. Angebotsposition (KAL-28l). Rechentests ergänzt; gespeicherte Versionen rechnen unverändert. |
 | 1.16 | 15.11.2026 | **Preis Jahr 1 manuell (Anlaufpreis)**, ab Jahr 2 kalkulierter Serienpreis; Jahresabschläge als Tabelle je Lieferjahr mit zwei gekoppelten Eingabespalten („% ggü. Vorjahr“ und „% vom Serienpreis“), getrennt für Zukaufteile der Nebenkalkulation (KAL-28k). **Fester Vorserienpreis** mit kalkuliertem Wert und Marge als Orientierung (KAL-28l). Rechentests ergänzt. Darstellung: Formularspalten laufen nicht mehr über. |
 | 1.17 | 15.11.2026 | **Abschläge vorab draufschlagen** auch bei manuellem Anlaufpreis, zwei Varianten (Ø Laufzeit = Kalkulation / letztes Jahr ≥ Kalkulation), Marge je Lieferjahr mit Warnung bei Minusgeschäft (KAL-28k). Rechentests ergänzt. |
+| 1.18 | 15.11.2026 | **Beschaffung** (Kap. 6.10, BES-1 … 9): Vorgänge für Werkzeuge, Montagelinien, Vorrichtungen und Prüfmittel, Eckdaten aus der Kalkulation, **Werkzeuganfrage** als PDF im Firmenlayout und E-Mail-Entwurf je Lieferant, Angebotsvergleich, Vergabeentscheidung mit Begründung, Übernahme in die Kalkulation als neue Version. Neue Tabellen `procurement_requests`, `procurement_offers` (automatisch angelegt). Seitenhilfe ergänzt. |

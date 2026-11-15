@@ -11,6 +11,7 @@ import PostCalcTab from './PostCalcTab'
 import ArticleAnalysis from './ArticleAnalysis'
 import LifecycleTab from './LifecycleTab'
 import ApprovalBar from '../components/Approval'
+import { ProcurementTab } from './Procurement'
 import AuditTable from '../components/AuditTable'
 import Attachments from '../components/Attachments'
 import CallPanel, { LastCall } from '../components/CallPanel'
@@ -39,7 +40,7 @@ export const calcMetaFields = [
   { name: 'remark', label: 'Bemerkung', type: 'textarea', span: true, rows: 3 },
 ]
 
-const TABS = [['calc', 'Kalkulation'], ['analysis', 'Artikelanalyse'], ['lifecycle', 'Lebensweg'], ['docs', 'Dokumente'], ['calls', 'Anrufe'], ['meta', 'Anfrage & Status'], ['versions', 'Versionen'], ['post', 'Nachkalkulation'], ['audit', 'Protokoll']]
+const TABS = [['calc', 'Kalkulation'], ['analysis', 'Artikelanalyse'], ['lifecycle', 'Lebensweg'], ['docs', 'Dokumente'], ['procurement', 'Beschaffung'], ['calls', 'Anrufe'], ['meta', 'Anfrage & Status'], ['versions', 'Versionen'], ['post', 'Nachkalkulation'], ['audit', 'Protokoll']]
 
 export default function CalculationEditor() {
   const { id } = useParams()
@@ -115,6 +116,7 @@ export default function CalculationEditor() {
         </div>
       )}
       {tab === 'calls' && <CallPanel calc={calc} onChange={setCalc} />}
+      {tab === 'procurement' && <ProcurementTab calc={calc} />}
       {tab === 'analysis' && <ArticleAnalysis calc={calc} setCalc={setCalc} />}
       {tab === 'lifecycle' && <LifecycleTab calc={calc} setCalc={setCalc} />}
       {tab === 'docs' && <div style={{ maxWidth: 1100 }}><Attachments entity="calculations" entityId={calc.id} title="Dokumente zur Kalkulation (Zeichnung, 3D, Anfrage, Lastenheft …)" /></div>}
