@@ -291,6 +291,8 @@ class MachineBase(BaseModel):
     maintenance_rate: float = 0
     productivity_pct: float = 85
     operator_factor: float = 0.3
+    handling_pct: float | None = None
+    automation_pct: float | None = None
     location: str | None = None
     available_hours_year: float | None = 6000
     base_load_pct: float | None = 0

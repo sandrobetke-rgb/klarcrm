@@ -32,6 +32,8 @@ DEFAULT_SETTINGS = {
     "labor_rate_h": 38.0,          # Lohnsatz Maschinenbediener €/h (Vollkosten)
     "setup_rate_h": 48.0,          # Lohnsatz Einrichter €/h
     "assembly_rate_h": 34.0,       # Lohnsatz Montage €/h
+    "handling_rate_h": 34.0,       # Lohnsatz Mitarbeiter Handling €/h
+    "automation_rate_h": 55.0,     # Lohnsatz Mitarbeiter Automatisierung €/h
     "mgk_pct": 6.0,
     "fgk_pct": 12.0,
     "scrap_pct": 3.0,
@@ -80,8 +82,13 @@ DEFAULT_INPUTS = {
     "machine_id": None, "machine_name": "", "machine_rate_h": 0.0, "maintenance_rate_h": 0.0,
     "cycle_time_s": 30.0, "cavities": 1, "productivity_pct": 85.0,
     "operator_factor": 0.3, "labor_rate_h": 38.0,
+    # Weitere Personalanteile an der Maschine (0 … 100 % je Maschine), je mit eigenem Stundensatz.
+    # Vorgabe 0, damit ältere Versionen unverändert rechnen; neue Kalkulationen erhalten die Sätze aus den Parametern.
+    "handling_pct": 0.0, "handling_rate_h": 0.0, "automation_pct": 0.0, "automation_rate_h": 0.0,
     # Rüsten
     "setup_time_h": 2.0, "setup_persons": 1.0, "setup_rate_h": 48.0, "startup_scrap_pcs": 50.0,
+    # Personalzeit beim Rüsten: Einrichter-Minuten je Rüstvorgang (None = gesamte Rüstzeit), Automatisierer-Minuten
+    "setup_staff_min": None, "automation_setup_min": 0.0,
     # Montage
     "assembly_time_s": 0.0, "assembly_persons": 1.0, "assembly_rate_h": 34.0, "assembly_productivity_pct": 85.0,
     # Zuschläge
@@ -252,10 +259,16 @@ def _compute(raw: dict) -> dict:
     machine = per(_f(i["machine_rate_h"])) * share
     maintenance = per(_f(i["maintenance_rate_h"])) * share
     labor = per(_f(i["labor_rate_h"]) * _f(i["operator_factor"])) * share
-    run_cost_piece = machine + maintenance + labor
-    setup_lot = _f(i["setup_time_h"]) * (
-        _f(i["machine_rate_h"]) + _f(i["maintenance_rate_h"]) + _f(i["setup_rate_h"]) * _f(i["setup_persons"])
-    ) * share + _f(i["startup_scrap_pcs"]) * (mek_material + mek_components + run_cost_piece)
+    labor_handling = per(_f(i["handling_rate_h"]) * _f(i["handling_pct"]) / 100) * share
+    labor_automation = per(_f(i["automation_rate_h"]) * _f(i["automation_pct"]) / 100) * share
+    run_cost_piece = machine + maintenance + labor + labor_handling + labor_automation
+    setup_h = _f(i["setup_time_h"])
+    staff_h = _f(i["setup_staff_min"]) / 60 if i.get("setup_staff_min") not in (None, "") else setup_h
+    setup_machine_lot = setup_h * (_f(i["machine_rate_h"]) + _f(i["maintenance_rate_h"])) * share
+    setup_staff_lot = staff_h * _f(i["setup_rate_h"]) * _f(i["setup_persons"]) * share
+    setup_auto_lot = _f(i["automation_setup_min"]) / 60 * _f(i["automation_rate_h"]) * share
+    setup_scrap_lot = _f(i["startup_scrap_pcs"]) * (mek_material + mek_components + run_cost_piece)
+    setup_lot = setup_machine_lot + setup_staff_lot + setup_auto_lot + setup_scrap_lot
     if lot <= 0:
         warnings.append("Losgröße fehlt – Rüstkosten werden nicht umgelegt.")
     setup = setup_lot / lot if lot > 0 else 0.0
@@ -385,7 +398,9 @@ def _compute(raw: dict) -> dict:
         ("mgk_purchased", f"MGK Zukaufteile {_p(pmgk_pct)} %", "material", mgk_purchased),
         ("machine", "Maschine", "fertigung", machine),
         ("maintenance", "Instandhaltung", "fertigung", maintenance),
-        ("labor", "Personal Maschine", "fertigung", labor),
+        ("labor", f"Personal Bediener {_p(_f(i['operator_factor']) * 100)} %", "fertigung", labor),
+        ("labor_handling", f"Personal Handling {_p(i['handling_pct'])} %", "fertigung", labor_handling),
+        ("labor_automation", f"Personal Automatisierung {_p(i['automation_pct'])} %", "fertigung", labor_automation),
         ("setup", "Rüsten (je Los umgelegt)", "fertigung", setup),
         ("assembly", "Montage (Handarbeit)", "fertigung", assembly),
         *[(f"op_{n}", f"Arbeitsgang: {x['name']}", "fertigung", x["cost"]) for n, x in enumerate(ops)],
@@ -452,6 +467,9 @@ def _compute(raw: dict) -> dict:
         "pieces_per_hour_theoretical": round(pph_theo, 1),
         "pieces_per_hour": round(pph, 1),
         "setup_cost_per_lot": round(setup_lot, 2),
+        "setup_breakdown": {"machine": round(setup_machine_lot, 2), "setter": round(setup_staff_lot, 2),
+                            "automation": round(setup_auto_lot, 2), "startup_scrap": round(setup_scrap_lot, 2),
+                            "setter_h": round(staff_h, 3)},
         "lots_per_year": round(lots_year, 2),
         "machine_hours_year": round(machine_hours, 1),
         "material_kg_year": round(kg_total * annual / (1 - scrap_rate), 1),

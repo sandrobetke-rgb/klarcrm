@@ -475,3 +475,6 @@ h1 .big-badge { font-size: 12.5px; margin-top: 0; }
 .items-table td.center { text-align: center; }
 .field.span-3:has(.comp-table) { overflow-x: auto; min-width: 0; }
 .comp-table td:nth-child(1) select { min-width: 110px; }
+.pct-field { display: flex; gap: 8px; align-items: center; }
+.pct-field .pct-presets button { padding: 6px 9px; font-size: 12.5px; }
+.pct-field input { width: 90px; flex: none; }

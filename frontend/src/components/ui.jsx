@@ -93,7 +93,12 @@ const toLocalInput = (iso) => {
  * Generisches Formular. fields: [{name, label, type, options, required, span, dependsOn}]
  */
 export function EntityForm({ fields, initial, onSubmit, onCancel, onDelete, submitLabel = 'Speichern' }) {
-  const [values, setValues] = useState(() => ({ ...initial }))
+  // Felder mit scale (z. B. Faktor 0,3 als 30 %) werden skaliert angezeigt und zurückgerechnet gespeichert
+  const [values, setValues] = useState(() => {
+    const v = { ...initial }
+    fields.forEach((f) => { if (f.scale && v[f.name] != null && v[f.name] !== '') v[f.name] = Math.round(Number(v[f.name]) * f.scale * 1e6) / 1e6 })
+    return v
+  })
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
   const set = (name, v) => setValues((s) => ({ ...s, [name]: v }))
@@ -107,6 +112,7 @@ export function EntityForm({ fields, initial, onSubmit, onCancel, onDelete, subm
       let v = values[f.name]
       if (v === '' || v === undefined) v = null
       if (f.type === 'number' && v !== null) v = Number(v)
+      if (f.scale && v !== null) v = v / f.scale
       if (f.type === 'datetime' && v) v = new Date(v).toISOString()
       if (f.type === 'checkbox') v = !!v
       out[f.name] = v

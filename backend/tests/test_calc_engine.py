@@ -184,3 +184,19 @@ def test_nebenkalkulation_teure_zukaufteile():
     full = compute({**BASE, "purchased_items": [item]})
     assert full["unit_price"] > r["unit_price"]
     assert r["co2"]["purchased"] == pytest.approx(0.5, abs=1e-6)
+
+
+def test_personal_handling_automatisierung_und_ruesten():
+    staff = {"handling_pct": 25, "handling_rate_h": 34, "automation_pct": 10, "automation_rate_h": 55,
+             "setup_staff_min": 90, "automation_setup_min": 10}
+    r = compute({**BASE, **staff})
+    assert r["values"]["labor_handling"] == pytest.approx(34 * 0.25 / PPH, abs=2e-6)
+    assert r["values"]["labor_automation"] == pytest.approx(55 * 0.10 / PPH, abs=2e-6)
+    b = r["setup_breakdown"]
+    assert b["machine"] == pytest.approx(2 * (45 + 5), abs=0.01)
+    assert b["setter"] == pytest.approx(1.5 * 48, abs=0.01)
+    assert b["automation"] == pytest.approx(10 / 60 * 55, abs=0.01)
+    assert r["values"]["setup"] == pytest.approx((100 + 72 + 55 / 6) / 10000, abs=2e-6)
+    # ohne Angaben: Einrichter über die gesamte Rüstzeit wie bisher
+    assert compute(BASE)["setup_breakdown"]["setter"] == pytest.approx(2 * 48, abs=0.01)
+    assert compute({**BASE, "operator_factor": 1.2})["values"]["labor"] == pytest.approx(38 * 1.2 / PPH, abs=2e-6)

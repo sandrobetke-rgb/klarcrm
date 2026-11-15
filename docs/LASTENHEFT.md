@@ -4,7 +4,7 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.13 |
+| **Dokumentversion** | 1.14 |
 | **Stand** | 14.11.2026 |
 | **Status** | Testphase (GitHub Codespaces); Zielbetrieb: interner Server F&R |
 
@@ -72,7 +72,7 @@ von Standardwerten werden markiert; jede Änderung an einer Kalkulation erzeugt 
 
 ### 5.1 Maschinen
 - STM-1: Je Maschine: Nummer, Bezeichnung, Schließkraft, Standort, **Maschinenstundensatz €/h (ohne Personal)**,
-  **Instandhaltung €/h**, **Standard-Produktivität %**, **Standard-Bedienfaktor** (Personen je Maschine), aktiv/inaktiv.
+  **Instandhaltung €/h**, **Standard-Produktivität %**, **Standard-Anteil Bediener %** (intern als Faktor gespeichert, 30 % = 0,3), **Standard-Anteil Handling %** und **Automatisierung %**, aktiv/inaktiv.
 - STM-2: Bei Auswahl einer Maschine in der Kalkulation werden Stundensatz, Instandhaltung, Produktivität und
   Bedienfaktor sofort übernommen und der Preis neu berechnet.
 - STM-13: Je Maschine zusätzlich: **verfügbare Stunden/Jahr** (Schichtmodell, Standard 6.000 h), **Grundauslastung
@@ -112,7 +112,7 @@ von Standardwerten werden markiert; jede Änderung an einer Kalkulation erzeugt 
 ### 5.3 Parameter (Standardwerte)
 - STM-21: Zukaufteile: eigener MGK-Satz (Standard leer = wie MGK); Nebenkalkulation MGK 3 %, Qualität 1 %,
   Ausschuss 1 %, Aufschlag 0 % (Richtwerte, änderbar).
-- STM-6: Lohnsätze Bediener, Einrichter, Montage (€/h).
+- STM-6: Lohnsätze Bediener, Einrichter, Montage, **Handling**, **Automatisierung** (€/h; Richtwerte 34 €/h und 55 €/h, änderbar).
 - STM-7: Zuschläge MGK, FGK, Ausschuss, Verwaltung, Vertrieb, Projektmanagement, **Qualität**, **Werkzeugbau** (%).
 - STM-8: Gewinn (Standard **7 %**), Skonto, Rabatt.
 - STM-9: Fertigungs-Standards: Produktivität, Montage-Produktivität, Rüstzeit, Einrichter je Rüstvorgang, Anfahrausschuss.
@@ -161,8 +161,8 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 |---|---|
 | Mengen | Jahresmenge, Losgröße, Projektlaufzeit (Jahre) |
 | Material | Material (Stammdaten), Preis €/kg, Teilgewicht g, Anguss je Schuss g, Mahlgut-Rückführung %, Masterbatch-Anteil % und -Preis, **Zukaufteile-Liste** (1 … N Teile aus Stammdaten mit Menge je Artikel, € und CO₂ je Einheit) plus Zukaufteile pauschal €/Stk; **weitere Komponenten (2K/3K …)** je mit Material, €/kg, Teilgewicht, Anguss, Mahlgut, CO₂-Faktor |
-| Maschine & Fertigung | Maschine (Stammdaten), Maschinenstundensatz €/h, Instandhaltung €/h, **Zykluszeit s**, **Fachzahl**, **Produktivität %**, Bedienfaktor, Lohnsatz Bediener; **Familienwerkzeug**: Werkzeuggruppe und Anteil dieses Artikels an Maschinenzeit/Rüsten % |
-| Rüsten | Rüstzeit je Los h, Einrichter, Lohnsatz Einrichter, Anfahrausschuss je Los Stk |
+| Maschine & Fertigung | Maschine (Stammdaten), Maschinenstundensatz €/h, Instandhaltung €/h, **Zykluszeit s**, **Fachzahl**, **Produktivität %**; **Personal an der Maschine in % je Maschine** mit Schnellwahl und freiem Satz: Bediener (10/20/30/50/100/120 % oder individuell, bis 300 %), Handling (0 … 100 %), Automatisierung (0 … 100 %), je Rolle eigener Lohnsatz; **Familienwerkzeug**: Werkzeuggruppe und Anteil dieses Artikels an Maschinenzeit/Rüsten % |
+| Rüsten | Rüstzeit je Los h (Maschinenstillstand), Anfahrausschuss je Los Stk, Einrichter (Personen), **Einrichter-Zeit je Rüstvorgang min** (leer = gesamte Rüstzeit), Lohnsatz Einrichter, **Automatisierer-Zeit je Rüstvorgang min**, Lohnsatz Automatisierung |
 | Montage & weitere Arbeitsgänge | Handmontage je Stück s, Personen, Lohnsatz, Produktivität Montage %; **weitere Arbeitsgänge 1 … N** je mit Anlage (Stammdaten), Bezeichnung, Taktzeit s, Teile je Takt, Stundensatz Anlage, Instandhaltung, Personen, Lohnsatz, Produktivität %, Rüstzeit je Los, kW |
 | Zuschläge | MGK, FGK, Ausschuss, Verwaltung, Vertrieb, Projektmanagement, **Qualität**, **Werkzeugbau**, Gewinn, Skonto, Rabatt (%); für Qualität und Werkzeugbau ist die **Basis wählbar**: FEK oder HK |
 | **Verpackung** | Auswahl **pauschal in % auf HK** (wenn Details unbekannt; Standard aus Parametern) **oder detailliert**: Verpackungsart (Vorschläge KLT, Karton, Gitterbox, Sonderladungsträger …), Teile je Verpackungseinheit (VE), Kosten je VE bzw. bei Mehrweg je Umlauf (Reinigung, Miete), Packzeit je VE, VE je Palette |
@@ -180,8 +180,8 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | MGK | MEK × MGK % |
 | Maschine | Maschinenstundensatz / Stück/h × Familienanteil (Instandhaltung, Personal, Rüsten ebenso) |
 | Instandhaltung | Instandhaltung €/h / Stück/h |
-| Personal | Lohnsatz × Bedienfaktor / Stück/h |
-| Rüsten | [Rüstzeit × (Maschinensatz + Instandhaltung + Lohnsatz Einrichter × Einrichter) + Anfahrausschuss × (Material + Maschine + Instandhaltung + Personal je Stück)] / Losgröße |
+| Personal | je Rolle eigene Zeile: Bediener = Lohnsatz Bediener × Anteil % / Stück/h; Handling = Lohnsatz Handling × Anteil % / Stück/h; Automatisierung = Lohnsatz Automatisierung × Anteil % / Stück/h |
+| Rüsten | [Rüstzeit × (Maschinensatz + Instandhaltung) + Einrichter-Zeit × Lohnsatz Einrichter × Einrichter + Automatisierer-Zeit × Lohnsatz Automatisierung + Anfahrausschuss × (Material + Maschine + Instandhaltung + Personal je Stück)] / Losgröße; Ausweis je Los aufgeteilt nach Maschinenstillstand, Einrichter, Automatisierung, Anfahrausschuss |
 | Montage | Montagezeit/3600 × Lohnsatz × Personen / Produktivität Montage |
 | Arbeitsgang n | Lauf: (Satz Anlage + Instandhaltung + Lohnsatz × Personen) / Stück je h, Stück je h = 3600 / Takt × Teile je Takt × Produktivität; Rüsten: Rüstzeit × (Satz Anlage + Instandhaltung + Lohnsatz × 1 Einrichter) / Losgröße |
 | MGK Zukaufteile (optional) | Zukaufteile (ohne Nebenkalkulation) × eigener MGK-Satz; sonst gemeinsam mit Material × MGK % |
@@ -516,3 +516,4 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.11 | 14.11.2026 | **Etappe 3 Arbeitsabläufe**: Dokumente an Kalkulation/Firma/Angebot (DOK-1 … 3), Benachrichtigungen mit optionalem SMTP (BEN-1/2), Outlook-Kalenderabo, .ics und E-Mail-Entwurf (OUT-1 … 3), Angebots-PDF im Firmenlayout mit Logo, Fußzeile, Deutsch/Englisch (PDF-1 … 3); Betrieb auf internem Server inkl. Backup von Dokumenten (NFA-2/4). |
 | 1.12 | 14.11.2026 | **Montagelinie & weitere Arbeitsgänge** (KAL-28g, AUS-6): 1 … N Anlagen je Artikel mit eigenem Stundensatz, Takt, Personal, Rüsten und kW; Maschinenart in den Stammdaten (STM-18). **Zukaufteile-Stammdaten** (STM-19/20) und Zukaufteile-Liste je Kalkulation mit Menge und CO₂ (KAL-28h). Neue Tabelle `purchased_parts` und Spalte `machines.kind` werden automatisch angelegt; gespeicherte Versionen rechnen unverändert. Rechentests ergänzt. |
 | 1.13 | 15.11.2026 | **Zukaufteile**: optional eigener MGK-Satz (KAL-28i) und optionale **Nebenkalkulation für teure Zukaufteile** mit eigenem MGK, Qualität, Ausschuss und optionalem Aufschlag statt voller Kalkulation (KAL-28j); Standardsätze in den Parametern (STM-21). Ohne Haken/Satz rechnen Kalkulationen wie bisher. Rechentests ergänzt; breite Tabellen in der Kalkulation scrollen jetzt waagerecht. |
+| 1.14 | 15.11.2026 | **Personal in Prozent je Maschine**: Bediener mit Schnellwahl 10–120 % oder freiem Satz, zusätzlich **Mitarbeiter Handling** und **Mitarbeiter Automatisierung** (je 0 … 100 %, eigener Lohnsatz), Standards je Maschine; **Rüsten** mit eigener Einrichter-Zeit und Automatisierer-Zeit je Rüstvorgang (Minuten) und Aufschlüsselung der Rüstkosten. Neue Felder starten mit 0 bzw. leer, gespeicherte Versionen rechnen unverändert. Neue Spalten `machines.handling_pct`, `machines.automation_pct` werden automatisch angelegt. |

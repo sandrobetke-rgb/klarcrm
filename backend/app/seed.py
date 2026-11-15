@@ -186,6 +186,9 @@ def seed_calc(db):
     db.flush()
     for m in machines:
         m.kind = "spritzguss"
+    # Beispiel: große Maschinen mit Entnahmeroboter und Handling
+    for m in machines[4:]:
+        m.handling_pct, m.automation_pct = 25, 10
     # Umlage so ansetzen, dass der hergeleitete Satz nahe am eingetragenen liegt (Demo)
     from .calc_engine import DEFAULT_SETTINGS, machine_rate
     for m in machines:
@@ -223,6 +226,8 @@ def seed_calc(db):
                    part_weight_g=g, sprue_weight_g=spr, machine_id=m.id, machine_name=m.name,
                    machine_rate_h=m.hourly_rate, maintenance_rate_h=m.maintenance_rate,
                    productivity_pct=m.productivity_pct, operator_factor=m.operator_factor,
+                   handling_pct=m.handling_pct or 0, automation_pct=m.automation_pct or 0,
+                   automation_setup_min=15 if m.automation_pct else 0,
                    cycle_time_s=cyc, cavities=cav, annual_volume=vol, lot_size=lot,
                    co2_material_kg_kg=mat.co2_kg_per_kg or 0, machine_power_kw=m.power_kw or 0,
                    co2_pack_per_unit=0.15 if g < 200 else 2.5, transport_km=0 if idx % 3 else 320,

@@ -240,6 +240,8 @@ function CalcTab({ calc, setCalc, master }) {
   const defaults = useMemo(() => ({
     machine_rate_h: machine?.hourly_rate, maintenance_rate_h: machine?.maintenance_rate,
     productivity_pct: machine?.productivity_pct, operator_factor: machine?.operator_factor,
+    handling_pct: machine?.handling_pct ?? 0, automation_pct: machine?.automation_pct ?? 0,
+    handling_rate_h: S.handling_rate_h, automation_rate_h: S.automation_rate_h,
     material_price_kg: material?.price_per_kg,
     labor_rate_h: S.labor_rate_h, setup_rate_h: S.setup_rate_h, assembly_rate_h: S.assembly_rate_h,
     mgk_pct: S.mgk_pct, fgk_pct: S.fgk_pct, scrap_pct: S.scrap_pct, vwgk_pct: S.vwgk_pct, vtgk_pct: S.vtgk_pct,
@@ -258,6 +260,7 @@ function CalcTab({ calc, setCalc, master }) {
     setInputs((s) => ({ ...s, machine_id: m.id, machine_name: `${m.number ? m.number + ' · ' : ''}${m.name}`,
       machine_rate_h: m.hourly_rate, maintenance_rate_h: m.maintenance_rate,
       productivity_pct: m.productivity_pct, operator_factor: m.operator_factor,
+      handling_pct: m.handling_pct ?? s.handling_pct ?? 0, automation_pct: m.automation_pct ?? s.automation_pct ?? 0,
       machine_power_kw: m.power_kw ?? s.machine_power_kw, co2_grid_kg_kwh: m.grid_factor ?? master.settings.co2_grid_kg_kwh ?? s.co2_grid_kg_kwh }))
   }
   function pickMaterial(mid) {
@@ -382,8 +385,19 @@ function CalcTab({ calc, setCalc, master }) {
             {F({ k: 'cycle_time_s', label: 'Zykluszeit', unit: 's', step: 0.5 })}
             {F({ k: 'cavities', label: inputs.family_group ? 'Fachzahl dieses Artikels' : 'Fachzahl', unit: 'Kav.', step: 1 })}
             {F({ k: 'productivity_pct', label: 'Produktivität / Nutzungsgrad', unit: '%' })}
-            {F({ k: 'operator_factor', label: 'Bedienfaktor', unit: 'Pers./M.', step: 0.05 })}
+            <div className="field span-3"><label>Personal an der Maschine</label>
+              <small className="hint">Anteil je Maschine in %: 30 % = ein Mitarbeiter betreut ca. 3 Maschinen, 100 % = fest an der Maschine, 120 % = 1 Person + 20 % Springer. Jede Rolle mit eigenem Stundensatz.</small></div>
+            <PctField label="Bediener" value={inputs.operator_factor == null || inputs.operator_factor === '' ? '' : inputs.operator_factor * 100}
+              def={defaults.operator_factor != null ? defaults.operator_factor * 100 : undefined} presets={[10, 20, 30, 50, 100, 120]} max={300}
+              onChange={(v) => set('operator_factor', v === '' ? '' : Math.round(v * 1e4) / 1e6)} />
             {F({ k: 'labor_rate_h', label: 'Lohnsatz Bediener', unit: '€/h' })}
+            <PctField label="Handling" value={inputs.handling_pct ?? ''} def={defaults.handling_pct} presets={[0, 10, 25, 50, 100]} max={100}
+              onChange={(v) => set('handling_pct', v)} />
+            {F({ k: 'handling_rate_h', label: 'Lohnsatz Handling', unit: '€/h' })}
+            <PctField label="Automatisierung" value={inputs.automation_pct ?? ''} def={defaults.automation_pct} presets={[0, 5, 10, 25, 50, 100]} max={100}
+              onChange={(v) => set('automation_pct', v)} />
+            {F({ k: 'automation_rate_h', label: 'Lohnsatz Automatisierung', unit: '€/h' })}
+            <Info>Personal je Stück: Bediener {fix4(r.values?.labor)} € · Handling {fix4(r.values?.labor_handling)} € · Automatisierung {fix4(r.values?.labor_automation)} €</Info>
             {F({ k: 'family_share_pct', label: 'Familienwerkzeug: Anteil dieses Artikels', unit: '% der Maschinenzeit', step: 5, hint: '100 % = eigenes Werkzeug' })}
             <div className="field span-2"><label htmlFor="in-family_group">Familienwerkzeug / Werkzeuggruppe</label>
               <input id="in-family_group" value={inputs.family_group || ''} placeholder="z. B. WZ-4711 Familie Steuergerät (leer = kein Familienwerkzeug)" onChange={(e) => set('family_group', e.target.value)} />
@@ -393,10 +407,15 @@ function CalcTab({ calc, setCalc, master }) {
 
           <Section title="Rüsten">
             {F({ k: 'setup_time_h', label: 'Rüstzeit je Los', unit: 'h', step: 0.25 })}
-            {F({ k: 'setup_persons', label: 'Einrichter', unit: 'Pers.', step: 0.5 })}
-            {F({ k: 'setup_rate_h', label: 'Lohnsatz Einrichter', unit: '€/h' })}
             {F({ k: 'startup_scrap_pcs', label: 'Anfahrausschuss je Los', unit: 'Stk', step: 10 })}
-            <Info>Rüstkosten je Los: <b>{eur(r.setup_cost_per_lot)}</b> · {num(r.lots_per_year, 1)} Lose p. a.</Info>
+            <div className="field" />
+            {F({ k: 'setup_persons', label: 'Einrichter', unit: 'Pers.', step: 0.5 })}
+            {F({ k: 'setup_staff_min', label: 'Einrichter-Zeit je Rüstvorgang', unit: 'min', step: 5, hint: `leer = gesamte Rüstzeit (${num((Number(inputs.setup_time_h) || 0) * 60, 0)} min)` })}
+            {F({ k: 'setup_rate_h', label: 'Lohnsatz Einrichter', unit: '€/h' })}
+            {F({ k: 'automation_setup_min', label: 'Automatisierer-Zeit je Rüstvorgang', unit: 'min', step: 5, hint: 'z. B. 10 min Roboter/Greifer anpassen' })}
+            {F({ k: 'automation_rate_h', label: 'Lohnsatz Automatisierung', unit: '€/h' })}
+            <Info>Rüstkosten je Los: <b>{eur(r.setup_cost_per_lot)}</b> · {num(r.lots_per_year, 1)} Lose p. a.
+              {r.setup_breakdown && <> · Maschinenstillstand {eur(r.setup_breakdown.machine)} · Einrichter {eur(r.setup_breakdown.setter)} ({num(r.setup_breakdown.setter_h * 60, 0)} min) · Automatisierung {eur(r.setup_breakdown.automation)} · Anfahrausschuss {eur(r.setup_breakdown.startup_scrap)}</>}</Info>
           </Section>
 
           <Section title="Montage & weitere Arbeitsgänge">
@@ -531,6 +550,22 @@ function Info({ children }) {
   return <div className="calc-info span-3">{children}</div>
 }
 
+function PctField({ label, value, def, presets, max = 100, onChange }) {
+  const changed = def != null && value !== '' && value != null && Math.abs(Number(value) - Number(def)) > 1e-9
+  return (
+    <div className={`field span-2 ${changed ? 'field-changed' : ''}`}>
+      <label>Anteil {label} <span className="unit">% je Maschine</span></label>
+      <div className="pct-field">
+        <div className="seg pct-presets">{presets.map((p) => (
+          <button key={p} type="button" className={value !== '' && value != null && Math.abs(Number(value) - p) < 1e-6 ? 'on' : ''} onClick={() => onChange(p)}>{p} %</button>))}</div>
+        <input type="number" step="any" min="0" max={max} className="num" value={value === '' || value == null ? '' : Math.round(Number(value) * 100) / 100}
+          title="individueller Satz, z. B. 25" onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))} />
+      </div>
+      {changed && <button type="button" className="std-reset" onClick={() => onChange(def)} title="Auf Maschinen-Standard zurücksetzen">≠ Standard {num(def, 1)} % ↺</button>}
+    </div>
+  )
+}
+
 function NumField({ k, label, unit, value, def, onChange, step = 'any', hint }) {
   const changed = def != null && value !== '' && value != null && Number(value) !== Number(def)
   return (
@@ -590,7 +625,7 @@ function OperationsEditor({ rows, machines, labor, onChange, result }) {
       operator_factor: 1, labor_rate_h: labor ?? 38, setup_h: 0, setup_persons: 1, power_kw: 0, ...(m ? fromMachine(m) : {}) }])
   }
   const cols = [['cycle_s', 'Takt s'], ['parts_per_cycle', 'Teile/Takt'], ['rate_h', '€/h Anlage'], ['maintenance_h', 'IH €/h'],
-    ['operator_factor', 'Pers.'], ['labor_rate_h', 'Lohn €/h'], ['productivity_pct', 'Prod. %'], ['setup_h', 'Rüsten h/Los'], ['power_kw', 'kW']]
+    ['operator_factor', 'Pers.-Faktor'], ['labor_rate_h', 'Lohn €/h'], ['productivity_pct', 'Prod. %'], ['setup_h', 'Rüsten h/Los'], ['power_kw', 'kW']]
   return (
     <div className="field span-3">
       <div className="section-head"><label>Weitere Arbeitsgänge (Montagelinie, Schweißen, Bedrucken, Prüfung …)</label>

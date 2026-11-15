@@ -90,7 +90,7 @@ def write_settings(data: dict, db: Session = Depends(get_db), _: User = Depends(
 def default_inputs(db: Session) -> dict:
     st = get_settings(db)
     inp = dict(DEFAULT_INPUTS)
-    for k in ("labor_rate_h", "setup_rate_h", "assembly_rate_h", "mgk_pct", "fgk_pct", "scrap_pct", "vwgk_pct",
+    for k in ("labor_rate_h", "setup_rate_h", "assembly_rate_h", "handling_rate_h", "automation_rate_h", "mgk_pct", "fgk_pct", "scrap_pct", "vwgk_pct",
               "vtgk_pct", "pm_pct", "quality_pct", "toolshop_pct", "profit_pct", "cash_discount_pct", "rebate_pct", "productivity_pct",
               "assembly_productivity_pct", "setup_time_h", "setup_persons", "startup_scrap_pcs",
               "co2_grid_kg_kwh", "co2_scope1_kg_h", "co2_masterbatch_kg_kg", "co2_transport_kg_tkm",

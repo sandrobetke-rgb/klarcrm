@@ -232,6 +232,8 @@ class Machine(TimestampMixin, Base):
     maintenance_rate: Mapped[float] = mapped_column(Float, default=0)   # Instandhaltung €/h
     productivity_pct: Mapped[float] = mapped_column(Float, default=85)  # Nutzungsgrad / Produktivität
     operator_factor: Mapped[float] = mapped_column(Float, default=0.3)  # Personen je Maschine
+    handling_pct: Mapped[float | None] = mapped_column(Float)     # Standard-Anteil Mitarbeiter Handling %
+    automation_pct: Mapped[float | None] = mapped_column(Float)   # Standard-Anteil Mitarbeiter Automatisierung %
     location: Mapped[str | None] = mapped_column(String(80))
     available_hours_year: Mapped[float | None] = mapped_column(Float, default=6000)  # verfügbare Std/Jahr (Schichtmodell)
     base_load_pct: Mapped[float | None] = mapped_column(Float, default=0)          # Grundauslastung Bestandsaufträge %
