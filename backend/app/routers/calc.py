@@ -94,7 +94,8 @@ def default_inputs(db: Session) -> dict:
               "vtgk_pct", "pm_pct", "quality_pct", "toolshop_pct", "profit_pct", "cash_discount_pct", "rebate_pct", "productivity_pct",
               "assembly_productivity_pct", "setup_time_h", "setup_persons", "startup_scrap_pcs",
               "co2_grid_kg_kwh", "co2_scope1_kg_h", "co2_masterbatch_kg_kg", "co2_transport_kg_tkm",
-              "purchased_mgk_pct", "side_mgk_pct", "side_quality_pct", "side_scrap_pct", "side_markup_pct"):
+              "purchased_mgk_pct", "side_mgk_pct", "side_quality_pct", "side_scrap_pct", "side_markup_pct",
+              "energy_price_kwh"):
         inp[k] = st.get(k, DEFAULT_SETTINGS.get(k))
     inp["extras"], inp["one_time"] = [], [{"label": "Spritzgießwerkzeug", "cost": 0, "price": 0}]
     # Neue Kalkulationen: Verpackung pauschal mit Standard-%, bis Details bekannt sind; Transport-% vorbelegt

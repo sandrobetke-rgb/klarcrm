@@ -4,7 +4,7 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.19 |
+| **Dokumentversion** | 1.20 |
 | **Stand** | 15.11.2026 |
 | **Status** | Testphase (GitHub Codespaces); Zielbetrieb: interner Server F&R |
 
@@ -187,6 +187,7 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | MGK Zukaufteile (optional) | Zukaufteile (ohne Nebenkalkulation) × eigener MGK-Satz; sonst gemeinsam mit Material × MGK % |
 | Zukaufteile Nebenkalkulation (optional) | siehe KAL-28j; wird zu den Selbstkosten addiert; Gewinn % nur auf die Selbstkosten der Hauptkalkulation |
 | Jahresabschläge (optional) | manueller Anlaufpreis: Jahr 1 = eingegebener Preis, Jahr y ≥ 2 = Serienpreis × k × Faktor y (k siehe KAL-28k); sonst Faktor Jahr 1 = 1; Jahr y = 1 − Abschlag y % (Bezug Jahr 1) bzw. Vorjahresfaktor × (1 − Abschlag y %) (Bezug Vorjahr); vorab eingerechnet: Preis Jahr y = Preisanteil × n / Σ Faktoren × Faktor y – getrennt für Hauptanteil und Zukaufteile-Nebenkalkulation |
+| Grenzkosten (KAL-28m) | [Material + Zukauf + (Personal + Instandhaltung) + kW × (1/Stück je h + Rüstzeit/Los) × €/kWh + (Einrichter- + Automatisierer-Kosten je Los)/Los + Anfahrteile/Los × (Material + Personal + Instandhaltung) + Montage + Σ Arbeitsgänge variabel] / (1 − Ausschuss) + Zukauf NK/(1 − Ausschuss NK) + Verpackung + Transport; DB = Preis − Grenzkosten |
 | FEK | Maschine + Instandhaltung + Personal + Rüsten + Montage + Σ Arbeitsgänge |
 | FGK | FEK × FGK % |
 | Qualität / Werkzeugbau (Basis FEK) | FEK × Qualität % bzw. FEK × Werkzeugbau % – Teil der Herstellkosten (vor Ausschuss) |
@@ -256,6 +257,16 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
   Δ % zur Serie; im Angebot als eigene Position „Vorserienpreis“ mit Menge und Preis je 1.000. Optional **fester
   Vorserienpreis (manuell)**: gilt dann im Angebot; kalkulierter Vorserienpreis, Selbstkosten und Marge bleiben als
   Orientierung sichtbar (Warnfarbe bei negativer Marge).
+- KAL-28m: **Grenzkostenkalkulation (direkte Artikelkosten)** läuft in jeder Kalkulation mit – Überblick für
+  Verhandlungen, nicht im Angebot. Enthalten: Material inkl. Komponenten, Zukaufteile (Nebenkalkulation zum
+  Einstand inkl. deren Ausschuss), Personal an der Maschine (Bediener, Handling, Automatisierung), Instandhaltung,
+  Energie (kWh je Stück × Strompreis, Maschine und Arbeitsgänge), Rüsten nur Personal (Einrichter, Automatisierer)
+  plus Anfahrteile (Material + variable Fertigung), Handmontage, weitere Arbeitsgänge (Personal, Instandhaltung),
+  Ausschuss (Satz der Kalkulation), Verpackung und Transport. Nicht enthalten: Maschinenstundensatz (Abschreibung,
+  Zinsen, Raum, Umlage), MGK/FGK, Qualität/Werkzeugbau %, VwGK, VtGK, PM, Gewinn, Einmalkosten.
+  Ausweis: Grenzkosten je Stück und je 1.000, Deckungsbeitrag je Stück (€ und %) und p. a., Aufteilung des Preises
+  (Grenzkosten / Fix- und Gemeinkosten / Gewinn), Preisuntergrenze kurz- (Grenzkosten) und langfristig (Selbstkosten);
+  DB p. a. auch je Lieferjahr. Neues Eingabefeld Strompreis €/kWh (Vorgabe aus Parametern).
 - KAL-28b: **Mehrkomponenten**: Material, CO₂, Gewicht und Schussgewicht aller Komponenten; im Angebot „A + B (2K)“.
 - KAL-28c: **Familienwerkzeug**: Maschinen-, Instandhaltungs-, Personal- und Rüstkosten, Maschinenstunden
   (Auslastung) und Energie-CO₂ anteilig; Summe der Anteile aller Artikel der Gruppe = 100 % (Hinweis).
@@ -594,3 +605,4 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.17 | 15.11.2026 | **Abschläge vorab draufschlagen** auch bei manuellem Anlaufpreis, zwei Varianten (Ø Laufzeit = Kalkulation / letztes Jahr ≥ Kalkulation), Marge je Lieferjahr mit Warnung bei Minusgeschäft (KAL-28k). Rechentests ergänzt. |
 | 1.18 | 15.11.2026 | **Beschaffung** (Kap. 6.10, BES-1 … 9): Vorgänge für Werkzeuge, Montagelinien, Vorrichtungen und Prüfmittel, Eckdaten aus der Kalkulation, **Werkzeuganfrage** als PDF im Firmenlayout und E-Mail-Entwurf je Lieferant, Angebotsvergleich, Vergabeentscheidung mit Begründung, Übernahme in die Kalkulation als neue Version. Neue Tabellen `procurement_requests`, `procurement_offers` (automatisch angelegt). Seitenhilfe ergänzt. |
 | 1.19 | 15.11.2026 | **Briefkopf erweitert** (PDF-1, PDF-1a): Fax, weitere Standorte, Sitz, Steuernummer, zweite Bankverbindung, Zertifizierungen, Fußzeilen-Zusatz, Logogröße und Logo entfernen; Live-Vorschau; gemeinsamer Briefkopf für Angebot und Werkzeuganfrage. |
+| 1.20 | 15.11.2026 | **Grenzkostenkalkulation** (KAL-28m): direkte Artikelkosten inkl. Verpackung und Transport, Deckungsbeitrag je Stück/p. a./Lieferjahr, Preisuntergrenzen; Strompreis als Eingabe. Rechentest mit Handrechnung ergänzt; gespeicherte Versionen rechnen unverändert (ohne Strompreis = ohne Energie). |

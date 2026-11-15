@@ -253,7 +253,7 @@ function CalcTab({ calc, setCalc, master }) {
     co2_material_kg_kg: material?.co2_kg_per_kg ?? undefined, machine_power_kw: machine?.power_kw ?? undefined,
     co2_grid_kg_kwh: machine?.grid_factor ?? S.co2_grid_kg_kwh, co2_scope1_kg_h: S.co2_scope1_kg_h,
     co2_masterbatch_kg_kg: S.co2_masterbatch_kg_kg, co2_transport_kg_tkm: S.co2_transport_kg_tkm,
-    pack_pct: S.pack_pct, transport_pct: S.transport_pct,
+    pack_pct: S.pack_pct, transport_pct: S.transport_pct, energy_price_kwh: S.energy_price_kwh,
   }), [machine, material, S])
 
   function pickMachine(mid) {
@@ -473,6 +473,7 @@ function CalcTab({ calc, setCalc, master }) {
             {F({ k: 'co2_material_kg_kg', label: 'Emissionsfaktor Material', unit: 'kg CO₂e/kg', step: 0.1, hint: 'Cradle-to-Gate, am besten Lieferanten-PCF' })}
             {F({ k: 'co2_masterbatch_kg_kg', label: 'Emissionsfaktor Masterbatch', unit: 'kg CO₂e/kg', step: 0.1 })}
             {F({ k: 'machine_power_kw', label: 'Leistungsaufnahme Maschine inkl. Peripherie', unit: 'kW', step: 1, hint: 'Mittelwert, z. B. aus Energiemessung' })}
+            {F({ k: 'energy_price_kwh', label: 'Strompreis', unit: '€/kWh', step: 0.01, hint: 'für Energiekosten in der Grenzkostenkalkulation' })}
             {F({ k: 'co2_grid_kg_kwh', label: 'Strom-Emissionsfaktor', unit: 'kg CO₂e/kWh', step: 0.01, hint: 'Stromkennzeichnung des Versorgers; Ökostrom = 0' })}
             {F({ k: 'co2_scope1_kg_h', label: 'Werksemissionen Scope 1', unit: 'kg CO₂e/Masch.-h', step: 0.1, hint: 'Heizung, Gas – anteilig je Maschinenstunde' })}
             {F({ k: 'co2_purchased_parts', label: 'Zukaufteile', unit: 'kg CO₂e/Stk', step: 0.001 })}
@@ -759,6 +760,39 @@ function yearFactors(reds, years, basis) {
   return out
 }
 
+function DirectCostCard({ d, r, inputs }) {
+  const price = r.unit_price || 0
+  const parts = [
+    ['Grenzkosten', d.total, 'dc-var'],
+    ['Fix- und Gemeinkosten', Math.max(d.fixed_share, 0), 'dc-fix'],
+    ['Gewinn / Rest', Math.max(price - r.self_cost, 0), 'dc-profit'],
+  ]
+  const sum = parts.reduce((a, [, v]) => a + v, 0) || 1
+  return (
+    <div className="card">
+      <h3>Grenzkosten – direkte Artikelkosten</h3>
+      <p className="muted small" style={{ marginTop: 0 }}>Nur Kosten, die für die Herstellung dieses Artikels zusätzlich anfallen – ohne Maschinenabschreibung, Zinsen, Raum,
+        Gemeinkosten, Verwaltung, Vertrieb, Gewinn und Einmalkosten. Überblick für Verhandlungen; nicht im Angebot.</p>
+      <div className="dc-bar" title="Aufteilung des Verkaufspreises">
+        {parts.map(([l, v, c]) => v > 0 && <span key={l} className={c} style={{ width: `${(v / sum) * 100}%` }} title={`${l}: ${fix4(v)} €`} />)}
+      </div>
+      <div className="dc-legend">{parts.map(([l, v, c]) => <span key={l}><i className={c} />{l} {fix4(v)} €</span>)}</div>
+      <table className="table table-compact">
+        <tbody>
+          {d.lines.map((l) => <tr key={l.key}><td>{l.label}</td><td className="num">{fix4(l.value)}</td></tr>)}
+          <tr className="row-sum"><td><b>Grenzkosten je Stück</b></td><td className="num"><b>{fix4(d.total)}</b></td></tr>
+          <tr><td>je 1.000 Stk</td><td className="num">{num2(d.per_1000)}</td></tr>
+          <tr><td>Verkaufspreis</td><td className="num">{fix4(price)}</td></tr>
+          <tr className="row-sum"><td><b>Deckungsbeitrag je Stück</b></td><td className={`num ${d.contribution < 0 ? 'text-critical' : ''}`}><b>{fix4(d.contribution)}</b> ({num(d.contribution_pct, 1)} %)</td></tr>
+          <tr><td>Deckungsbeitrag p. a.</td><td className="num">{eur(d.contribution_year)}</td></tr>
+        </tbody>
+      </table>
+      <small className="hint">Preisuntergrenze kurzfristig (Grenzkosten) <b>{eur4(d.total)}</b> · langfristig (Selbstkosten) <b>{eur4(r.self_cost)}</b>.
+        {!d.energy_price_kwh && Number(inputs.machine_power_kw) > 0 ? ' Strompreis unter „CO₂-Fußabdruck“ eintragen, damit Energie mitgerechnet wird.' : ''}</small>
+    </div>
+  )
+}
+
 function YearReductions({ inputs, setInputs, r }) {
   const years = Math.min(Math.max(Math.ceil(Number(inputs.project_years) || 1), 1), 15)
   const side = (inputs.purchased_items || []).some((x) => x.side)
@@ -881,16 +915,19 @@ function Results({ r, inputs, set, canWrite, calc, versionNo }) {
         </table>
       </div>
 
+      {r.direct_costs && <DirectCostCard d={r.direct_costs} r={r} inputs={inputs} />}
+
       {r.price_years?.length > 0 && (
         <div className="card">
           <h3>Serienpreis je Lieferjahr</h3>
           <table className="table table-compact">
-            <thead><tr><th>Jahr</th><th className="num">€/Stk</th><th className="num">€/1.000</th>{r.price_side_part > 0 && <th className="num">davon Zukauf NK</th>}<th className="num">vom Serienpreis</th><th className="num">Marge</th><th className="num">Umsatz</th></tr></thead>
+            <thead><tr><th>Jahr</th><th className="num">€/Stk</th><th className="num">€/1.000</th>{r.price_side_part > 0 && <th className="num">davon Zukauf NK</th>}<th className="num">vom Serienpreis</th><th className="num">Marge</th><th className="num">DB p. a.</th><th className="num">Umsatz</th></tr></thead>
             <tbody>{r.price_years.map((y) => (
               <tr key={y.year}><td className="nowrap">Jahr {y.year}</td><td className="num"><b>{fix4(y.price)}</b></td><td className="num">{num2(y.price * 1000)}</td>
                 {r.price_side_part > 0 && <td className="num">{fix4(y.side)}</td>}
                 <td className="num">{y.year === 1 ? (y.manual ? 'manuell' : '–') : `${num(y.factor * 100, 2)} %`}</td>
-                <td className={`num ${y.margin_pct < 0 ? 'text-critical' : ''}`}>{num(y.margin_pct, 1)} %</td><td className="num">{eur(y.revenue)}</td></tr>))}</tbody>
+                <td className={`num ${y.margin_pct < 0 ? 'text-critical' : ''}`}>{num(y.margin_pct, 1)} %</td>
+                <td className={`num ${y.contribution < 0 ? 'text-critical' : ''}`}>{eur(y.contribution)}</td><td className="num">{eur(y.revenue)}</td></tr>))}</tbody>
           </table>
           <small className="hint">Kalkulierter Serienpreis {eur4(r.unit_price)}{r.price_year1_manual ? <> · Jahr 1 manueller Anlaufpreis (+{num(r.preload_pct, 2)} %)</> : r.preload_pct ? <> · Jahr 1 inkl. Vorab-Aufschlag +{num(r.preload_pct, 2)} %</> : null} · Projektumsatz {eur(r.project_revenue_reductions)}. Im Angebot wird der Preis für Jahr 1 und die Preisentwicklung ausgewiesen.</small>
         </div>

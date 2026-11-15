@@ -121,6 +121,8 @@ DEFAULT_INPUTS = {
     # Preis Jahr 1: "kalkuliert" (= Serienpreis, optional mit Vorab-Einrechnung) oder "manuell" (fester Anlaufpreis;
     # ab Jahr 2 gilt der kalkulierte Serienpreis × Faktor des Jahres)
     "price_year1_mode": "kalkuliert", "price_year1_manual": None,
+    # Grenzkostenkalkulation: Strompreis für die Energiekosten (0 = ohne Energie, ältere Versionen)
+    "energy_price_kwh": 0.0,
     # Vorserie: Kleinstmengen vor Serienstart (0 = kein Vorserienpreis)
     "preseries_qty": 0, "preseries_lot": None, "preseries_productivity_pct": None, "preseries_scrap_pct": None,
     "preseries_setup_h": None, "preseries_surcharge_pct": 0.0,
@@ -211,6 +213,40 @@ def compute(raw: dict) -> dict:
     return res
 
 
+def _direct_costs(i: dict, d: dict) -> dict:
+    """Grenzkosten (direkte Artikelkosten) je Stück für den Verhandlungsüberblick: nur Kosten, die für die Herstellung
+    des Artikels zusätzlich anfallen – ohne Abschreibung/Zinsen/Raum der Maschine, ohne Gemeinkosten, Verwaltung,
+    Vertrieb, Projektmanagement, Gewinn und Einmalkosten."""
+    lot, pph, share = d["lot"], d["pph"], d["share"]
+    var_run = d["labor"] + d["maintenance"]                      # Personal + Instandhaltung je Stück
+    startup = _f(i["startup_scrap_pcs"]) / lot if lot > 0 else 0.0
+    kw = _f(i["machine_power_kw"])
+    hours = ((1 / pph if pph > 0 else 0) + (_f(i["setup_time_h"]) / lot if lot > 0 else 0)) * share
+    energy = (kw * hours + sum(o["power_kw"] * o["hours_piece"] for o in d["ops"])) * _f(i.get("energy_price_kwh"))
+    setup = (d["staff_lot"] + d["auto_lot"]) / lot if lot > 0 else 0.0
+    setup_scrap = startup * (d["material"] + var_run)            # Anfahrteile: Material + variable Fertigung
+    ops = sum(o["variable"] for o in d["ops"])
+    production = d["material"] + d["purchased"] + var_run + energy + setup + setup_scrap + d["assembly"] + ops
+    scrap = production / (1 - d["scrap_rate"]) - production if d["scrap_rate"] < 1 else 0.0
+    side = d["side"] / (1 - d["side_scrap_rate"]) if d["side_scrap_rate"] < 1 else d["side"]
+    total = production + scrap + side + d["packaging"] + d["transport"]
+    price, annual = d["price"], d["annual"]
+    rows = [("material", "Material inkl. Komponenten", d["material"]), ("purchased", "Zukaufteile", d["purchased"] + side),
+            ("labor", "Personal Maschine (Bediener, Handling, Automatisierung)", d["labor"]),
+            ("maintenance", "Instandhaltung", d["maintenance"]), ("energy", "Energie (Strom)", energy),
+            ("setup", "Rüsten Personal + Anfahrteile", setup + setup_scrap), ("assembly", "Montage (Handarbeit)", d["assembly"]),
+            ("operations", "Weitere Arbeitsgänge (Personal, Instandhaltung)", ops), ("scrap", "Ausschuss", scrap),
+            ("packaging", "Verpackung", d["packaging"]), ("transport", "Transport", d["transport"])]
+    db = price - total
+    return {
+        "lines": [{"key": k, "label": l, "value": round(v, 6)} for k, l, v in rows if abs(v) > 1e-12],
+        "total": round(total, 6), "per_1000": round(total * 1000, 2),
+        "contribution": round(db, 6), "contribution_pct": round(db / price * 100, 2) if price else 0,
+        "contribution_year": round(db * annual, 2), "fixed_share": round(d["sk"] - total, 6),
+        "energy_price_kwh": _f(i.get("energy_price_kwh")),
+    }
+
+
 def _factors(reds: list, years: int, basis: str) -> list:
     """Preisfaktor je Jahr (Jahr 1 = 1) aus den Abschlägen ab Jahr 2."""
     vals = [_f(r) for r in reds if r not in (None, "")]
@@ -265,7 +301,8 @@ def _price_years(i: dict, res: dict) -> dict:
                      "factor": round(fm[y], 4), "factor_side": round(fs[y], 4), "revenue": round(price * annual, 2),
                      "manual": bool(manual and y == 0),
                      "margin_pct": round((price - sk) / price * 100, 2) if price else 0,
-                     "profit": round((price - sk) * annual, 2), "below_calc": price < res["unit_price"] - 1e-9})
+                     "profit": round((price - sk) * annual, 2), "below_calc": price < res["unit_price"] - 1e-9,
+                     "contribution": round((price - _f((res.get("direct_costs") or {}).get("total"))) * annual, 2)})
     p1 = rows[0]["price"] if manual else main * km + side * ks
     series_uplift = (main * km + side * ks) / res["unit_price"] - 1 if res["unit_price"] else 0
     return {"price_years": rows, "price_year1": round(p1, 4), "price_year1_manual": manual,
@@ -394,8 +431,10 @@ def _compute(raw: dict) -> dict:
         osetup = osetup_lot / lot if lot > 0 else 0.0
         if cyc <= 0:
             warnings.append(f"Arbeitsgang „{o.get('name') or 'ohne Name'}“: Taktzeit fehlt.")
+        ovar = ((_f(o.get("maintenance_h")) + _f(o.get("labor_rate_h")) * _f(o.get("operator_factor"))) / opph if opph > 0 else 0.0) \
+            + (_f(o.get("setup_h")) * _f(o.get("labor_rate_h")) * _f(o.get("setup_persons"), 1) / lot if lot > 0 else 0.0)
         ops.append({"name": o.get("name") or "Arbeitsgang", "machine_id": o.get("machine_id"), "kind": o.get("kind") or "",
-                    "pieces_per_hour": opph, "run": run, "setup": osetup, "cost": run + osetup,
+                    "pieces_per_hour": opph, "run": run, "setup": osetup, "cost": run + osetup, "variable": ovar,
                     "hours_year": (annual / opph if opph > 0 else 0) + (annual / lot if lot > 0 else 0) * _f(o.get("setup_h")),
                     "power_kw": _f(o.get("power_kw")),
                     "hours_piece": (1 / opph if opph > 0 else 0) + (_f(o.get("setup_h")) / lot if lot > 0 else 0)})
@@ -544,6 +583,11 @@ def _compute(raw: dict) -> dict:
                   for k, lbl, g, v in lines],
         "values": {k: rnd(v) for k, _, _, v in lines},
         "unit_price": round(price, 4),
+        "direct_costs": _direct_costs(i, dict(
+            material=mek_material + mek_components, purchased=purchased, side=side_cost, side_scrap_rate=side_scrap_rate,
+            labor=labor + labor_handling + labor_automation, maintenance=maintenance, pph=pph, lot=lot, share=share,
+            staff_lot=setup_staff_lot, auto_lot=setup_auto_lot, assembly=assembly, ops=ops, scrap_rate=scrap_rate,
+            packaging=packaging, transport=transport, price=price, sk=sk, annual=annual)),
         "price_side_part": round((side_sk + side_markup) / (1 - sd) / (1 - rb) if sd < 1 and rb < 1 else side_sk + side_markup, 6),
         "price_per_100": round(price * 100, 2),
         "price_per_1000": round(price * 1000, 2),

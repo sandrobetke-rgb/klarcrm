@@ -113,7 +113,7 @@ export const INPUT_LABELS = {
   price_reductions: ['Jahresabschläge Serienpreis', '% ab Jahr 2'], side_price_reductions: ['Jahresabschläge Zukaufteile NK', '% ab Jahr 2'],
   price_reductions_basis: ['Bezug Jahresabschläge', ''], price_reductions_preload: ['Abschläge vorab eingerechnet', ''], price_reductions_preload_mode: ['Vorab-Einrechnung', ''],
   preseries_qty: ['Vorserienmenge', 'Stk'], preseries_price_manual: ['Vorserienpreis fest', '€/Stk'],
-  price_year1_mode: ['Preis Jahr 1', ''], price_year1_manual: ['Preis Jahr 1 manuell', '€/Stk'], preseries_lot: ['Losgröße Vorserie', 'Stk'], preseries_setup_h: ['Rüstzeit Vorserie', 'h'],
+  price_year1_mode: ['Preis Jahr 1', ''], energy_price_kwh: ['Strompreis', '€/kWh'], price_year1_manual: ['Preis Jahr 1 manuell', '€/Stk'], preseries_lot: ['Losgröße Vorserie', 'Stk'], preseries_setup_h: ['Rüstzeit Vorserie', 'h'],
   preseries_productivity_pct: ['Produktivität Vorserie', '%'], preseries_scrap_pct: ['Ausschuss Vorserie', '%'], preseries_surcharge_pct: ['Aufschlag Vorserie', '%'],
   side_mgk_pct: ['MGK Nebenkalkulation', '%'], side_quality_pct: ['Qualität Nebenkalkulation', '%'], side_scrap_pct: ['Ausschuss Nebenkalkulation', '%'], side_markup_pct: ['Aufschlag Nebenkalkulation', '%'], family_share_pct: ['Anteil Familienwerkzeug', '%'], family_group: ['Familienwerkzeug', ''],
   amort_quantity: ['Amortisation über', 'Stk'],

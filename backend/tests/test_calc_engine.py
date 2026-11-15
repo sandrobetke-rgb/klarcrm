@@ -271,3 +271,19 @@ def test_abschlaege_vorab_draufschlagen_kein_minusgeschaeft():
     assert sum(p[1:]) / 3 == pytest.approx(0.315, abs=1e-4)
     assert r3["price_years"][1]["margin_pct"] == pytest.approx((p[1] - r3["self_cost"]) / p[1] * 100, abs=0.05)
     assert f  # Faktoren zur Dokumentation
+
+
+def test_grenzkosten_direkte_artikelkosten():
+    inp = {**BASE, "energy_price_kwh": 0.2, "machine_power_kw": 20, "pack_mode": "detail", "transport_mode": "palette"}
+    r = compute(inp)
+    d = r["direct_costs"]
+    mat = (20 + 4 / 4) / 1000 * 3.0
+    var = (38 * 0.3 + 5) / PPH                       # Bediener + Instandhaltung, ohne Maschinenstundensatz
+    energy = 20 * (1 / PPH + 2 / 10000) * 0.2
+    setup = 2 * 48 * 1 / 10000                       # Einrichter; Anfahrausschuss 0
+    prod = mat + var + energy + setup
+    total = prod / 0.97 + r["values"]["packaging"] + r["values"]["transport"]
+    assert d["total"] == pytest.approx(total, abs=2e-6)
+    assert d["total"] < r["self_cost"]               # Grenzkosten unter Selbstkosten
+    assert d["contribution"] == pytest.approx(r["unit_price"] - total, abs=1e-4)  # Preis ungerundet
+    assert d["contribution_year"] == pytest.approx((r["unit_price"] - total) * 100000, abs=10)
