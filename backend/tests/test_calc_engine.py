@@ -200,3 +200,35 @@ def test_personal_handling_automatisierung_und_ruesten():
     # ohne Angaben: Einrichter über die gesamte Rüstzeit wie bisher
     assert compute(BASE)["setup_breakdown"]["setter"] == pytest.approx(2 * 48, abs=0.01)
     assert compute({**BASE, "operator_factor": 1.2})["values"]["labor"] == pytest.approx(38 * 1.2 / PPH, abs=2e-6)
+
+
+def test_jahresabschlaege_vorab_eingerechnet():
+    r = compute({**BASE, "project_years": 3, "price_reductions": [2, 3]})
+    f = [1, 0.98, 0.97]
+    k = 3 / sum(f)
+    assert [y["price"] for y in r["price_years"]] == pytest.approx([round(0.315 * k * x, 4) for x in f], abs=1e-4)
+    assert sum(y["price"] for y in r["price_years"]) / 3 == pytest.approx(0.315, abs=1e-4)  # Ø = kalkulierter Preis
+    assert r["preload_pct"] == pytest.approx((k - 1) * 100, abs=0.01)
+    # fortlaufend ggü. Vorjahr, ohne Vorab-Einrechnung
+    r2 = compute({**BASE, "project_years": 3, "price_reductions": [2, 3], "price_reductions_basis": "vorjahr",
+                  "price_reductions_preload": False})
+    assert r2["price_years"][0]["price"] == 0.315
+    assert r2["price_years"][2]["price"] == pytest.approx(0.315 * 0.98 * 0.97, abs=1e-4)
+
+
+def test_jahresabschlaege_zukaufteile_eigener_satz():
+    side = {"purchased_items": [{"name": "LP", "qty": 1, "price_per_piece": 4.0, "side": True}], "project_years": 3,
+            "price_reductions": [2, 3], "side_price_reductions": [0, 0]}
+    r = compute({**BASE, **side})
+    assert all(y["side"] == pytest.approx(r["price_side_part"], abs=1e-4) for y in r["price_years"])  # Zukauf ohne Abschlag
+    assert r["price_years"][2]["main"] < r["price_years"][0]["main"]
+
+
+def test_vorserienpreis():
+    r = compute({**BASE, "preseries_qty": 500, "preseries_productivity_pct": 60, "preseries_surcharge_pct": 10})
+    p = r["preseries"]
+    assert p["lot_size"] == 500
+    sub = compute({**BASE, "annual_volume": 500, "lot_size": 500, "productivity_pct": 60})
+    assert p["unit_price"] == pytest.approx(sub["unit_price"] * 1.1, abs=1e-4)
+    assert p["unit_price"] > r["unit_price"]
+    assert compute(BASE)["preseries"] is None

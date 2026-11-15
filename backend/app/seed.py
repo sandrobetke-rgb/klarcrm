@@ -244,6 +244,7 @@ def seed_calc(db):
             inp["lot_tiers"] = [round(lot / 2), lot, lot * 3]
         if art.startswith("Frontend"):
             inp["project_years"] = 6
+            inp["price_reductions"] = [2, 3, 3, 3, 3]  # Jahresabschläge Automotive, vorab eingerechnet
         if art.startswith("Gehäuse Sensor"):
             tpe = materials[8]
             inp["components"] = [{"label": "Dichtung TPE", "material_id": tpe.id, "material_name": tpe.name,
@@ -268,6 +269,9 @@ def seed_calc(db):
                 return {"part_id": part.id, "part_no": part.part_no, "name": part.name, "qty": qty,
                         "price_per_piece": part.price / (part.price_basis or 1), "co2_kg_per_piece": part.co2_kg_per_piece or 0}
             inp["purchased_items"] = [pi(parts[0], 2), pi(parts[2], 1), pi(parts[4], 1), {**pi(parts[5], 1), "side": True}]
+            inp["price_reductions"], inp["side_price_reductions"] = [2, 2, 2, 2], [1, 1, 1, 1]
+            inp.update(preseries_qty=1000, preseries_lot=500, preseries_productivity_pct=65, preseries_scrap_pct=6,
+                       preseries_surcharge_pct=5)
             inp["extras"].append({"label": "Bedrucken Tampondruck", "amount": 0.035, "basis": "stueck", "category": "fertigung"})
         inp = normalize(inp)
         owner = users[idx % len(users)]

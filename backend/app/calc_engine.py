@@ -28,6 +28,8 @@ Einmalkosten (Werkzeug, Bemusterung, Prüfmittel …) werden separat mit Kosten 
 """
 from __future__ import annotations
 
+import math
+
 DEFAULT_SETTINGS = {
     "labor_rate_h": 38.0,          # Lohnsatz Maschinenbediener €/h (Vollkosten)
     "setup_rate_h": 48.0,          # Lohnsatz Einrichter €/h
@@ -111,6 +113,13 @@ DEFAULT_INPUTS = {
     "operations": [],  # [{machine_id, name, kind, rate_h, maintenance_h, cycle_s, parts_per_cycle, productivity_pct,
                        #   operator_factor, labor_rate_h, setup_h, setup_persons, power_kw}]
     # Zukaufteile aus Stammdaten: [{part_id, part_no, name, qty, price_per_piece, co2_kg_per_piece}]
+    # Jährliche Preisabschläge (Produktivität an den Kunden) ab Jahr 2 in %, z. B. [2, 3, 3]
+    "price_reductions": [], "price_reductions_basis": "jahr1",  # "jahr1" = ggü. Preis Jahr 1, "vorjahr" = ggü. Vorjahr
+    "price_reductions_preload": True,   # Abschläge vorab einrechnen (Ø-Preis über Laufzeit = kalkulierter Preis)
+    "side_price_reductions": [],        # eigene Abschläge für Zukaufteile in der Nebenkalkulation
+    # Vorserie: Kleinstmengen vor Serienstart (0 = kein Vorserienpreis)
+    "preseries_qty": 0, "preseries_lot": None, "preseries_productivity_pct": None, "preseries_scrap_pct": None,
+    "preseries_setup_h": None, "preseries_surcharge_pct": 0.0,
     "purchased_items": [],  # je Position optional "side": true = Nebenkalkulation statt voller Kalkulation
     # Eigener MGK-Satz auf Zukaufteile (None = wie MGK)
     "purchased_mgk_pct": None,
@@ -154,6 +163,8 @@ def normalize(inputs: dict) -> dict:
     out["components"] = [e for e in (out.get("components") or []) if isinstance(e, dict)]
     out["operations"] = [e for e in (out.get("operations") or []) if isinstance(e, dict)]
     out["purchased_items"] = [e for e in (out.get("purchased_items") or []) if isinstance(e, dict)]
+    out["price_reductions"] = [e for e in (out.get("price_reductions") or []) if e not in (None, "")]
+    out["side_price_reductions"] = [e for e in (out.get("side_price_reductions") or []) if e not in (None, "")]
     return out
 
 
@@ -190,7 +201,69 @@ def compute(raw: dict) -> dict:
     res["lot_tiers"] = sorted(tiers, key=lambda t: t["lot_size"])
     res["volume_tiers"] = sorted(vtiers, key=lambda t: t["annual_volume"])
     res["base_calculated_price"] = base
+    res["preseries"] = _preseries(i, res)
+    res.update(_price_years(i, res))
     return res
+
+
+def _factors(reds: list, years: int, basis: str) -> list:
+    """Preisfaktor je Jahr (Jahr 1 = 1) aus den Abschlägen ab Jahr 2."""
+    vals = [_f(r) for r in reds if r not in (None, "")]
+    out, f = [1.0], 1.0
+    for y in range(2, years + 1):
+        r = vals[y - 2] if y - 2 < len(vals) else None
+        if basis == "vorjahr":
+            f *= 1 - (r or 0) / 100
+        elif r is not None:
+            f = 1 - r / 100
+        out.append(f)
+    return out
+
+
+def _price_years(i: dict, res: dict) -> dict:
+    """Serienpreis je Jahr mit Abschlägen; Zukaufteile der Nebenkalkulation mit eigenen Abschlägen."""
+    main_reds = [r for r in i.get("price_reductions") or [] if r not in (None, "")]
+    side_reds = [r for r in i.get("side_price_reductions") or [] if r not in (None, "")]
+    if not main_reds and not side_reds:
+        return {"price_years": [], "price_year1": res["unit_price"], "preload_pct": 0}
+    years = min(max(int(math.ceil(_f(i["project_years"], 1))), 1), 15)
+    basis = i.get("price_reductions_basis") or "jahr1"
+    fm, fs = _factors(main_reds, years, basis), _factors(side_reds, years, basis)
+    side = _f(res.get("price_side_part"))
+    main = res["unit_price"] - side
+    preload = i.get("price_reductions_preload", True) not in (False, "false", 0)
+    km = years / sum(fm) if preload and sum(fm) else 1.0
+    ks = years / sum(fs) if preload and sum(fs) else 1.0
+    annual = _f(i["annual_volume"])
+    rows = []
+    for y in range(years):
+        pm, ps = main * km * fm[y], side * ks * fs[y]
+        rows.append({"year": y + 1, "price": round(pm + ps, 4), "main": round(pm, 4), "side": round(ps, 4),
+                     "factor": round(fm[y], 4), "factor_side": round(fs[y], 4), "revenue": round((pm + ps) * annual, 2)})
+    p1 = main * km + side * ks
+    return {"price_years": rows, "price_year1": round(p1, 4),
+            "preload_pct": round((p1 / res["unit_price"] - 1) * 100, 2) if res["unit_price"] else 0,
+            "project_revenue_reductions": round(sum(r["revenue"] for r in rows), 2)}
+
+
+def _preseries(i: dict, res: dict) -> dict | None:
+    """Vorserienpreis für Kleinstmengen: eigene Menge/Los, optional schlechtere Produktivität, Ausschuss, Rüstzeit."""
+    qty = _f(i.get("preseries_qty"))
+    if qty <= 0:
+        return None
+    over = {"annual_volume": qty, "lot_size": _f(i.get("preseries_lot")) or qty, "price_override": None,
+            "lot_tiers": [], "volume_tiers": [], "price_reductions": [], "side_price_reductions": [],
+            "one_time": [{**o, "amortize": False} for o in i.get("one_time") or []]}
+    for src, dst in (("preseries_productivity_pct", "productivity_pct"), ("preseries_scrap_pct", "scrap_pct"),
+                     ("preseries_setup_h", "setup_time_h")):
+        if i.get(src) not in (None, ""):
+            over[dst] = _f(i[src])
+    sub = _compute({**i, **over})
+    price = sub["unit_price"] * (1 + _f(i.get("preseries_surcharge_pct")) / 100)
+    return {"qty": qty, "lot_size": over["lot_size"], "self_cost": sub["self_cost"], "calc_price": sub["unit_price"],
+            "unit_price": round(price, 4), "price_per_1000": round(price * 1000, 2), "total": round(price * qty, 2),
+            "setup_per_piece": sub["values"]["setup"], "pieces_per_hour": sub["pieces_per_hour"],
+            "delta_pct": round((price / res["unit_price"] - 1) * 100, 1) if res["unit_price"] else 0}
 
 
 def _compute(raw: dict) -> dict:
@@ -439,6 +512,7 @@ def _compute(raw: dict) -> dict:
                   for k, lbl, g, v in lines],
         "values": {k: rnd(v) for k, _, _, v in lines},
         "unit_price": round(price, 4),
+        "price_side_part": round((side_sk + side_markup) / (1 - sd) / (1 - rb) if sd < 1 and rb < 1 else side_sk + side_markup, 6),
         "price_per_100": round(price * 100, 2),
         "price_per_1000": round(price * 1000, 2),
         "price_source": price_source,

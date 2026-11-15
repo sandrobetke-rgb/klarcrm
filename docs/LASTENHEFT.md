@@ -4,8 +4,8 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.14 |
-| **Stand** | 14.11.2026 |
+| **Dokumentversion** | 1.15 |
+| **Stand** | 15.11.2026 |
 | **Status** | Testphase (GitHub Codespaces); Zielbetrieb: interner Server F&R |
 
 > Dieses Lastenheft wird bei **jeder** Änderung am System mitgezogen. Neue Anforderungen, geänderte Regeln und
@@ -186,6 +186,7 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | Arbeitsgang n | Lauf: (Satz Anlage + Instandhaltung + Lohnsatz × Personen) / Stück je h, Stück je h = 3600 / Takt × Teile je Takt × Produktivität; Rüsten: Rüstzeit × (Satz Anlage + Instandhaltung + Lohnsatz × 1 Einrichter) / Losgröße |
 | MGK Zukaufteile (optional) | Zukaufteile (ohne Nebenkalkulation) × eigener MGK-Satz; sonst gemeinsam mit Material × MGK % |
 | Zukaufteile Nebenkalkulation (optional) | siehe KAL-28j; wird zu den Selbstkosten addiert; Gewinn % nur auf die Selbstkosten der Hauptkalkulation |
+| Jahresabschläge (optional) | Faktor Jahr 1 = 1; Jahr y = 1 − Abschlag y % (Bezug Jahr 1) bzw. Vorjahresfaktor × (1 − Abschlag y %) (Bezug Vorjahr); vorab eingerechnet: Preis Jahr y = Preisanteil × n / Σ Faktoren × Faktor y – getrennt für Hauptanteil und Zukaufteile-Nebenkalkulation |
 | FEK | Maschine + Instandhaltung + Personal + Rüsten + Montage + Σ Arbeitsgänge |
 | FGK | FEK × FGK % |
 | Qualität / Werkzeugbau (Basis FEK) | FEK × Qualität % bzw. FEK × Werkzeugbau % – Teil der Herstellkosten (vor Ausschuss) |
@@ -232,6 +233,17 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
   optionaler Aufschlag = SK-NK × Aufschlag-NK % (Standard 0 %, fließt in den Gewinn). Skonto/Rabatt wirken auf den
   Gesamtpreis. CO₂ der Teile wird unverändert im Fußabdruck berücksichtigt. Ausweis der Nebenkalkulation je Stück
   und p. a. in der Kalkulation.
+- KAL-28k: **Jahresabschläge (Produktivität an den Kunden)**: je Lieferjahr ab Jahr 2 ein Abschlag in % (bis zur
+  Projektlaufzeit, max. 15 Jahre); Bezug wählbar „gegenüber Preis Jahr 1“ (Standard) oder „gegenüber Vorjahr“
+  (fortlaufend). Option **vorab einrechnen** (Standard an): Preis Jahr 1 = kalkulierter Preis × n / Σ Faktoren, damit
+  der Durchschnitt über die Laufzeit dem kalkulierten Preis entspricht. **Zukaufteile in der Nebenkalkulation** haben
+  eigene Abschläge (z. B. 0 %, wenn der Lieferant keine Abschläge gibt) und werden getrennt vorab eingerechnet.
+  Ausweis: Tabelle Serienpreis je Lieferjahr mit Abschlag und Umsatz; im Angebot Preis Jahr 1 als Positionspreis und
+  Preisentwicklung je Jahr im Positionstext.
+- KAL-28l: **Vorserienpreis** für Kleinstmengen: Vorserienmenge, Losgröße (leer = eine Lieferung), optional eigene
+  Rüstzeit, Produktivität und Ausschuss (leer = wie Serie) und Aufschlag %. Gerechnet wird die vollständige Kalkulation
+  mit diesen Werten (Jahresmenge = Vorserienmenge, ohne Werkzeugamortisation, ohne Staffeln/Abschläge). Ausweis mit
+  Δ % zur Serie; im Angebot als eigene Position „Vorserienpreis“ mit Menge und Preis je 1.000.
 - KAL-28b: **Mehrkomponenten**: Material, CO₂, Gewicht und Schussgewicht aller Komponenten; im Angebot „A + B (2K)“.
 - KAL-28c: **Familienwerkzeug**: Maschinen-, Instandhaltungs-, Personal- und Rüstkosten, Maschinenstunden
   (Auslastung) und Energie-CO₂ anteilig; Summe der Anteile aller Artikel der Gruppe = 100 % (Hinweis).
@@ -362,6 +374,20 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 - CO2-6: Abgrenzung: vereinfachter PCF ohne Zertifizierung (keine vollständige ISO 14067-Bilanz); Nutzungs- und
   End-of-Life-Phase nicht enthalten. Ausrichtung auf das bestehende F&R-Konzept (Scope 1–2 je Bauteil/Auftrag/Lieferung).
 
+### 6.9 Auswertungen (Berichte)
+- AUSW-1: Seite „Auswertungen“ mit Filtern Zeitraum (Anfragedatum, sonst Anlagedatum; Schnellwahl Jahr, Vorjahr,
+  12 Monate, alle), Vertrieb und Kunde. Kennzahlen: Anfragen, offen, Angebotsquote, Trefferquote
+  (gewonnen / (gewonnen + verloren)), Absagequote (kein Angebot / Anfragen), angefragter und gewonnener Jahresumsatz.
+- AUSW-2: Berichte je **Maschinengröße** (Schließkraftklassen bis 100 t, 100–250 t, 250–500 t, über 500 t, ohne
+  Maschine – nach der in der Kalkulation gewählten Maschine), **Kunde** (Anzahl, Anteil an Anfragen und am
+  angefragten Umsatz, Trefferquote), **Absagegründe** (kein Angebot), **Verlustgründe**, **Maschine**, **Werkstoff**,
+  **Vertrieb**, **Status**, **Machbarkeit**, **Monat**.
+- AUSW-3: Je Bericht: Anfragen, Anteil, angeboten, gewonnen, verloren, kein Angebot, offen, Umsatz p. a. angefragt,
+  Anteil Umsatz, gewonnener Umsatz, Trefferquote, Absage-/Verlustquote; Balkendiagramm umschaltbar nach Anzahl,
+  Umsatz oder Absagen + Verluste.
+- AUSW-4: Export je Bericht als CSV (Excel, deutsches Zahlenformat), Druck/PDF der Seite (auch „Alle Berichte“).
+- AUSW-5: Lesezugriff für alle Rollen inkl. Gesellschafter.
+
 ## 7. Nachkalkulation
 - NK-1: Zu jeder Kalkulation beliebig viele Nachkalkulationen (z. B. je Fertigungsauftrag oder Zeitraum) mit
   Referenz, Zeitraum, Bemerkung und Bezug auf eine Version.
@@ -472,6 +498,8 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 - NFA-9: **Rechentests**: jeder Rechenweg (Schema, Zuschläge, Staffeln, Mehrkomponenten, Familienwerkzeug,
   Amortisation, Verpackung/Transport, CO₂, Nachkalkulation, Stundensatz, Artikelanalyse) ist gegen eine
   Handrechnung automatisiert getestet; Tests laufen bei jedem Push, ein Fehler stoppt den Build.
+- NFA-10: **Seitenhilfe**: oben auf jeder Seite eine kurze Anleitung „So arbeiten Sie hier“ (Zweck der Seite und
+  Vorgehen in Schritten); auf-/zuklappbar, Zustand je Seite und Browser gemerkt; nicht im Druck.
 - NFA-7: Fußzeile auf allen Seiten inkl. Anmeldung: „© <Jahr> SB/Thinkworks · KlarCRM · built with clarity“ (nicht im Druck).
 
 ## 9. Technik
@@ -517,3 +545,4 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.12 | 14.11.2026 | **Montagelinie & weitere Arbeitsgänge** (KAL-28g, AUS-6): 1 … N Anlagen je Artikel mit eigenem Stundensatz, Takt, Personal, Rüsten und kW; Maschinenart in den Stammdaten (STM-18). **Zukaufteile-Stammdaten** (STM-19/20) und Zukaufteile-Liste je Kalkulation mit Menge und CO₂ (KAL-28h). Neue Tabelle `purchased_parts` und Spalte `machines.kind` werden automatisch angelegt; gespeicherte Versionen rechnen unverändert. Rechentests ergänzt. |
 | 1.13 | 15.11.2026 | **Zukaufteile**: optional eigener MGK-Satz (KAL-28i) und optionale **Nebenkalkulation für teure Zukaufteile** mit eigenem MGK, Qualität, Ausschuss und optionalem Aufschlag statt voller Kalkulation (KAL-28j); Standardsätze in den Parametern (STM-21). Ohne Haken/Satz rechnen Kalkulationen wie bisher. Rechentests ergänzt; breite Tabellen in der Kalkulation scrollen jetzt waagerecht. |
 | 1.14 | 15.11.2026 | **Personal in Prozent je Maschine**: Bediener mit Schnellwahl 10–120 % oder freiem Satz, zusätzlich **Mitarbeiter Handling** und **Mitarbeiter Automatisierung** (je 0 … 100 %, eigener Lohnsatz), Standards je Maschine; **Rüsten** mit eigener Einrichter-Zeit und Automatisierer-Zeit je Rüstvorgang (Minuten) und Aufschlüsselung der Rüstkosten. Neue Felder starten mit 0 bzw. leer, gespeicherte Versionen rechnen unverändert. Neue Spalten `machines.handling_pct`, `machines.automation_pct` werden automatisch angelegt. |
+| 1.15 | 15.11.2026 | **Auswertungen** (Kap. 6.9, AUSW-1 … 5): Berichte nach Maschinengröße, Kunde (Anteil an Anfragen und Umsatz), Absage- und Verlustgründen, Maschine, Werkstoff, Vertrieb, Status, Machbarkeit und Monat mit Filtern, CSV und Druck. **Seitenhilfe** auf jeder Seite (NFA-10). **Jahresabschläge** mit Vorab-Einrechnung und eigenen Abschlägen für Zukaufteile der Nebenkalkulation (KAL-28k). **Vorserienpreis** für Kleinstmengen inkl. Angebotsposition (KAL-28l). Rechentests ergänzt; gespeicherte Versionen rechnen unverändert. |

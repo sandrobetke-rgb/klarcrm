@@ -18,6 +18,8 @@ import Calculations from './pages/Calculations'
 import CalculationEditor from './pages/CalculationEditor'
 import MasterData from './pages/MasterData'
 import Utilization from './pages/Utilization'
+import Reports from './pages/Reports'
+import PageHelp from './components/PageHelp'
 import AuditLog from './pages/AuditLog'
 import CompanySettings from './pages/CompanySettings'
 import NotificationBell from './components/NotificationBell'
@@ -35,6 +37,7 @@ function Layout() {
     ['/aktivitaeten', 'Aktivitäten', '✓'],
     ['/kalkulationen', 'Kalkulation', '∑'],
     ['/auslastung', 'Auslastung', '▤'],
+    ['/auswertungen', 'Auswertungen', '◔'],
     ['/angebote', 'Angebote', '€'],
     ['/stammdaten', 'Stammdaten', '≡'],
   ]
@@ -64,6 +67,7 @@ function Layout() {
         </div>
       </aside>
       <main className="content">
+        <PageHelp />
         <Outlet />
         <Footer />
       </main>
@@ -90,6 +94,7 @@ function App() {
             <Route path="/kalkulationen/:id" element={<CalculationEditor />} />
             <Route path="/stammdaten" element={<MasterData />} />
             <Route path="/auslastung" element={<Utilization />} />
+            <Route path="/auswertungen" element={<Reports />} />
             <Route path="/protokoll" element={<AuditLog />} />
             <Route path="/einstellungen" element={<CompanySettings />} />
             <Route path="/benutzer" element={<Users />} />

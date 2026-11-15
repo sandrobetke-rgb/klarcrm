@@ -478,3 +478,29 @@ h1 .big-badge { font-size: 12.5px; margin-top: 0; }
 .pct-field { display: flex; gap: 8px; align-items: center; }
 .pct-field .pct-presets button { padding: 6px 9px; font-size: 12.5px; }
 .pct-field input { width: 90px; flex: none; }
+.barlist-bar.tone-bad { background: var(--critical, #c0392b); }
+.report-filters { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; padding: 14px 16px; }
+.report-filters .field { min-width: 150px; }
+.report-tabs { flex-wrap: wrap; margin: 4px 0; }
+.report-card .section-head { align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.report-card .barlist { margin: 8px 0 14px; }
+.table-wrap { overflow-x: auto; }
+.report-table td, .report-table th { white-space: nowrap; }
+.page-help { background: var(--surface-2); border: 1px solid var(--border); border-left: 3px solid var(--brand); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 16px; font-size: 13px; color: var(--text-2); }
+.page-help summary { cursor: pointer; font-weight: 600; color: var(--text); list-style: none; }
+.page-help summary::-webkit-details-marker { display: none; }
+.page-help summary::before { content: 'ℹ '; color: var(--brand); }
+.page-help[open] summary { margin-bottom: 6px; }
+.page-help ol, .page-help ul { margin: 4px 0 2px 18px; padding: 0; }
+.page-help li { margin: 2px 0; }
+.page-help p { margin: 4px 0; }
+@media print { .page-help { display: none; } }
+.year-red { display: flex; flex-wrap: wrap; gap: 8px; }
+.year-red-cell { display: flex; flex-direction: column; gap: 2px; width: 78px; font-weight: 400; }
+.year-red-cell small { color: var(--muted); }
+.result-price-sm { font-size: 20px; margin: 4px 0; }
+.page-help-wrap { padding: 20px 32px 0; max-width: 1280px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+.page-help-wrap .page-help { margin-bottom: 0; }
+.page-help-wrap + .page { padding-top: 16px; }
+.report-q { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; }
+@media print { .page-help-wrap { display: none; } }

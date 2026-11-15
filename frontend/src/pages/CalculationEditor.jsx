@@ -497,6 +497,24 @@ function CalcTab({ calc, setCalc, master }) {
             {F({ k: 'rebate_pct', label: 'Rabatt', unit: '%', step: 0.5 })}
           </Section>
 
+          <Section title="Jahresabschläge (Produktivität an den Kunden)">
+            <YearReductions inputs={inputs} setInputs={setInputs} r={r} />
+          </Section>
+
+          <Section title="Vorserienpreis">
+            {F({ k: 'preseries_qty', label: 'Vorserienmenge gesamt', unit: 'Stk', step: 50, hint: '0 = kein Vorserienpreis' })}
+            {Number(inputs.preseries_qty) > 0 && <>
+              {F({ k: 'preseries_lot', label: 'Losgröße Vorserie', unit: 'Stk', step: 50, hint: 'leer = gesamte Menge in einem Los' })}
+              {F({ k: 'preseries_setup_h', label: 'Rüstzeit Vorserie', unit: 'h', step: 0.25, hint: `leer = wie Serie (${num(inputs.setup_time_h, 2)} h)` })}
+              {F({ k: 'preseries_productivity_pct', label: 'Produktivität Vorserie', unit: '%', hint: `leer = wie Serie (${num(inputs.productivity_pct, 0)} %)` })}
+              {F({ k: 'preseries_scrap_pct', label: 'Ausschuss Vorserie', unit: '%', step: 0.5, hint: `leer = wie Serie (${num(inputs.scrap_pct, 1)} %)` })}
+              {F({ k: 'preseries_surcharge_pct', label: 'Aufschlag Vorserie', unit: '%', step: 1, hint: 'z. B. für Handling, Sonderprüfung' })}
+              {r.preseries && <Info>Vorserienpreis: <b>{eur4(r.preseries.unit_price)} /Stk</b> · {num2(r.preseries.price_per_1000)} € je 1.000 ·
+                gesamt {eur(r.preseries.total)} · Rüsten {fix4(r.preseries.setup_per_piece)} €/Stk · <b>{r.preseries.delta_pct > 0 ? '+' : ''}{num(r.preseries.delta_pct, 1)} %</b> ggü. Serie.
+                Werkzeug-Amortisation bleibt in der Vorserie unberücksichtigt; erscheint als eigene Angebotsposition.</Info>}
+            </>}
+          </Section>
+
           <ListSection title="Zusatzpositionen" hint="Peripherie, Nacharbeit, Bedrucken, Sonderkosten … (Verpackung und Transport oben im eigenen Bereich)"
             rows={inputs.extras} onChange={(v) => set('extras', v)}
             empty={{ label: '', amount: 0, basis: 'stueck', category: 'fertigung' }}
@@ -724,6 +742,39 @@ function ComponentsEditor({ rows, materials, onChange, result }) {
   )
 }
 
+function YearReductions({ inputs, setInputs, r }) {
+  const years = Math.min(Math.max(Math.ceil(Number(inputs.project_years) || 1), 1), 15)
+  const side = (inputs.purchased_items || []).some((x) => x.side)
+  const row = (key, label) => (
+    <div className="field span-3"><label>{label} <span className="unit">% Abschlag ab Jahr 2</span></label>
+      <div className="year-red">
+        {Array.from({ length: years - 1 }, (_, n) => (
+          <label key={n} className="year-red-cell"><small>Jahr {n + 2}</small>
+            <input type="number" step="any" className="num" value={(inputs[key] || [])[n] ?? ''} placeholder="0"
+              onChange={(e) => {
+                const t = [...(inputs[key] || [])]
+                while (t.length < n) t.push(0)
+                t[n] = e.target.value === '' ? '' : Number(e.target.value)
+                while (t.length && (t[t.length - 1] === '' || t[t.length - 1] == null)) t.pop()
+                setInputs((x) => ({ ...x, [key]: t }))
+              }} /></label>))}
+        {years < 2 && <small className="hint">Projektlaufzeit unter „Mengen“ auf mindestens 2 Jahre setzen.</small>}
+      </div></div>)
+  return <>
+    {row('price_reductions', 'Abschläge Serienpreis')}
+    {side && row('side_price_reductions', 'Abschläge Zukaufteile (Nebenkalkulation)')}
+    <div className="field"><label>Bezug der Abschläge</label>
+      <select value={inputs.price_reductions_basis || 'jahr1'} onChange={(e) => setInputs((x) => ({ ...x, price_reductions_basis: e.target.value }))}>
+        <option value="jahr1">gegenüber Preis Jahr 1</option><option value="vorjahr">gegenüber Vorjahr (fortlaufend)</option>
+      </select></div>
+    <div className="field field-check"><label htmlFor="in-preload">Abschläge vorab einrechnen</label>
+      <input id="in-preload" type="checkbox" checked={inputs.price_reductions_preload !== false}
+        onChange={(e) => setInputs((x) => ({ ...x, price_reductions_preload: e.target.checked }))} /></div>
+    <small className="hint span-3" style={{ gridColumn: '1 / -1' }}>Vorab einrechnen: Der Preis im 1. Jahr wird so angehoben, dass der Durchschnitt über die Laufzeit dem kalkulierten Preis entspricht
+      {r.price_years?.length ? <> (hier <b>+{num(r.preload_pct, 2)} %</b>)</> : null}. Zukaufteile in der Nebenkalkulation können eigene Abschläge haben (z. B. 0 %, wenn der Lieferant nicht mitgeht).</small>
+  </>
+}
+
 function Results({ r, inputs, set, canWrite, calc, versionNo }) {
   return (
     <div className="stack">
@@ -760,6 +811,28 @@ function Results({ r, inputs, set, canWrite, calc, versionNo }) {
           </tbody>
         </table>
       </div>
+
+      {r.price_years?.length > 0 && (
+        <div className="card">
+          <h3>Serienpreis je Lieferjahr</h3>
+          <table className="table table-compact">
+            <thead><tr><th>Jahr</th><th className="num">€/Stk</th><th className="num">€/1.000</th>{r.price_side_part > 0 && <th className="num">davon Zukauf NK</th>}<th className="num">Abschlag</th><th className="num">Umsatz</th></tr></thead>
+            <tbody>{r.price_years.map((y) => (
+              <tr key={y.year}><td className="nowrap">Jahr {y.year}</td><td className="num"><b>{fix4(y.price)}</b></td><td className="num">{num2(y.price * 1000)}</td>
+                {r.price_side_part > 0 && <td className="num">{fix4(y.side)}</td>}
+                <td className="num">{y.year === 1 ? '–' : `−${num((1 - y.factor) * 100, 1)} %`}</td><td className="num">{eur(y.revenue)}</td></tr>))}</tbody>
+          </table>
+          <small className="hint">Kalkulierter Preis {eur4(r.unit_price)}{r.preload_pct ? <> · Jahr 1 inkl. Vorab-Aufschlag +{num(r.preload_pct, 2)} %</> : null} · Projektumsatz {eur(r.project_revenue_reductions)}. Im Angebot wird der Preis für Jahr 1 und die Preisentwicklung ausgewiesen.</small>
+        </div>
+      )}
+
+      {r.preseries && (
+        <div className="card">
+          <h3>Vorserienpreis</h3>
+          <p className="result-price-sm"><b>{eur4(r.preseries.unit_price)}</b> /Stk · {num2(r.preseries.price_per_1000)} € je 1.000</p>
+          <small className="hint">für {num(r.preseries.qty)} Stk in Losen à {num(r.preseries.lot_size)} · {r.preseries.delta_pct > 0 ? '+' : ''}{num(r.preseries.delta_pct, 1)} % ggü. Serienpreis · gesamt {eur(r.preseries.total)}</small>
+        </div>
+      )}
 
       <Co2Card co2={r.co2} lot={inputs.lot_size} annual={inputs.annual_volume} />
 
@@ -883,6 +956,7 @@ function VersionsTab({ calc }) {
       return `${x.label}: ${num(x.amount ?? x.price ?? x.cost ?? 0, 2)}`
     }).join('; ') || '–'
     if (v === null || v === '' || v === undefined) return '–'
+    if (typeof v === 'boolean') return v ? 'ja' : 'nein'
     return typeof v === 'number' ? num(v, 4) : String(v)
   }
   return (

@@ -393,7 +393,9 @@ L = {
            "lotw": "Los", "pack": "Verpackung", "perunit": "Stk je VE", "delivery": "Lieferbedingung", "exw": "ab Werk",
            "dap": "frei Haus", "lifecycle": "Lebensweg", "recycled": "Rezyklatanteil", "marking": "Werkstoffkennzeichnung",
            "mono": "Monomaterial", "co2": "CO₂-Fußabdruck (Cradle-to-Gate)", "of_which": "davon Scope 1+2",
-           "once": "einmalig", "bulk": "Sammelangebot", "articles": "Artikel"},
+           "once": "einmalig", "bulk": "Sammelangebot", "articles": "Artikel",
+           "years": "Serienpreis je 1.000 Stk nach Lieferjahr", "year": "Jahr", "pre": "Vorserienpreis",
+           "pre_note": "gilt für Vorserienmengen bis", "pre_lot": "je Los"},
     "en": {"your_no": "Your part no.", "material": "Material", "calc": "Costing", "per1000": "Price per 1,000 pcs",
            "lot": "Lot size", "pcs": "pcs", "clause": "Price adjustment clause: material basis", "as_of": "as of", "index": "index",
            "adjust": "adjustment if changed by more than ±", "amort": "Incl. tool amortisation", "per1000s": "per 1,000 pcs",
@@ -401,7 +403,9 @@ L = {
            "lotw": "Lot", "pack": "Packaging", "perunit": "pcs per unit", "delivery": "Delivery terms", "exw": "ex works",
            "dap": "delivered", "lifecycle": "Life cycle", "recycled": "recycled content", "marking": "material marking",
            "mono": "mono-material", "co2": "Carbon footprint (cradle-to-gate)", "of_which": "thereof scope 1+2",
-           "once": "one-off", "bulk": "Combined quotation", "articles": "items"},
+           "once": "one-off", "bulk": "Combined quotation", "articles": "items",
+           "years": "Series price per 1,000 pcs by delivery year", "year": "Year", "pre": "Pre-series price",
+           "pre_note": "valid for pre-series quantities up to", "pre_lot": "per lot"},
 }
 
 
@@ -435,7 +439,10 @@ def build_quote(db: Session, pairs: list, user: User, lang: str = "de") -> Quote
         mats = [inp.get('material_name') or '–'] + [c.get("material_name") or c.get("label") or "" for c in inp.get("components") or []]
         art += f"\n{t['material']}: {' + '.join(m for m in mats if m)}" + (f" ({len(mats)}K)" if len(mats) > 1 else "") + \
             f" · {t['calc']} {calc.number} V{ver.version_no}"
-        art += f"\n{t['per1000']}: {nf(r['price_per_1000'])} € · {t['lot']} {nf(float(inp.get('lot_size') or 0), 0)} {t['pcs']}"
+        p1000 = (r.get("price_year1") or r["unit_price"]) * 1000 if r.get("price_years") else r["price_per_1000"]
+        art += f"\n{t['per1000']}: {nf(p1000)} € · {t['lot']} {nf(float(inp.get('lot_size') or 0), 0)} {t['pcs']}"
+        if r.get("price_years"):
+            art += f"\n{t['years']}: " + " · ".join(f"{t['year']} {y['year']}: {nf(y['price'] * 1000)} €" for y in r["price_years"])
         if float(inp.get("material_price_kg") or 0) > 0:
             st_ = get_settings(db)
             mat = db.get(Material, inp.get("material_id")) if inp.get("material_id") else None
@@ -475,7 +482,13 @@ def build_quote(db: Session, pairs: list, user: User, lang: str = "de") -> Quote
         if co2.get("active") and inp.get("co2_on_quote", True):
             art += (f"\n{t['co2']}: {nf(co2['cradle_to_gate'] * 1000, 1)} g CO₂e/{t['pcs']} · "
                     f"{nf(co2['cradle_to_gate'] * 1000, 2)} kg {t['per1000s']} · {t['of_which']} {nf(co2['scope12'] * 1000, 1)} g/{t['pcs']}")
-        items.append(dict(description=art, quantity=r["annual_volume"], unit="Stk", unit_price=r["unit_price"]))
+        items.append(dict(description=art, quantity=r["annual_volume"], unit="Stk",
+                          unit_price=r.get("price_year1") if r.get("price_years") else r["unit_price"]))
+        pre = r.get("preseries")
+        if pre:
+            items.append(dict(description=f"{t['pre']} – {calc.article_name}\n{t['pre_note']} {nf(pre['qty'], 0)} {t['pcs']}"
+                                          f" ({t['lot']} {nf(pre['lot_size'], 0)} {t['pcs']}) · {nf(pre['price_per_1000'])} € {t['per1000s']}",
+                              quantity=pre["qty"], unit="Stk", unit_price=pre["unit_price"]))
         for o in [o for o in r["one_time"] if o["price"]]:
             label = o["label"] if single else f"{o['label']} – {calc.article_name}"
             one_time.append(dict(description=f"{label} ({t['once']})", quantity=1, unit="psch", unit_price=o["price"]))
