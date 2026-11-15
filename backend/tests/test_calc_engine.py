@@ -236,10 +236,10 @@ def test_vorserienpreis():
 
 def test_preis_jahr1_manuell_ab_jahr2_serienpreis():
     r = compute({**BASE, "project_years": 4, "price_year1_mode": "manuell", "price_year1_manual": 0.36,
-                 "price_reductions": [0, 2, 4]})
+                 "price_reductions": [0, 2, 4], "price_reductions_preload": False})
     p = [y["price"] for y in r["price_years"]]
     assert p == pytest.approx([0.36, 0.315, 0.315 * 0.98, 0.315 * 0.96], abs=1e-4)
-    assert r["price_year1"] == 0.36 and r["preload_pct"] > 0
+    assert r["price_year1"] == 0.36 and r["preload_pct"] == 0
     # ohne Abschläge: Jahr 1 manuell, danach Serienpreis
     r2 = compute({**BASE, "project_years": 3, "price_year1_mode": "manuell", "price_year1_manual": 0.4})
     assert [y["price"] for y in r2["price_years"]] == pytest.approx([0.4, 0.315, 0.315], abs=1e-4)
@@ -250,3 +250,24 @@ def test_vorserienpreis_manuell():
     p = r["preseries"]
     assert p["manual"] and p["unit_price"] == 1.25 and p["calc_price"] > 0
     assert p["margin_pct"] == pytest.approx((1.25 - p["self_cost"]) / 1.25 * 100, abs=0.1)
+
+
+
+def test_abschlaege_vorab_draufschlagen_kein_minusgeschaeft():
+    base = {**BASE, "project_years": 4, "price_reductions": [2, 4, 6]}
+    f = [1, 0.98, 0.96, 0.94]
+    # Ø-neutral: Durchschnitt = kalkulierter Preis
+    r = compute(base)
+    assert sum(y["price"] for y in r["price_years"]) / 4 == pytest.approx(0.315, abs=1e-4)
+    # letztes Jahr: kein Jahr unter dem kalkulierten Preis
+    r2 = compute({**base, "price_reductions_preload_mode": "letztes_jahr"})
+    assert r2["price_years"][-1]["price"] == pytest.approx(0.315, abs=1e-4)
+    assert r2["price_years"][0]["price"] == pytest.approx(0.315 / 0.94, abs=1e-4)
+    assert not any(y["below_calc"] for y in r2["price_years"])
+    # manueller Anlaufpreis: Vorab-Einrechnung auf die Serienjahre 2 … n
+    r3 = compute({**base, "price_reductions": [0, 2, 4], "price_year1_mode": "manuell", "price_year1_manual": 0.4})
+    p = [y["price"] for y in r3["price_years"]]
+    assert p[0] == 0.4
+    assert sum(p[1:]) / 3 == pytest.approx(0.315, abs=1e-4)
+    assert r3["price_years"][1]["margin_pct"] == pytest.approx((p[1] - r3["self_cost"]) / p[1] * 100, abs=0.05)
+    assert f  # Faktoren zur Dokumentation

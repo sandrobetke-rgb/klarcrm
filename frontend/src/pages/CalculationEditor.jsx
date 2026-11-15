@@ -793,11 +793,17 @@ function YearReductions({ inputs, setInputs, r }) {
         <input type="number" step="any" className="num" value={inputs.price_year1_manual ?? ''}
           onChange={(e) => setInputs((x) => ({ ...x, price_year1_manual: e.target.value === '' ? '' : Number(e.target.value) }))} />
         <small className="hint">kalkulierter Serienpreis {eur4(r.unit_price)}</small></div>
-    ) : (
-      <div className="field field-check"><label htmlFor="in-preload">Abschläge vorab in Jahr 1 einrechnen</label>
-        <input id="in-preload" type="checkbox" checked={inputs.price_reductions_preload !== false}
-          onChange={(e) => setInputs((x) => ({ ...x, price_reductions_preload: e.target.checked }))} /></div>
-    )}
+    ) : <div className="field" />}
+    <div className="field"><label>Abschläge vorab draufschlagen</label>
+      <select value={inputs.price_reductions_preload === false ? 'nein' : (inputs.price_reductions_preload_mode || 'durchschnitt')}
+        onChange={(e) => {
+          const v = e.target.value
+          setInputs((x) => ({ ...x, price_reductions_preload: v !== 'nein', price_reductions_preload_mode: v === 'nein' ? x.price_reductions_preload_mode : v }))
+        }}>
+        <option value="durchschnitt">ja, Ø Laufzeit = Kalk.</option>
+        <option value="letztes_jahr">ja, letztes Jahr ≥ Kalk.</option>
+        <option value="nein">nein</option>
+      </select></div>
     <div className="field span-3">
       <table className="table table-compact year-table">
         <thead><tr><th>Jahr</th><th className="num">Abschlag ggü. Vorjahr %</th><th className="num">vom Serienpreis %</th>
@@ -829,8 +835,9 @@ function YearReductions({ inputs, setInputs, r }) {
       </table>
       <small className="hint">Abschlag in einer der beiden Spalten eintragen – die andere rechnet mit (z. B. 2 % ggü. Vorjahr ↔ 98 % vom Serienpreis).
         Jahre ohne Abschlag bleiben auf 100 % bzw. dem Vorjahreswert. Anzahl Jahre = Projektlaufzeit unter „Mengen“ ({years} J.).
-        {manual ? ' Serienpreis = kalkulierter Preis; Jahr 1 = Ihr Anlaufpreis.' : r.preload_pct ? ` Vorab-Einrechnung: Jahr 1 +${num(r.preload_pct, 2)} %, Ø über die Laufzeit = kalkulierter Preis.` : ''}
+        {r.preload_pct ? ` Vorab draufgeschlagen: Serienpreis +${num(r.preload_pct, 2)} %${manual ? ' (ab Jahr 2; Jahr 1 = Ihr Anlaufpreis)' : ''}.` : manual ? ' Jahr 1 = Ihr Anlaufpreis, ab Jahr 2 kalkulierter Serienpreis.' : ''}
         {side ? ' Zukaufteile der Nebenkalkulation haben eigene Abschläge (z. B. 0 %, wenn der Lieferant nicht mitgeht).' : ''}</small>
+      {r.years_below_cost?.length > 0 && <div className="warn-box">⚠ Minusgeschäft in Jahr {r.years_below_cost.join(', ')}: Preis unter den Selbstkosten – Abschläge vorab draufschlagen oder Preis anpassen.</div>}
     </div>
   </>
 }
@@ -876,11 +883,12 @@ function Results({ r, inputs, set, canWrite, calc, versionNo }) {
         <div className="card">
           <h3>Serienpreis je Lieferjahr</h3>
           <table className="table table-compact">
-            <thead><tr><th>Jahr</th><th className="num">€/Stk</th><th className="num">€/1.000</th>{r.price_side_part > 0 && <th className="num">davon Zukauf NK</th>}<th className="num">vom Serienpreis</th><th className="num">Umsatz</th></tr></thead>
+            <thead><tr><th>Jahr</th><th className="num">€/Stk</th><th className="num">€/1.000</th>{r.price_side_part > 0 && <th className="num">davon Zukauf NK</th>}<th className="num">vom Serienpreis</th><th className="num">Marge</th><th className="num">Umsatz</th></tr></thead>
             <tbody>{r.price_years.map((y) => (
               <tr key={y.year}><td className="nowrap">Jahr {y.year}</td><td className="num"><b>{fix4(y.price)}</b></td><td className="num">{num2(y.price * 1000)}</td>
                 {r.price_side_part > 0 && <td className="num">{fix4(y.side)}</td>}
-                <td className="num">{y.year === 1 ? (y.manual ? 'manuell' : '–') : `${num(y.factor * 100, 2)} %`}</td><td className="num">{eur(y.revenue)}</td></tr>))}</tbody>
+                <td className="num">{y.year === 1 ? (y.manual ? 'manuell' : '–') : `${num(y.factor * 100, 2)} %`}</td>
+                <td className={`num ${y.margin_pct < 0 ? 'text-critical' : ''}`}>{num(y.margin_pct, 1)} %</td><td className="num">{eur(y.revenue)}</td></tr>))}</tbody>
           </table>
           <small className="hint">Kalkulierter Serienpreis {eur4(r.unit_price)}{r.price_year1_manual ? <> · Jahr 1 manueller Anlaufpreis (+{num(r.preload_pct, 2)} %)</> : r.preload_pct ? <> · Jahr 1 inkl. Vorab-Aufschlag +{num(r.preload_pct, 2)} %</> : null} · Projektumsatz {eur(r.project_revenue_reductions)}. Im Angebot wird der Preis für Jahr 1 und die Preisentwicklung ausgewiesen.</small>
         </div>

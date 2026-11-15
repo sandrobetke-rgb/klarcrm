@@ -115,7 +115,8 @@ DEFAULT_INPUTS = {
     # Zukaufteile aus Stammdaten: [{part_id, part_no, name, qty, price_per_piece, co2_kg_per_piece}]
     # Jährliche Preisabschläge (Produktivität an den Kunden) ab Jahr 2 in %, z. B. [2, 3, 3]
     "price_reductions": [], "price_reductions_basis": "jahr1",  # "jahr1" = ggü. Preis Jahr 1, "vorjahr" = ggü. Vorjahr
-    "price_reductions_preload": True,   # Abschläge vorab einrechnen (Ø-Preis über Laufzeit = kalkulierter Preis)
+    "price_reductions_preload": True,   # Abschläge vorab einrechnen
+    "price_reductions_preload_mode": "durchschnitt",  # "durchschnitt" (Ø = kalk. Preis) | "letztes_jahr" (kein Jahr darunter)
     "side_price_reductions": [],        # eigene Abschläge für Zukaufteile in der Nebenkalkulation
     # Preis Jahr 1: "kalkuliert" (= Serienpreis, optional mit Vorab-Einrechnung) oder "manuell" (fester Anlaufpreis;
     # ab Jahr 2 gilt der kalkulierte Serienpreis × Faktor des Jahres)
@@ -224,8 +225,20 @@ def _factors(reds: list, years: int, basis: str) -> list:
     return out
 
 
+def _preload(f: list, idx: list, mode: str) -> float:
+    """Aufschlag-Faktor, damit die Abschläge vorab eingerechnet sind.
+    durchschnitt: Ø der Jahre = Ausgangspreis; letztes_jahr: kein Jahr unter dem Ausgangspreis."""
+    vals = [f[n] for n in idx]
+    if not vals:
+        return 1.0
+    if mode == "letztes_jahr":
+        return 1 / min(vals) if min(vals) > 0 else 1.0
+    return len(vals) / sum(vals) if sum(vals) else 1.0
+
+
 def _price_years(i: dict, res: dict) -> dict:
-    """Serienpreis je Jahr mit Abschlägen; Zukaufteile der Nebenkalkulation mit eigenen Abschlägen."""
+    """Serienpreis je Lieferjahr: optional manueller Anlaufpreis Jahr 1, Abschläge je Jahr (vorab eingerechnet),
+    Zukaufteile der Nebenkalkulation mit eigenen Abschlägen. Marge je Jahr gegen die Selbstkosten."""
     main_reds = [r for r in i.get("price_reductions") or [] if r not in (None, "")]
     side_reds = [r for r in i.get("side_price_reductions") or [] if r not in (None, "")]
     manual = i.get("price_year1_mode") == "manuell" and _f(i.get("price_year1_manual")) > 0
@@ -236,22 +249,30 @@ def _price_years(i: dict, res: dict) -> dict:
     fm, fs = _factors(main_reds, years, basis), _factors(side_reds, years, basis)
     side = _f(res.get("price_side_part"))
     main = res["unit_price"] - side
-    preload = i.get("price_reductions_preload", True) not in (False, "false", 0) and not manual
-    km = years / sum(fm) if preload and sum(fm) else 1.0
-    ks = years / sum(fs) if preload and sum(fs) else 1.0
-    annual = _f(i["annual_volume"])
+    preload = i.get("price_reductions_preload", True) not in (False, "false", 0)
+    mode = i.get("price_reductions_preload_mode") or "durchschnitt"
+    idx = list(range(1, years)) if manual else list(range(years))  # bei manuellem Anlaufpreis: Jahre ab 2
+    km = _preload(fm, idx, mode) if preload else 1.0
+    ks = _preload(fs, idx, mode) if preload else 1.0
+    annual, sk = _f(i["annual_volume"]), _f(res.get("self_cost"))
     rows = []
     for y in range(years):
         pm, ps = main * km * fm[y], side * ks * fs[y]
         if manual and y == 0:  # fester Anlaufpreis Jahr 1
             pm, ps = _f(i["price_year1_manual"]) - side, side
-        rows.append({"year": y + 1, "price": round(pm + ps, 4), "main": round(pm, 4), "side": round(ps, 4),
-                     "factor": round(fm[y], 4), "factor_side": round(fs[y], 4), "revenue": round((pm + ps) * annual, 2),
-                     "manual": bool(manual and y == 0)})
-    p1 = _f(i["price_year1_manual"]) if manual else main * km + side * ks
+        price = pm + ps
+        rows.append({"year": y + 1, "price": round(price, 4), "main": round(pm, 4), "side": round(ps, 4),
+                     "factor": round(fm[y], 4), "factor_side": round(fs[y], 4), "revenue": round(price * annual, 2),
+                     "manual": bool(manual and y == 0),
+                     "margin_pct": round((price - sk) / price * 100, 2) if price else 0,
+                     "profit": round((price - sk) * annual, 2), "below_calc": price < res["unit_price"] - 1e-9})
+    p1 = rows[0]["price"] if manual else main * km + side * ks
+    series_uplift = (main * km + side * ks) / res["unit_price"] - 1 if res["unit_price"] else 0
     return {"price_years": rows, "price_year1": round(p1, 4), "price_year1_manual": manual,
-            "preload_pct": round((p1 / res["unit_price"] - 1) * 100, 2) if res["unit_price"] else 0,
-            "project_revenue_reductions": round(sum(r["revenue"] for r in rows), 2)}
+            "preload_pct": round(series_uplift * 100, 2),
+            "preload_mode": mode if preload else None,
+            "project_revenue_reductions": round(sum(r["revenue"] for r in rows), 2),
+            "years_below_cost": [r["year"] for r in rows if r["margin_pct"] < 0]}
 
 
 def _preseries(i: dict, res: dict) -> dict | None:

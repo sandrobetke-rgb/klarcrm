@@ -111,7 +111,7 @@ export const INPUT_LABELS = {
   lot_tiers: ['Staffel-Losgrößen', 'Stk'], volume_tiers: ['Staffel-Jahresmengen', 'Stk'],
   components: ['Weitere Komponenten', ''], operations: ['Weitere Arbeitsgänge', ''], purchased_items: ['Zukaufteile (Liste)', ''], purchased_mgk_pct: ['MGK Zukaufteile', '%'],
   price_reductions: ['Jahresabschläge Serienpreis', '% ab Jahr 2'], side_price_reductions: ['Jahresabschläge Zukaufteile NK', '% ab Jahr 2'],
-  price_reductions_basis: ['Bezug Jahresabschläge', ''], price_reductions_preload: ['Abschläge vorab eingerechnet', ''],
+  price_reductions_basis: ['Bezug Jahresabschläge', ''], price_reductions_preload: ['Abschläge vorab eingerechnet', ''], price_reductions_preload_mode: ['Vorab-Einrechnung', ''],
   preseries_qty: ['Vorserienmenge', 'Stk'], preseries_price_manual: ['Vorserienpreis fest', '€/Stk'],
   price_year1_mode: ['Preis Jahr 1', ''], price_year1_manual: ['Preis Jahr 1 manuell', '€/Stk'], preseries_lot: ['Losgröße Vorserie', 'Stk'], preseries_setup_h: ['Rüstzeit Vorserie', 'h'],
   preseries_productivity_pct: ['Produktivität Vorserie', '%'], preseries_scrap_pct: ['Ausschuss Vorserie', '%'], preseries_surcharge_pct: ['Aufschlag Vorserie', '%'],
