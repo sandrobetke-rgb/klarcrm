@@ -159,3 +159,28 @@ def test_zukaufteile_liste_mit_co2():
     r0 = compute({**BASE, "purchased_parts": 0.01})
     assert r["co2"]["purchased"] - r0["co2"]["purchased"] == pytest.approx(0.014, abs=1e-6)
     assert r["co2"]["active"]
+
+
+def test_zukaufteile_eigener_mgk_satz():
+    items = [{"name": "Buchse", "qty": 2, "price_per_piece": 0.05}]
+    r = compute({**BASE, "purchased_items": items, "purchased_mgk_pct": 2})
+    assert r["values"]["mgk_purchased"] == pytest.approx(0.1 * 0.02, abs=2e-6)
+    assert r["values"]["mgk"] == pytest.approx((20 + 4 / 4) / 1000 * 3.0 * 0.06, abs=2e-6)
+    # ohne eigenen Satz: eine gemeinsame MGK-Zeile wie bisher
+    r2 = compute({**BASE, "purchased_items": items})
+    assert r2["values"]["mgk_purchased"] == 0
+    assert r2["values"]["mgk"] == pytest.approx(((20 + 4 / 4) / 1000 * 3.0 + 0.1) * 0.06, abs=2e-6)
+
+
+def test_nebenkalkulation_teure_zukaufteile():
+    item = {"name": "Platine", "qty": 1, "price_per_piece": 4.0, "co2_kg_per_piece": 0.5}
+    side = {"side_mgk_pct": 3, "side_quality_pct": 1, "side_scrap_pct": 1, "side_markup_pct": 2}
+    r = compute({**BASE, **side, "purchased_items": [{**item, "side": True}]})
+    sk_side = 4.0 * (1 + 0.03 + 0.01) / 0.99
+    assert r["purchased_side"]["self_cost"] == pytest.approx(sk_side, abs=2e-6)
+    # Hauptkalkulation unverändert, Nebenkalkulation nur mit eigenen Zuschlägen obenauf
+    assert r["unit_price"] == pytest.approx(0.315 + sk_side * 1.02, abs=1e-4)
+    assert r["values"]["purchased"] == 0
+    full = compute({**BASE, "purchased_items": [item]})
+    assert full["unit_price"] > r["unit_price"]
+    assert r["co2"]["purchased"] == pytest.approx(0.5, abs=1e-6)

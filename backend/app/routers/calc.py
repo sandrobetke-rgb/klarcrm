@@ -79,6 +79,8 @@ def read_settings(db: Session = Depends(get_db), _: User = Depends(can_read)):
 def write_settings(data: dict, db: Session = Depends(get_db), _: User = Depends(admin_only)):
     current = get_settings(db)
     clean = {k: float(v) for k, v in data.items() if k in DEFAULT_SETTINGS and v not in (None, "")}
+    if "purchased_mgk_pct" in data and data["purchased_mgk_pct"] in (None, ""):
+        clean["purchased_mgk_pct"] = None  # leer = wie MGK
     row = db.get(CalcSettings, 1)
     row.data = {**current, **clean}
     db.commit()
@@ -91,8 +93,9 @@ def default_inputs(db: Session) -> dict:
     for k in ("labor_rate_h", "setup_rate_h", "assembly_rate_h", "mgk_pct", "fgk_pct", "scrap_pct", "vwgk_pct",
               "vtgk_pct", "pm_pct", "quality_pct", "toolshop_pct", "profit_pct", "cash_discount_pct", "rebate_pct", "productivity_pct",
               "assembly_productivity_pct", "setup_time_h", "setup_persons", "startup_scrap_pcs",
-              "co2_grid_kg_kwh", "co2_scope1_kg_h", "co2_masterbatch_kg_kg", "co2_transport_kg_tkm"):
-        inp[k] = st[k]
+              "co2_grid_kg_kwh", "co2_scope1_kg_h", "co2_masterbatch_kg_kg", "co2_transport_kg_tkm",
+              "purchased_mgk_pct", "side_mgk_pct", "side_quality_pct", "side_scrap_pct", "side_markup_pct"):
+        inp[k] = st.get(k, DEFAULT_SETTINGS.get(k))
     inp["extras"], inp["one_time"] = [], [{"label": "Spritzgießwerkzeug", "cost": 0, "price": 0}]
     # Neue Kalkulationen: Verpackung pauschal mit Standard-%, bis Details bekannt sind; Transport-% vorbelegt
     inp["pack_mode"], inp["pack_pct"], inp["transport_pct"] = "prozent", st["pack_pct"], st["transport_pct"]

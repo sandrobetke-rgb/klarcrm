@@ -57,6 +57,9 @@ DEFAULT_SETTINGS = {
     "co2_masterbatch_kg_kg": 3.0,   # Masterbatch kg CO₂e/kg
     "co2_transport_kg_tkm": 0.10,   # Lkw kg CO₂e je Tonnenkilometer
     "pack_pct": 1.5,                # Verpackung pauschal % auf HK (wenn Details unbekannt)
+    # Zukaufteile: eigener MGK-Satz (leer = wie MGK) und Nebenkalkulation für teure Zukaufteile
+    "purchased_mgk_pct": None,
+    "side_mgk_pct": 3.0, "side_quality_pct": 1.0, "side_scrap_pct": 1.0, "side_markup_pct": 0.0,
     "space_cost_m2_year": 90.0,     # Raumkosten €/m² und Jahr (Herleitung Maschinenstundensatz)
     "energy_price_kwh": 0.20,       # Strompreis €/kWh (Herleitung Maschinenstundensatz)
     "escalation_threshold_pct": 5.0,  # Preisgleitung: Anpassung ab Materialpreisänderung ± %
@@ -101,7 +104,11 @@ DEFAULT_INPUTS = {
     "operations": [],  # [{machine_id, name, kind, rate_h, maintenance_h, cycle_s, parts_per_cycle, productivity_pct,
                        #   operator_factor, labor_rate_h, setup_h, setup_persons, power_kw}]
     # Zukaufteile aus Stammdaten: [{part_id, part_no, name, qty, price_per_piece, co2_kg_per_piece}]
-    "purchased_items": [],
+    "purchased_items": [],  # je Position optional "side": true = Nebenkalkulation statt voller Kalkulation
+    # Eigener MGK-Satz auf Zukaufteile (None = wie MGK)
+    "purchased_mgk_pct": None,
+    # Nebenkalkulation teurer Zukaufteile: nur MGK, Qualität, Ausschuss, Aufschlag – keine FGK/VwGK/VtGK/PM/Gewinn
+    "side_mgk_pct": 0.0, "side_quality_pct": 0.0, "side_scrap_pct": 0.0, "side_markup_pct": 0.0,
     # Werkzeugamortisation: Einmalkosten mit amortize=true werden über diese Stückzahl umgelegt (0 = Jahresmenge × Laufzeit)
     "amort_quantity": 0,
     # Verpackung (Vorgabe leer = 0, damit ältere Versionen unverändert rechnen)
@@ -218,11 +225,27 @@ def _compute(raw: dict) -> dict:
             continue
         qty, pr = _f(p_.get("qty"), 1), _f(p_.get("price_per_piece"))
         pitems.append({"name": p_.get("name") or p_.get("part_no") or "Zukaufteil", "part_no": p_.get("part_no") or "",
-                       "qty": qty, "price_per_piece": pr, "cost": qty * pr,
+                       "qty": qty, "price_per_piece": pr, "cost": qty * pr, "side": bool(p_.get("side")),
                        "co2": qty * _f(p_.get("co2_kg_per_piece"))})
-    purchased = _f(i["purchased_parts"]) + sum(x["cost"] for x in pitems)
+    purchased = _f(i["purchased_parts"]) + sum(x["cost"] for x in pitems if not x["side"])
     mek = mek_material + mek_components + purchased
-    mgk = mek * _f(i["mgk_pct"]) / 100
+    own_pmgk = i.get("purchased_mgk_pct") not in (None, "")
+    pmgk_pct = _f(i["purchased_mgk_pct"]) if own_pmgk else _f(i["mgk_pct"])
+    mgk = (mek - purchased) * _f(i["mgk_pct"]) / 100
+    mgk_purchased = purchased * pmgk_pct / 100
+    if not own_pmgk:  # gemeinsame Zeile wie bisher
+        mgk, mgk_purchased = mgk + mgk_purchased, 0.0
+
+    # --- Nebenkalkulation teurer Zukaufteile (wird nur mit eigenen Zuschlägen auf den Preis gerechnet)
+    side_items = [x for x in pitems if x["side"]]
+    side_cost = sum(x["cost"] for x in side_items)
+    side_mgk = side_cost * _f(i["side_mgk_pct"]) / 100
+    side_quality = side_cost * _f(i["side_quality_pct"]) / 100
+    side_base = side_cost + side_mgk + side_quality
+    side_scrap_rate = min(_f(i["side_scrap_pct"]) / 100, 0.95)
+    side_scrap = side_base / (1 - side_scrap_rate) - side_base
+    side_sk = side_base + side_scrap
+    side_markup = side_sk * _f(i["side_markup_pct"]) / 100
 
     # --- Fertigung
     share = min(max(_f(i.get("family_share_pct"), 100), 0), 100) / 100 or 1.0
@@ -283,7 +306,7 @@ def _compute(raw: dict) -> dict:
     sek_v = sum(e["per_piece"] for e in extras_detail if e["category"] == "vertrieb")
 
     # --- Herstellkosten & Ausschuss
-    hk_pre = mek + mgk + fek + fgk + quality_f + toolshop_f + sek_f
+    hk_pre = mek + mgk + mgk_purchased + fek + fgk + quality_f + toolshop_f + sek_f
     scrap_rate = min(_f(i["scrap_pct"]) / 100, 0.95)
     hk = hk_pre / (1 - scrap_rate)
     scrap = hk - hk_pre
@@ -320,7 +343,8 @@ def _compute(raw: dict) -> dict:
             transport = _f(i["transport_cost_per_delivery"]) * _f(i["transport_deliveries_per_year"]) / annual
     elif mode == "prozent":
         transport = hk * _f(i["transport_pct"]) / 100
-    sk = hk + vwgk + vtgk + pm + quality_h + toolshop_h + packaging + transport + sek_v
+    sk_main = hk + vwgk + vtgk + pm + quality_h + toolshop_h + packaging + transport + sek_v
+    sk = sk_main + side_sk
 
     # --- Werkzeugamortisation (Einmalkosten mit amortize=true, ohne Gewinnaufschlag umgelegt)
     amort_qty = _f(i.get("amort_quantity")) or annual * max(_f(i["project_years"], 1), 1)
@@ -337,7 +361,7 @@ def _compute(raw: dict) -> dict:
         profit = net - sk - amortization
         price_source = "manuell"
     else:
-        profit = sk * _f(i["profit_pct"]) / 100
+        profit = sk_main * _f(i["profit_pct"]) / 100 + side_markup
         net = sk + profit + amortization
         price = net / (1 - sd) / (1 - rb) if sd < 1 and rb < 1 else net
         price_source = "kalkuliert"
@@ -355,8 +379,10 @@ def _compute(raw: dict) -> dict:
         ("mek_material", "Material" + (" Komponente A" if comps else "") + " (inkl. Angussanteil)", "material", mek_material),
         ("mek_components", "Material weitere Komponenten (" + ", ".join(c["label"] for c in comps) + ")" if comps else
          "Material weitere Komponenten", "material", mek_components),
-        ("purchased", "Zukaufteile" + (f" ({len(pitems)} Pos.)" if pitems else ""), "material", purchased),
-        ("mgk", f"Materialgemeinkosten {_p(i['mgk_pct'])} %", "material", mgk),
+        ("purchased", "Zukaufteile" + (f" ({len(pitems) - len(side_items)} Pos.)" if len(pitems) > len(side_items) else ""),
+         "material", purchased),
+        ("mgk", f"Materialgemeinkosten {_p(i['mgk_pct'])} %" + (" auf Material" if own_pmgk else ""), "material", mgk),
+        ("mgk_purchased", f"MGK Zukaufteile {_p(pmgk_pct)} %", "material", mgk_purchased),
         ("machine", "Maschine", "fertigung", machine),
         ("maintenance", "Instandhaltung", "fertigung", maintenance),
         ("labor", "Personal Maschine", "fertigung", labor),
@@ -380,8 +406,10 @@ def _compute(raw: dict) -> dict:
         ("transport", {"palette": "Transport je Palette", "lieferung": "Transport je Lieferung",
                        "prozent": f"Transport {_p(i['transport_pct'])} % auf HK"}.get(mode, "Transport"), "gemeinkosten", transport),
         ("sek_v", "Sondereinzelkosten Vertrieb", "gemeinkosten", sek_v),
+        ("side_purchased", f"Zukaufteile Nebenkalkulation ({len(side_items)} Pos.)", "nebenkalkulation", side_sk),
         ("sk", "Selbstkosten", "summe", sk),
-        ("profit", "Gewinn" + (f" {_p(i['profit_pct'])} %" if price_source == "kalkuliert" else " (Rest)"), "ergebnis", profit),
+        ("profit", "Gewinn" + (f" {_p(i['profit_pct'])} %" + (" (+ Aufschlag Nebenkalk.)" if side_markup else "")
+                               if price_source == "kalkuliert" else " (Rest)"), "ergebnis", profit),
         ("amortization", "Werkzeugamortisation (ohne Aufschlag)", "ergebnis", amortization),
         ("discounts", "Skonto / Rabatt", "ergebnis", discounts),
         ("price", "Verkaufspreis", "summe", price),
@@ -412,6 +440,11 @@ def _compute(raw: dict) -> dict:
                         "setup": round(x["setup"], 6), "cost": round(x["cost"], 6), "hours_year": round(x["hours_year"], 1),
                         "hours_piece": round(x["hours_piece"], 8)} for x in ops],
         "operations_cost": round(operations, 6),
+        "purchased_side": {"items": len(side_items), "cost": round(side_cost, 6), "mgk": round(side_mgk, 6),
+                           "quality": round(side_quality, 6), "scrap": round(side_scrap, 6), "self_cost": round(side_sk, 6),
+                           "markup": round(side_markup, 6), "total": round(side_sk + side_markup, 6),
+                           "mgk_pct": _f(i["side_mgk_pct"]), "quality_pct": _f(i["side_quality_pct"]),
+                           "scrap_pct": _f(i["side_scrap_pct"]), "markup_pct": _f(i["side_markup_pct"])},
         "purchased_items": [{k: (round(v, 6) if isinstance(v, float) else v) for k, v in x.items()} for x in pitems],
         "amortization_per_piece": round(amortization, 6),
         "amortization_total": round(amort_total, 2),

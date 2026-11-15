@@ -354,6 +354,18 @@ function CalcTab({ calc, setCalc, master }) {
             {F({ k: 'masterbatch_price_kg', label: 'Masterbatch-Preis', unit: '€/kg', step: 0.1 })}
             <ComponentsEditor rows={inputs.components || []} materials={master.materials} onChange={(v) => set('components', v)} result={r} />
             <PurchasedEditor rows={inputs.purchased_items || []} parts={master.parts} onChange={(v) => set('purchased_items', v)} result={r} />
+            {(inputs.purchased_items || []).some((x) => !x.side) || Number(inputs.purchased_parts) ? (
+              F({ k: 'purchased_mgk_pct', label: 'Eigener MGK-Satz Zukaufteile', unit: '%', step: 0.5, hint: 'leer = wie MGK auf Material' })
+            ) : null}
+            {(inputs.purchased_items || []).some((x) => x.side) && <>
+              <div className="field span-3"><label>Nebenkalkulation teure Zukaufteile</label>
+                <small className="hint">Diese Teile laufen <b>nicht</b> durch die volle Kalkulation (keine FGK, Ausschuss, VwGK, VtGK, PM, Verpackung %, Gewinn %), sondern nur mit den folgenden Zuschlägen und werden dann auf die Selbstkosten aufgerechnet.</small></div>
+              {F({ k: 'side_mgk_pct', label: 'MGK Nebenkalkulation', unit: '%', step: 0.5 })}
+              {F({ k: 'side_quality_pct', label: 'Qualität Nebenkalkulation', unit: '%', step: 0.5 })}
+              {F({ k: 'side_scrap_pct', label: 'Ausschuss Nebenkalkulation', unit: '%', step: 0.5 })}
+              {F({ k: 'side_markup_pct', label: 'Aufschlag (Handling/Gewinn)', unit: '%', step: 0.5, hint: 'optional, Standard 0 %' })}
+              <Info>Nebenkalkulation: Einstand <b>{fix4(r.purchased_side?.cost)} €</b> + MGK {fix4(r.purchased_side?.mgk)} + Qualität {fix4(r.purchased_side?.quality)} + Ausschuss {fix4(r.purchased_side?.scrap)} = <b>{fix4(r.purchased_side?.self_cost)} €/Stk</b>{r.purchased_side?.markup ? <> + Aufschlag {fix4(r.purchased_side?.markup)} = <b>{fix4(r.purchased_side?.total)} €/Stk</b></> : null} · {eur(r.purchased_side?.total * (inputs.annual_volume || 0))} p. a.</Info>
+            </>}
             {F({ k: 'purchased_parts', label: 'Sonstige Zukaufteile pauschal je Stück', unit: '€', step: 0.01, hint: 'zusätzlich zur Liste, z. B. Kleinteile ohne Stammdaten' })}
             <Info>Gewicht je Stück inkl. Angussanteil: <b>{num(r.kg_per_piece * 1000, 2)} g</b> · Schussgewicht {num(r.shot_weight_g, 1)} g · Material p. a. {num(r.material_kg_year)} kg</Info>
           </Section>
@@ -626,7 +638,7 @@ function PurchasedEditor({ rows, parts, onChange, result }) {
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => onChange([...rows, { qty: 1, price_per_piece: 0, co2_kg_per_piece: 0, ...(parts[0] ? fromPart(parts[0]) : { name: 'Zukaufteil' }) }])}>+ Zukaufteil</button></div>
       {rows.length > 0 ? (
         <table className="table items-table comp-table">
-          <thead><tr><th>Zukaufteil</th><th>Bezeichnung</th><th className="num">Menge je Artikel</th><th className="num">€ je Einheit</th><th className="num">kg CO₂e je Einheit</th><th className="num">€/Stk</th><th /></tr></thead>
+          <thead><tr><th>Zukaufteil</th><th>Bezeichnung</th><th className="num">Menge je Artikel</th><th className="num">€ je Einheit</th><th className="num">kg CO₂e je Einheit</th><th className="num">€/Stk</th><th title="Nebenkalkulation: nur MGK, Qualität, Ausschuss – nicht durch die volle Kalkulation">Nebenkalk.</th><th /></tr></thead>
           <tbody>{rows.map((p, i) => (
             <tr key={i}>
               <td><select value={p.part_id ?? ''} onChange={(e) => pick(i, e.target.value)}>
@@ -636,10 +648,12 @@ function PurchasedEditor({ rows, parts, onChange, result }) {
                 <td key={k}><input type="number" step="any" className="num" value={p[k] ?? ''} onChange={(e) => upd(i, { [k]: e.target.value === '' ? '' : Number(e.target.value) })} /></td>
               ))}
               <td className="num"><b>{fix4(result?.purchased_items?.[i]?.cost)}</b></td>
+              <td className="center"><input type="checkbox" checked={!!p.side} title="Nebenkalkulation (für teure Zukaufteile)" onChange={(e) => upd(i, { side: e.target.checked })} /></td>
               <td><button type="button" className="icon-btn" title="Entfernen" onClick={() => onChange(rows.filter((_, j) => j !== i))}>×</button></td>
             </tr>))}</tbody>
         </table>
       ) : <small className="hint">Einlegeteile, Buchsen, Dichtungen, Clips, Schrauben, Etiketten … aus den Stammdaten wählen; Preis je Einheit wird aus Preis ÷ Preiseinheit vorbelegt. MGK wirkt auf die Zukaufteile.</small>}
+      {rows.length > 0 && <small className="hint">Haken „Nebenkalk.“ bei teuren Zukaufteilen: Sie werden nur mit eigenem MGK, Qualität und Ausschuss (optional Aufschlag) kalkuliert und nicht mit allen Zuschlägen der Hauptkalkulation belastet.</small>}
     </div>
   )
 }
@@ -829,7 +843,7 @@ function VersionsTab({ calc }) {
     if (Array.isArray(v)) return v.map((x) => {
       if (!x || typeof x !== 'object') return num(x)
       if (k === 'operations') return `${x.name}: ${num(x.cycle_s, 1)} s, ${num(x.rate_h, 2)} €/h`
-      if (k === 'purchased_items') return `${num(x.qty, 2)} × ${x.name} à ${num(x.price_per_piece, 4)} €`
+      if (k === 'purchased_items') return `${num(x.qty, 2)} × ${x.name} à ${num(x.price_per_piece, 4)} €${x.side ? ' (Nebenkalk.)' : ''}`
       if (k === 'components') return `${x.label}: ${x.material_name || ''} ${num(x.part_weight_g, 1)} g`
       return `${x.label}: ${num(x.amount ?? x.price ?? x.cost ?? 0, 2)}`
     }).join('; ') || '–'

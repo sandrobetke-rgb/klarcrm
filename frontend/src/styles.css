@@ -472,3 +472,6 @@ h1 .big-badge { font-size: 12.5px; margin-top: 0; }
 .ops-table td:nth-child(2) input { min-width: 150px; }
 .ops-table td input.num { width: 64px; }
 .comp-table-wrap, .field.span-3:has(.ops-table) { overflow-x: auto; }
+.items-table td.center { text-align: center; }
+.field.span-3:has(.comp-table) { overflow-x: auto; min-width: 0; }
+.comp-table td:nth-child(1) select { min-width: 110px; }

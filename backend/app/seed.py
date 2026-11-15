@@ -148,6 +148,7 @@ PURCHASED_PARTS = [  # Art.-Nr., Bezeichnung, Lieferant, Lief.-Nr., Preis, Preis
     ("ZK-1003", "Federstahl-Clip verzinkt", "Stanztechnik Detmold", "FC-118", 0.032, 1, 20000, 28, 0.006),
     ("ZK-1004", "Schraube PT K30×8 Torx", "Verbindungselemente Weser", "PT30x8", 9.5, 1000, 10000, 10, 0.002),
     ("ZK-1005", "Typenschild-Etikett PET", "Etiketten Paderborn", "TS-40x20", 12.0, 1000, 5000, 7, 0.0005),
+    ("ZK-2001", "Leiterplatte Sensor bestückt", "Elektronikfertigung Bielefeld", "LP-SN-778", 3.85, 1, 2000, 42, 0.45),
 ]
 MACHINE_POWER = {"M01": 9, "M02": 14, "M03": 22, "M04": 28, "M05": 42, "M06": 60}
 # Herleitung Stundensatz: Wiederbeschaffungswert, m², Instandhaltung €/Jahr, sonstige Fixkosten €/Jahr
@@ -261,7 +262,7 @@ def seed_calc(db):
             def pi(part, qty):
                 return {"part_id": part.id, "part_no": part.part_no, "name": part.name, "qty": qty,
                         "price_per_piece": part.price / (part.price_basis or 1), "co2_kg_per_piece": part.co2_kg_per_piece or 0}
-            inp["purchased_items"] = [pi(parts[0], 2), pi(parts[2], 1), pi(parts[4], 1)]
+            inp["purchased_items"] = [pi(parts[0], 2), pi(parts[2], 1), pi(parts[4], 1), {**pi(parts[5], 1), "side": True}]
             inp["extras"].append({"label": "Bedrucken Tampondruck", "amount": 0.035, "basis": "stueck", "category": "fertigung"})
         inp = normalize(inp)
         owner = users[idx % len(users)]

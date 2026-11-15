@@ -4,7 +4,7 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.12 |
+| **Dokumentversion** | 1.13 |
 | **Stand** | 14.11.2026 |
 | **Status** | Testphase (GitHub Codespaces); Zielbetrieb: interner Server F&R |
 
@@ -110,6 +110,8 @@ von Standardwerten werden markiert; jede Änderung an einer Kalkulation erzeugt 
   gespeicherte Version).
 
 ### 5.3 Parameter (Standardwerte)
+- STM-21: Zukaufteile: eigener MGK-Satz (Standard leer = wie MGK); Nebenkalkulation MGK 3 %, Qualität 1 %,
+  Ausschuss 1 %, Aufschlag 0 % (Richtwerte, änderbar).
 - STM-6: Lohnsätze Bediener, Einrichter, Montage (€/h).
 - STM-7: Zuschläge MGK, FGK, Ausschuss, Verwaltung, Vertrieb, Projektmanagement, **Qualität**, **Werkzeugbau** (%).
 - STM-8: Gewinn (Standard **7 %**), Skonto, Rabatt.
@@ -182,6 +184,8 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 | Rüsten | [Rüstzeit × (Maschinensatz + Instandhaltung + Lohnsatz Einrichter × Einrichter) + Anfahrausschuss × (Material + Maschine + Instandhaltung + Personal je Stück)] / Losgröße |
 | Montage | Montagezeit/3600 × Lohnsatz × Personen / Produktivität Montage |
 | Arbeitsgang n | Lauf: (Satz Anlage + Instandhaltung + Lohnsatz × Personen) / Stück je h, Stück je h = 3600 / Takt × Teile je Takt × Produktivität; Rüsten: Rüstzeit × (Satz Anlage + Instandhaltung + Lohnsatz × 1 Einrichter) / Losgröße |
+| MGK Zukaufteile (optional) | Zukaufteile (ohne Nebenkalkulation) × eigener MGK-Satz; sonst gemeinsam mit Material × MGK % |
+| Zukaufteile Nebenkalkulation (optional) | siehe KAL-28j; wird zu den Selbstkosten addiert; Gewinn % nur auf die Selbstkosten der Hauptkalkulation |
 | FEK | Maschine + Instandhaltung + Personal + Rüsten + Montage + Σ Arbeitsgänge |
 | FGK | FEK × FGK % |
 | Qualität / Werkzeugbau (Basis FEK) | FEK × Qualität % bzw. FEK × Werkzeugbau % – Teil der Herstellkosten (vor Ausschuss) |
@@ -217,6 +221,17 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
   Zuschläge wirken wie bei der Spritzgießmaschine. Stunden fließen in die Auslastung der jeweiligen Anlage (AUS-6).
 - KAL-28h: **Zukaufteile-Liste**: beliebig viele Zukaufteile je Artikel mit Menge; Zeile „Zukaufteile (n Pos.)“ im
   Schema, MGK wirkt darauf; CO₂ der Zukaufteile fließt in den Fußabdruck (Kap. 6.8).
+- KAL-28i: **Eigener MGK-Satz für Zukaufteile** (optional; leer = MGK-Satz Material): eigene Zeile „MGK Zukaufteile x %“
+  im Schema, Material behält seinen MGK-Satz. Standard in den Parametern (STM-21).
+- KAL-28j: **Nebenkalkulation teurer Zukaufteile** (optional je Zukaufteil per Haken „Nebenkalk.“): Diese Teile
+  laufen nicht durch die volle Kalkulation (kein MEK-Anteil, keine FGK, kein Ausschuss der Hauptkalkulation, keine
+  VwGK/VtGK/PM, keine %-Verpackung/Transport, kein Gewinn-%), sondern nur durch eine kleine Nebenkalkulation:
+  Einstand E = Σ Menge × € je Einheit; MGK = E × MGK-NK %; Qualität = E × Qualität-NK %;
+  Ausschuss = (E + MGK + Qualität) / (1 − Ausschuss-NK %) − (E + MGK + Qualität);
+  SK-NK = E + MGK + Qualität + Ausschuss (eigene Zeile „Zukaufteile Nebenkalkulation“ vor den Selbstkosten);
+  optionaler Aufschlag = SK-NK × Aufschlag-NK % (Standard 0 %, fließt in den Gewinn). Skonto/Rabatt wirken auf den
+  Gesamtpreis. CO₂ der Teile wird unverändert im Fußabdruck berücksichtigt. Ausweis der Nebenkalkulation je Stück
+  und p. a. in der Kalkulation.
 - KAL-28b: **Mehrkomponenten**: Material, CO₂, Gewicht und Schussgewicht aller Komponenten; im Angebot „A + B (2K)“.
 - KAL-28c: **Familienwerkzeug**: Maschinen-, Instandhaltungs-, Personal- und Rüstkosten, Maschinenstunden
   (Auslastung) und Energie-CO₂ anteilig; Summe der Anteile aller Artikel der Gruppe = 100 % (Hinweis).
@@ -500,3 +515,4 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.10 | 14.11.2026 | **Etappe 2 Nachweisführung**: Freigabe-Workflow mit Vier-Augen-Prinzip (FRG-1 … 5, ROL-6), Änderungsprotokoll für alle Daten (PRT-1 … 4), Löschschutz (LSH-1 … 3), Lebenswegbetrachtung nach ISO 14001 6.1.2 (LWB-1 … 3), Zuordnung zu IATF 16949 / ISO 14001 (Kap. 7a.5). |
 | 1.11 | 14.11.2026 | **Etappe 3 Arbeitsabläufe**: Dokumente an Kalkulation/Firma/Angebot (DOK-1 … 3), Benachrichtigungen mit optionalem SMTP (BEN-1/2), Outlook-Kalenderabo, .ics und E-Mail-Entwurf (OUT-1 … 3), Angebots-PDF im Firmenlayout mit Logo, Fußzeile, Deutsch/Englisch (PDF-1 … 3); Betrieb auf internem Server inkl. Backup von Dokumenten (NFA-2/4). |
 | 1.12 | 14.11.2026 | **Montagelinie & weitere Arbeitsgänge** (KAL-28g, AUS-6): 1 … N Anlagen je Artikel mit eigenem Stundensatz, Takt, Personal, Rüsten und kW; Maschinenart in den Stammdaten (STM-18). **Zukaufteile-Stammdaten** (STM-19/20) und Zukaufteile-Liste je Kalkulation mit Menge und CO₂ (KAL-28h). Neue Tabelle `purchased_parts` und Spalte `machines.kind` werden automatisch angelegt; gespeicherte Versionen rechnen unverändert. Rechentests ergänzt. |
+| 1.13 | 15.11.2026 | **Zukaufteile**: optional eigener MGK-Satz (KAL-28i) und optionale **Nebenkalkulation für teure Zukaufteile** mit eigenem MGK, Qualität, Ausschuss und optionalem Aufschlag statt voller Kalkulation (KAL-28j); Standardsätze in den Parametern (STM-21). Ohne Haken/Satz rechnen Kalkulationen wie bisher. Rechentests ergänzt; breite Tabellen in der Kalkulation scrollen jetzt waagerecht. |
