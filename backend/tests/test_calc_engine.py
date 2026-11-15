@@ -232,3 +232,21 @@ def test_vorserienpreis():
     assert p["unit_price"] == pytest.approx(sub["unit_price"] * 1.1, abs=1e-4)
     assert p["unit_price"] > r["unit_price"]
     assert compute(BASE)["preseries"] is None
+
+
+def test_preis_jahr1_manuell_ab_jahr2_serienpreis():
+    r = compute({**BASE, "project_years": 4, "price_year1_mode": "manuell", "price_year1_manual": 0.36,
+                 "price_reductions": [0, 2, 4]})
+    p = [y["price"] for y in r["price_years"]]
+    assert p == pytest.approx([0.36, 0.315, 0.315 * 0.98, 0.315 * 0.96], abs=1e-4)
+    assert r["price_year1"] == 0.36 and r["preload_pct"] > 0
+    # ohne Abschläge: Jahr 1 manuell, danach Serienpreis
+    r2 = compute({**BASE, "project_years": 3, "price_year1_mode": "manuell", "price_year1_manual": 0.4})
+    assert [y["price"] for y in r2["price_years"]] == pytest.approx([0.4, 0.315, 0.315], abs=1e-4)
+
+
+def test_vorserienpreis_manuell():
+    r = compute({**BASE, "preseries_qty": 500, "preseries_price_manual": 1.25})
+    p = r["preseries"]
+    assert p["manual"] and p["unit_price"] == 1.25 and p["calc_price"] > 0
+    assert p["margin_pct"] == pytest.approx((1.25 - p["self_cost"]) / 1.25 * 100, abs=0.1)

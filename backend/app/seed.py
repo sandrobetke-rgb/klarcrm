@@ -269,7 +269,9 @@ def seed_calc(db):
                 return {"part_id": part.id, "part_no": part.part_no, "name": part.name, "qty": qty,
                         "price_per_piece": part.price / (part.price_basis or 1), "co2_kg_per_piece": part.co2_kg_per_piece or 0}
             inp["purchased_items"] = [pi(parts[0], 2), pi(parts[2], 1), pi(parts[4], 1), {**pi(parts[5], 1), "side": True}]
-            inp["price_reductions"], inp["side_price_reductions"] = [2, 2, 2, 2], [1, 1, 1, 1]
+            # Jahr 1 manueller Anlaufpreis, ab Jahr 2 Serienpreis, danach Abschläge; Leiterplatte ohne Abschlag
+            inp.update(price_year1_mode="manuell", price_year1_manual=6.60, price_reductions=[0, 2, 4, 6],
+                       side_price_reductions=[0, 0, 0, 0])
             inp.update(preseries_qty=1000, preseries_lot=500, preseries_productivity_pct=65, preseries_scrap_pct=6,
                        preseries_surcharge_pct=5)
             inp["extras"].append({"label": "Bedrucken Tampondruck", "amount": 0.035, "basis": "stueck", "category": "fertigung"})
