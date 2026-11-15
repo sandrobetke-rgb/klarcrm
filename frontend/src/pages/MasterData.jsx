@@ -4,7 +4,7 @@ import { resetThresholds } from '../components/BigProject'
 import { Escalation, MachineRates, Templates } from './MasterExtras'
 import { useAuth } from '../auth'
 import ListPage from '../components/ListPage'
-import { Badge, ErrorBox } from '../components/ui'
+import { Badge, EntityForm, ErrorBox, Modal } from '../components/ui'
 import { MACHINE_KINDS, machineKindLabel, num, num2 } from '../constants'
 
 const machineFields = [
@@ -12,7 +12,7 @@ const machineFields = [
   { name: 'name', label: 'Bezeichnung', required: true },
   { name: 'kind', label: 'Art', type: 'select', required: true, options: MACHINE_KINDS, hint: 'Montagelinien, Prüfstationen u. a. werden in der Kalkulation als weitere Arbeitsgänge gewählt' },
   { name: 'clamping_force_t', label: 'Schließkraft (t)', type: 'number', step: 'any' },
-  { name: 'location', label: 'Standort / Halle' },
+  { name: 'location', label: 'Halle / Bereich' },
   { name: 'hourly_rate', label: 'Maschinenstundensatz €/h (ohne Personal)', type: 'number', step: 'any', required: true },
   { name: 'maintenance_rate', label: 'Instandhaltung €/h', type: 'number', step: 'any' },
   { name: 'productivity_pct', label: 'Standard-Produktivität %', type: 'number', step: 'any' },
@@ -79,13 +79,102 @@ const PARAMS = [
   ['Nachkalkulation (Ampel)', [['nk_green_pct', 'Grün bis Abweichung Selbstkosten', '%'], ['nk_red_pct', 'Rot ab Abweichung Selbstkosten', '%']]],
 ]
 
+// Parameter, die je Standort abweichen dürfen (wie SITE_KEYS im Backend)
+const SITE_KEYS = ['labor_rate_h', 'setup_rate_h', 'assembly_rate_h', 'handling_rate_h', 'automation_rate_h', 'mgk_pct', 'fgk_pct',
+  'scrap_pct', 'vwgk_pct', 'vtgk_pct', 'pm_pct', 'quality_pct', 'toolshop_pct', 'profit_pct', 'cash_discount_pct', 'rebate_pct',
+  'productivity_pct', 'assembly_productivity_pct', 'setup_time_h', 'setup_persons', 'startup_scrap_pcs', 'co2_grid_kg_kwh',
+  'co2_scope1_kg_h', 'co2_masterbatch_kg_kg', 'co2_transport_kg_tkm', 'purchased_mgk_pct', 'side_mgk_pct', 'side_quality_pct',
+  'side_scrap_pct', 'side_markup_pct', 'energy_price_kwh', 'pack_pct', 'transport_pct']
+const siteFields = [
+  { name: 'code', label: 'Kürzel', required: true }, { name: 'name', label: 'Name', required: true },
+  { name: 'country', label: 'Land' }, { name: 'address', label: 'Anschrift' },
+  { name: 'sort', label: 'Reihenfolge', type: 'number', step: '1' }, { name: 'active', label: 'Aktiv', type: 'checkbox' },
+]
+
+function Sites({ tabs, onChange }) {
+  const { isAdmin } = useAuth()
+  const [sites, setSites] = useState(null)
+  const [group, setGroup] = useState({})
+  const [draft, setDraft] = useState({})
+  const [edit, setEdit] = useState(null)
+  const [msg, setMsg] = useState(null)
+  const [err, setErr] = useState(null)
+  const load = () => api.get('/sites?limit=50&sort=sort').then((x) => {
+    setSites(x.items)
+    setDraft(Object.fromEntries(x.items.map((st) => [st.id, { ...(st.settings || {}) }])))
+    onChange?.(x.items)
+  })
+  useEffect(() => { load(); api.get('/calc/settings').then(setGroup) }, [])
+  if (!sites) return <div className="loading">Lade…</div>
+  const setVal = (sid, k, v) => { setMsg(null); setDraft((d) => ({ ...d, [sid]: { ...d[sid], [k]: v === '' ? null : Number(v) } })) }
+  async function saveAll() {
+    setErr(null)
+    try {
+      for (const st of sites) {
+        const clean = Object.fromEntries(Object.entries(draft[st.id] || {}).filter(([, v]) => v !== null && v !== '' && !Number.isNaN(v)))
+        // eslint-disable-next-line no-await-in-loop
+        await api.put(`/sites/${st.id}`, { settings: clean })
+      }
+      setMsg('Standort-Sätze gespeichert – gelten für neue Kalkulationen und Standortwechsel/-vergleich.')
+      load()
+    } catch (e) { setErr(e) }
+  }
+  const groups = PARAMS.map(([t, rows]) => [t, rows.filter(([k]) => SITE_KEYS.includes(k))]).filter(([, rows]) => rows.length)
+  return (
+    <div className="page">
+      <div className="page-head">
+        <div><h1>Stammdaten · Standorte</h1><p className="muted">Standorte der Gruppe mit abweichenden Sätzen. Leeres Feld = Gruppen-Parameter gilt.</p></div>
+        <div className="toolbar">{tabs}</div>
+      </div>
+      {msg && <div className="ok-box">{msg}</div>}<ErrorBox error={err} />
+      <div className="card card-flush">
+        <table className="table">
+          <thead><tr><th>Kürzel</th><th>Standort</th><th>Land</th><th>Anschrift</th><th className="num">abweichende Sätze</th><th>Status</th><th /></tr></thead>
+          <tbody>{sites.map((st) => (
+            <tr key={st.id}><td>{st.code}</td><td><strong>{st.name}</strong></td><td>{st.country || '–'}</td><td>{st.address || '–'}</td>
+              <td className="num">{Object.keys(st.settings || {}).length}</td>
+              <td>{st.active ? <Badge tone="good">aktiv</Badge> : <Badge>inaktiv</Badge>}</td>
+              <td>{isAdmin && <button className="btn btn-ghost btn-sm" onClick={() => setEdit(st)}>Bearbeiten</button>}</td></tr>))}</tbody>
+        </table>
+        {isAdmin && <div style={{ padding: 12 }}><button className="btn btn-ghost btn-sm" onClick={() => setEdit({ active: true, sort: sites.length })}>+ Standort</button></div>}
+      </div>
+      <div className="card">
+        <div className="section-head"><h3>Sätze je Standort</h3>{isAdmin && <button className="btn btn-primary" onClick={saveAll}>Speichern</button>}</div>
+        <div className="table-wrap"><table className="table table-compact site-matrix">
+          <thead><tr><th>Parameter</th><th className="num">Gruppe (Standard)</th>{sites.map((st) => <th key={st.id} className="num">{st.name}</th>)}</tr></thead>
+          <tbody>{groups.map(([t, rows]) => [
+            <tr key={t} className="group-row"><td colSpan={2 + sites.length}><b>{t}</b></td></tr>,
+            ...rows.map(([k, l, u]) => (
+              <tr key={k}><td>{l} <span className="muted small">{u}</span></td><td className="num muted">{group[k] ?? '–'}</td>
+                {sites.map((st) => {
+                  const v = draft[st.id]?.[k]
+                  return <td key={st.id} className="num"><input type="number" step="any" className={`num ${v != null ? 'site-over' : ''}`} disabled={!isAdmin}
+                    value={v ?? ''} placeholder={group[k] ?? ''} onChange={(e) => setVal(st.id, k, e.target.value)} /></td>
+                })}</tr>)),
+          ])}</tbody>
+        </table></div>
+        <small className="hint">Blau hinterlegte Felder weichen vom Gruppen-Standard ab. Maschinenstundensätze stehen je Maschine (Reiter „Maschinen & Anlagen“, Feld Standort).</small>
+      </div>
+      {edit && <Modal title={edit.id ? `Standort ${edit.name}` : 'Neuer Standort'} onClose={() => setEdit(null)}>
+        <EntityForm fields={siteFields} initial={edit} onCancel={() => setEdit(null)}
+          onSubmit={async (v) => { if (edit.id) await api.put(`/sites/${edit.id}`, v); else await api.post('/sites', { ...v, settings: {} }); setEdit(null); load() }} />
+      </Modal>}
+    </div>
+  )
+}
+
 export default function MasterData() {
   const [tab, setTab] = useState('machines')
+  const [sites, setSites] = useState([])
+  useEffect(() => { api.get('/sites?limit=50&sort=sort').then((x) => setSites(x.items)).catch(() => {}) }, [])
+  const siteOpts = sites.map((x) => ({ value: x.id, label: x.name }))
+  const siteName = (id) => sites.find((x) => x.id === id)?.name
   const tabs = <div className="seg">
-    {[['machines', 'Maschinen & Anlagen'], ['rates', 'Stundensätze'], ['materials', 'Materialien'], ['parts', 'Zukaufteile'], ['prices', 'Preisgleitung'], ['templates', 'Vorlagen'], ['params', 'Parameter']].map(([k, l]) =>
+    {[['machines', 'Maschinen & Anlagen'], ['sites', 'Standorte'], ['rates', 'Stundensätze'], ['materials', 'Materialien'], ['parts', 'Zukaufteile'], ['prices', 'Preisgleitung'], ['templates', 'Vorlagen'], ['params', 'Parameter']].map(([k, l]) =>
       <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}
   </div>
   if (tab === 'params') return <Params tabs={tabs} />
+  if (tab === 'sites') return <Sites tabs={tabs} onChange={setSites} />
   if (tab === 'rates') return <MachineRates tabs={tabs} />
   if (tab === 'prices') return <Escalation tabs={tabs} />
   if (tab === 'templates') return <Templates tabs={tabs} />
@@ -118,8 +207,10 @@ export default function MasterData() {
       ]} />
   }
   return <ListPage key="mach" title="Stammdaten · Maschinen & Anlagen" subtitle="Spritzgießmaschinen, Montagelinien, Nachbearbeitung und Prüfstationen – Stundensätze, Instandhaltung, Produktivität"
-    path="/machines" entityLabel="Maschine" fields={machineFields} defaultSort="number"
-    filters={[{ name: 'kind', label: 'Art', options: MACHINE_KINDS.map((k) => ({ ...k, label: machineKindLabel(k.value) })) }]}
+    path="/machines" entityLabel="Maschine" defaultSort="number"
+    fields={[...machineFields.slice(0, 3), { name: 'site_id', label: 'Standort', type: 'select', options: siteOpts, hint: 'Sätze und Auslastung je Standort' }, ...machineFields.slice(3)]}
+    filters={[{ name: 'kind', label: 'Art', options: MACHINE_KINDS.map((k) => ({ ...k, label: machineKindLabel(k.value) })) },
+      ...(siteOpts.length ? [{ name: 'site_id', label: 'Standort', options: siteOpts }] : [])]}
     newDefaults={{ active: true, kind: 'spritzguss', productivity_pct: 85, operator_factor: 0.3, available_hours_year: 6000, base_load_pct: 0, base_load_decline_pct: 0 }} extraActions={tabs}
     columns={[
       { key: 'number', label: 'Nr.', sort: 'number' },
@@ -132,7 +223,7 @@ export default function MasterData() {
       { key: 'available_hours_year', label: 'h/Jahr', className: 'num', render: (r) => num(r.available_hours_year) },
       { key: 'base_load_pct', label: 'Grundlast', className: 'num', render: (r) => `${num(r.base_load_pct, 0)} % (−${num(r.base_load_decline_pct, 0)} %/J.)` },
       { key: 'power_kw', label: 'kW', className: 'num', render: (r) => (r.power_kw != null ? num(r.power_kw, 1) : '–') },
-      { key: 'location', label: 'Standort' },
+      { key: 'site_id', label: 'Standort', render: (r) => siteName(r.site_id) || r.location || '–' },
       { key: 'active', label: 'Status', render: (r) => (r.active ? <Badge tone="good">aktiv</Badge> : <Badge>inaktiv</Badge>) },
     ]} />
 }

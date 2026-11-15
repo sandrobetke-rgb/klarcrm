@@ -1,3 +1,4 @@
+import { siteOptions, useSites } from '../components/useSites'
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { api } from '../api'
@@ -5,11 +6,12 @@ import { useAuth } from '../auth'
 import { Badge, EntityForm, ErrorBox, Modal, useFetch } from '../components/ui'
 import { fmtDate, ROLES } from '../constants'
 
-const fields = (isNew) => [
+const fields = (isNew, sites = []) => [
   { name: 'name', label: 'Name', required: true },
   { name: 'email', label: 'E-Mail (Login)', type: 'email', required: true },
   { name: 'role', label: 'Rolle', type: 'select', options: ROLES, required: true },
   { name: 'password', label: isNew ? 'Passwort' : 'Neues Passwort', type: 'password', required: isNew, hint: isNew ? 'Mind. 8 Zeichen' : 'Leer lassen = unverändert' },
+  ...(sites.length ? [{ name: 'site_id', label: 'Standard-Standort (für neue Kalkulationen)', type: 'select', options: siteOptions(sites) }] : []),
   { name: 'can_approve', label: 'Darf Kalkulationen freigeben (Vier-Augen-Prinzip)', type: 'checkbox' },
   { name: 'active', label: 'Aktiv', type: 'checkbox' },
 ]
@@ -18,6 +20,7 @@ export default function Users() {
   const { isAdmin, user: me } = useAuth()
   const { data, error, reload } = useFetch('/users')
   const [editing, setEditing] = useState(null)
+  const sites = useSites()
   if (!isAdmin) return <Navigate to="/" />
 
   async function save(values) {
@@ -55,7 +58,7 @@ export default function Users() {
       </div>
       {editing && (
         <Modal title={editing.id ? 'Benutzer bearbeiten' : 'Benutzer anlegen'} onClose={() => setEditing(null)}>
-          <EntityForm fields={fields(!editing.id)} initial={editing} onSubmit={save} onCancel={() => setEditing(null)} />
+          <EntityForm fields={fields(!editing.id, sites)} initial={editing} onSubmit={save} onCancel={() => setEditing(null)} />
         </Modal>
       )}
     </div>

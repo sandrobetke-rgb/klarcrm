@@ -152,6 +152,25 @@ PURCHASED_PARTS = [  # Art.-Nr., Bezeichnung, Lieferant, Lief.-Nr., Preis, Preis
     ("ZK-1005", "Typenschild-Etikett PET", "Etiketten Paderborn", "TS-40x20", 12.0, 1000, 5000, 7, 0.0005),
     ("ZK-2001", "Leiterplatte Sensor bestückt", "Elektronikfertigung Bielefeld", "LP-SN-778", 3.85, 1, 2000, 42, 0.45),
 ]
+# Standorte der Gruppe – Abweichungen von den Gruppen-Parametern (Demo-Werte, durch echte Sätze ersetzen)
+SITES = [
+    ("DE1", "Stammwerk", "Deutschland", {}),
+    ("DE2", "Werk 2", "Deutschland", {"labor_rate_h": 36.0, "setup_rate_h": 45.0, "fgk_pct": 14.0, "energy_price_kwh": 0.22}),
+    ("CZ", "Werk Krupka", "Tschechien", {"labor_rate_h": 19.0, "setup_rate_h": 25.0, "assembly_rate_h": 17.0,
+                                          "handling_rate_h": 17.0, "automation_rate_h": 31.0, "fgk_pct": 10.0, "vwgk_pct": 6.0,
+                                          "energy_price_kwh": 0.17, "co2_grid_kg_kwh": 0.42, "co2_transport_kg_tkm": 0.09}),
+]
+# Maschinen an Werk 2 und Krupka: Nr, Name, t, €/h, IH €/h, Prod %, Bedienfaktor, kW, Standort-Code, Art
+SITE_MACHINES = [
+    ("W2-01", "Spritzgießmaschine 110 t", 110, 43, 4, 86, 0.3, 14, "DE2", "spritzguss"),
+    ("W2-02", "Spritzgießmaschine 250 t", 250, 69, 7, 85, 0.3, 28, "DE2", "spritzguss"),
+    ("W2-03", "Spritzgießmaschine 420 t", 420, 92, 9, 84, 0.5, 42, "DE2", "spritzguss"),
+    ("KR-01", "Spritzgießmaschine 80 t", 80, 24, 3, 86, 0.3, 11, "CZ", "spritzguss"),
+    ("KR-02", "Spritzgießmaschine 160 t 2K", 160, 41, 5, 82, 0.5, 22, "CZ", "spritzguss"),
+    ("KR-03", "Spritzgießmaschine 300 t", 300, 52, 6, 84, 0.4, 32, "CZ", "spritzguss"),
+    ("KR-04", "Spritzgießmaschine 500 t", 500, 71, 9, 83, 0.5, 48, "CZ", "spritzguss"),
+    ("KR-M1", "Montagelinie (2 Stationen)", None, 19, 1.5, 88, 2.0, 5, "CZ", "montage"),
+]
 MACHINE_POWER = {"M01": 9, "M02": 14, "M03": 22, "M04": 28, "M05": 42, "M06": 60}
 # Herleitung Stundensatz: Wiederbeschaffungswert, m², Instandhaltung €/Jahr, sonstige Fixkosten €/Jahr
 MACHINE_COST = {"M01": (120000, 18, 18000, 2500), "M02": (190000, 24, 24000, 3500), "M03": (420000, 36, 33000, 6000),
@@ -184,7 +203,22 @@ def seed_calc(db):
                            lead_time_days=lt, co2_kg_per_piece=co2, price_valid_from=date(date.today().year, 1, 1),
                            notes="CO₂-Wert: Lieferantenangabe/Richtwert")
              for n, nm, sup, sn, pr, pb, moq, lt, co2 in PURCHASED_PARTS]
-    db.add_all(machines + materials + extra + parts)
+    from .models import Site
+    sites = {}
+    for n, (code, name, country, over) in enumerate(SITES):
+        site = db.scalars(select(Site).where(Site.code == code)).first() or Site(code=code, name=name, country=country,
+                                                                                 settings=over, sort=n)
+        db.add(site)
+        sites[code] = site
+    db.flush()
+    for m in machines + extra:
+        m.site_id, m.location = sites["DE1"].id, sites["DE1"].name
+    site_machines = [Machine(number=n, name=nm, kind=k, clamping_force_t=t, hourly_rate=r, maintenance_rate=ih,
+                             productivity_pct=p, operator_factor=bf, power_kw=kw, site_id=sites[sc].id, location=sites[sc].name,
+                             available_hours_year=6000 if k == "spritzguss" else 4000, base_load_pct=55, base_load_decline_pct=10,
+                             useful_life_years=10, interest_pct=6, grid_factor=sites[sc].settings.get("co2_grid_kg_kwh"))
+                     for n, nm, t, r, ih, p, bf, kw, sc, k in SITE_MACHINES]
+    db.add_all(machines + materials + extra + parts + site_machines)
     db.flush()
     for m in machines:
         m.kind = "spritzguss"
@@ -223,7 +257,7 @@ def seed_calc(db):
         if accounts and art in ("Halter Steuergerät", "Deckel Sicherungskasten"):
             acc = accounts[0]  # mehrere Artikel desselben Kunden (Sammelangebot)
         m, mat = machines[mi], materials[mati]
-        inp = default_inputs(db)
+        inp = default_inputs(db, sites["DE1"].id)
         inp.update(material_id=mat.id, material_name=mat.name, material_price_kg=mat.price_per_kg,
                    part_weight_g=g, sprue_weight_g=spr, machine_id=m.id, machine_name=m.name,
                    machine_rate_h=m.hourly_rate, maintenance_rate_h=m.maintenance_rate,
@@ -306,6 +340,7 @@ def seed_calc(db):
             final = (inp2, res2)
         calc.current_version = len(calc.versions)
         r = final[1]
+        calc.site_id = final[0].get("site_id")
         calc.unit_price, calc.annual_volume, calc.annual_revenue = r["unit_price"], r["annual_volume"], r["annual_revenue"]
         calc.one_time_revenue, calc.margin_pct = r["one_time_price"], r["margin_pct"]
         db.add(calc)
@@ -317,6 +352,18 @@ def seed_calc(db):
                 pres, light = post_calculate(final[0], r, actual, st)
                 calc.post_calcs.append(PostCalculation(version_no=calc.current_version, reference=ref, actuals=actual,
                                                        results=pres, traffic_light=light, created_by_id=owner.id))
+    # Beispiel Standortwechsel: Wallbox-Schale (Kunde in Tschechien) nach Krupka verlagert
+    from .routers.calc import site_inputs
+    wb = db.scalars(select(Calculation).where(Calculation.article_name == "Gehäuseschale Wallbox")).first()
+    if wb:
+        ver = wb.versions[-1]
+        inp_cz, _ = site_inputs(db, ver.inputs, sites["CZ"], sites["DE1"].id)
+        res_cz = compute(normalize(inp_cz))
+        no = ver.version_no + 1
+        wb.versions.append(CalculationVersion(version_no=no, inputs=normalize(inp_cz), results=res_cz, created_by_id=wb.owner_id,
+                                              change_note="Standort Werk Krupka (Standortvergleich: günstiger, Kunde in CZ)"))
+        wb.current_version, wb.site_id = no, sites["CZ"].id
+        wb.unit_price, wb.annual_revenue, wb.margin_pct = res_cz["unit_price"], res_cz["annual_revenue"], res_cz["margin_pct"]
     db.commit()
     # Preisgleitung demonstrieren: PA6 GF30 nach der Kalkulation teurer (Historie wird automatisch geschrieben)
     from .models import MaterialPrice

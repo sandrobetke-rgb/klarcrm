@@ -1,3 +1,4 @@
+import { useSites } from '../components/useSites'
 import { Fragment, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ErrorBox, useFetch } from '../components/ui'
@@ -31,7 +32,9 @@ export default function Utilization() {
   const [years, setYears] = useState(5)
   const [mode, setMode] = useState('pct_expected')
   const [open, setOpen] = useState(null)
-  const { data, error } = useFetch(`/calc/utilization?years=${years}`)
+  const [site, setSite] = useState('')
+  const sites = useSites()
+  const { data, error } = useFetch(`/calc/utilization?years=${years}${site ? `&site_id=${site}` : ''}`)
   if (error) return <ErrorBox error={error} />
   if (!data) return <div className="loading">Lade Auslastung…</div>
   const totalsRow = data.totals.map((t) => ({ ...t, capacity_h: t.capacity_h }))
@@ -42,6 +45,8 @@ export default function Utilization() {
         <div>
           <h1>Auslastung kommende Jahre</h1>
           <p className="muted">Maschinenstunden aus Bestand und Kalkulationen im Verhältnis zur verfügbaren Kapazität je Maschine</p>
+          {sites.length > 1 && <select value={site} onChange={(e) => setSite(e.target.value)} style={{ width: 'auto', marginTop: 6 }}>
+            <option value="">Alle Standorte</option>{sites.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>}
         </div>
         <div className="toolbar">
           <div className="seg">{MODES.map(([k, l, d]) => <button key={k} title={d} className={mode === k ? 'on' : ''} onClick={() => setMode(k)}>{l}</button>)}</div>

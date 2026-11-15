@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom'
 const HELP = [
   ['/kalkulationen/', 'Kalkulation bearbeiten', 'Eine Anfrage durchrechnen, Versionen festhalten und in ein Angebot überführen.', [
     'Kopfdaten prüfen: Kunde, Ansprechpartner, Artikel, Status, Machbarkeit, Serienstart.',
+    'Fertigungsstandort wählen (Abschnitt „Maschine & Fertigung“): Sätze und Maschinen des Standorts werden übernommen. Rechts „Standorte vergleichen“ rechnet dieselbe Kalkulation für alle Standorte.',
     'Im Reiter „Kalkulation“ von oben nach unten arbeiten: Mengen → Material/Zukaufteile → Maschine & Personal (in %) → Rüsten → Montage & Arbeitsgänge → Verpackung & Transport → Zuschläge.',
     'Werte sind aus Stammdaten vorbelegt; Abweichungen werden gelb markiert und lassen sich mit „↺“ zurücksetzen.',
     'Teure Zukaufteile bei Bedarf per Haken in die Nebenkalkulation nehmen; Jahresabschläge und Vorserienpreis unten eintragen.',
@@ -28,6 +29,7 @@ const HELP = [
     'Kapazität, Grundauslastung und Auslauf je Maschine pflegen Sie in den Stammdaten.',
   ]],
   ['/stammdaten', 'Stammdaten', 'Vorgabewerte für alle neuen Kalkulationen.', [
+    'Standorte: abweichende Sätze je Standort (Lohn, Zuschläge, Strom, CO₂) – leer = Gruppen-Standard. Maschinen sind je Standort zugeordnet.',
     'Maschinen & Anlagen (inkl. Montagelinien, Prüfstände), Stundensätze, Materialien, Zukaufteile, Preisgleitung, Vorlagen und Parameter (Zuschläge, Lohnsätze).',
     'Änderungen wirken auf neue Kalkulationen; gespeicherte Versionen bleiben unverändert (Nachvollziehbarkeit).',
     'Nur Administratoren ändern Parameter; Materialpreisänderungen werden automatisch protokolliert.',

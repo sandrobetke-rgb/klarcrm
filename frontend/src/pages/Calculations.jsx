@@ -1,3 +1,4 @@
+import { siteOptions, useSites } from '../components/useSites'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api'
@@ -79,6 +80,8 @@ function CallModal({ id, onClose }) {
 }
 
 export default function Calculations() {
+  const sites = useSites()
+  const siteName = (id) => sites.find((x) => x.id === id)?.name
   const nav = useNavigate()
   const { canWrite } = useAuth()
   const [callFor, setCallFor] = useState(null)
@@ -137,9 +140,10 @@ export default function Calculations() {
         { name: 'no_bid_reason', label: 'Kein Angebot', options: NO_BID_REASONS },
         { name: 'approval_status', label: 'Freigabe', options: [{ value: 'angefragt', label: 'angefragt' }, { value: 'freigegeben', label: 'freigegeben' }, { value: 'abgelehnt', label: 'abgelehnt' }] },
         { name: 'big', label: 'Großprojekte', options: [{ value: 'true', label: '★ nur Großprojekte' }] },
+        ...(sites.length > 1 ? [{ name: 'site_id', label: 'Standort', options: siteOptions(sites) }] : []),
       ]}
       columns={[
-        { key: 'number', label: 'Kalk.-Nr.', sort: 'number', render: (r) => <><strong>{r.number}</strong><br /><small className="muted">V{r.current_version}</small></> },
+        { key: 'number', label: 'Kalk.-Nr.', sort: 'number', render: (r) => <><strong>{r.number}</strong><br /><small className="muted">V{r.current_version}{sites.length > 1 && siteName(r.site_id) ? ` · ${siteName(r.site_id)}` : ''}</small></> },
         { key: 'article_name', label: 'Artikel', sort: 'article_name', render: (r) => <>{r.article_name}{r.own_article_no && <><br /><small className="muted">{r.own_article_no}</small></>}
           <div><BigBadge revenue={r.annual_revenue} invest={r.invest} /></div></> },
         { key: 'customer_article_no', label: 'Art.-Nr. Kunde', sort: 'customer_article_no' },

@@ -1,3 +1,4 @@
+import { useSites } from '../components/useSites'
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
 import { BarList } from '../components/charts'
@@ -8,6 +9,7 @@ const FEAS = Object.fromEntries(FEASIBILITY.map((x) => [x.value, x.label]))
 
 // Berichte: Schlüssel, Titel, Spaltenbezeichnung der Gruppe, Beschriftung des Schlüssels
 const REPORTS = [
+  ['site', 'Standorte', 'Standort', (k) => k, 'Anfragen, Umsatz und Erfolg je Fertigungsstandort.'],
   ['machine_class', 'Maschinengröße (Schließkraft)', 'Größenklasse', (k) => k, 'In welchem Bereich kommen die meisten Anfragen, wo sagen wir ab oder verlieren?'],
   ['customer', 'Kunden', 'Kunde', (k) => k, 'Wer fragt am meisten an, welcher Anteil am angefragten Umsatz, wie oft gewinnen wir?'],
   ['no_bid_reasons', 'Absagen (kein Angebot abgegeben)', 'Grund', (k) => noBidLabel(k), 'Warum geben wir kein Angebot ab?'],
@@ -82,7 +84,8 @@ function ReportTable({ title, keyLabel, label, rows, question }) {
 }
 
 export default function Reports() {
-  const [f, setF] = useState({ date_from: '', date_to: '', owner_id: null, account_id: null })
+  const [f, setF] = useState({ date_from: '', date_to: '', owner_id: null, account_id: null, site_id: '' })
+  const sites = useSites()
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [show, setShow] = useState('machine_class')
@@ -110,6 +113,8 @@ export default function Reports() {
             <button onClick={() => setF({ ...f, date_from: '', date_to: '' })}>alle</button>
           </div></div>
         <div className="field"><label>Vertrieb</label><RefSelect kind="user" value={f.owner_id} onChange={(v) => setF({ ...f, owner_id: v })} /></div>
+        {sites.length > 1 && <div className="field"><label>Standort</label><select value={f.site_id} onChange={(e) => setF({ ...f, site_id: e.target.value })}>
+          <option value="">alle</option>{sites.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select></div>}
         <div className="field"><label>Kunde</label><RefSelect kind="account" value={f.account_id} onChange={(v) => setF({ ...f, account_id: v })} /></div>
       </div>
       <ErrorBox error={error} />

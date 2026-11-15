@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from ..auth import can_read
 from ..database import get_db
-from ..models import Account, Calculation, Machine, Material, User
+from ..models import Account, Calculation, Machine, Material, Site, User
 
 router = APIRouter()
 
@@ -61,13 +61,15 @@ def _finish(groups: dict, total: dict, key_name: str = "key") -> list:
 
 @router.get("")
 def reports(date_from: date | None = Query(None), date_to: date | None = Query(None), owner_id: int | None = None,
-            account_id: int | None = None, db: Session = Depends(get_db), _: User = Depends(can_read)):
+            account_id: int | None = None, site_id: int | None = None, db: Session = Depends(get_db), _: User = Depends(can_read)):
     """Kennzahlen gruppiert. Zeitraum bezieht sich auf das Anfragedatum (sonst Anlagedatum)."""
     q = select(Calculation)
     if owner_id:
         q = q.where(Calculation.owner_id == owner_id)
     if account_id:
         q = q.where(Calculation.account_id == account_id)
+    if site_id:
+        q = q.where(Calculation.site_id == site_id)
     calcs = []
     for c in db.scalars(q).unique():
         d = c.inquiry_date or (c.created_at.date() if c.created_at else None)
@@ -78,10 +80,11 @@ def reports(date_from: date | None = Query(None), date_to: date | None = Query(N
     materials = {m.id: m for m in db.scalars(select(Material))}
     accounts = {a.id: a.name for a in db.scalars(select(Account)).unique()}
     users = {u.id: u.name for u in db.scalars(select(User))}
+    sites = {x.id: x.name for x in db.scalars(select(Site))}
 
     total = _empty()
     g = {k: defaultdict(_empty) for k in ("machine_class", "machine", "customer", "material", "owner", "month", "status",
-                                         "feasibility")}
+                                         "feasibility", "site")}
     lost_reasons, no_bid_reasons = defaultdict(_empty), defaultdict(_empty)
     for c, d in calcs:
         _add(total, c)
@@ -97,6 +100,7 @@ def reports(date_from: date | None = Query(None), date_to: date | None = Query(N
         _add(g["month"][d.strftime("%Y-%m") if d else "ohne Datum"], c)
         _add(g["status"][c.status], c)
         _add(g["feasibility"][c.feasibility or "nicht bewertet"], c)
+        _add(g["site"][sites.get(c.site_id or inp.get("site_id"), "ohne Standort")], c)
         if c.status == LOST:
             _add(lost_reasons[c.close_reason or "ohne Grund"], c)
         if c.status == NO_BID:

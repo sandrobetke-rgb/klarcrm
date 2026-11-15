@@ -563,3 +563,19 @@ h1 .big-badge { font-size: 12.5px; margin-top: 0; }
 .dc-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--text-2); margin-bottom: 8px; }
 .dc-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
 .row-sum td { border-top: 1px solid var(--border); }
+.site-cmp th, .site-cmp td { white-space: nowrap; }
+.site-cmp td:first-child { color: var(--text-2); }
+.site-cur { background: var(--surface-2); }
+.site-notes { margin: 6px 0; padding-left: 18px; }
+.site-matrix input.num { width: 86px; padding: 4px 6px; }
+.site-matrix input.site-over { background: var(--info-bg, #e8f0fc); border-color: #8fb0e6; }
+.site-matrix .group-row td { background: var(--surface-2); padding-top: 8px; }
+.site-tiles { display: grid; gap: 8px; }
+.site-tile { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; display: grid; gap: 4px; }
+.site-tile.site-best { border-color: var(--good); }
+.site-tile-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.site-price { margin-left: auto; font-weight: 700; font-size: 15px; }
+.site-delta { min-width: 52px; text-align: right; font-size: 12.5px; }
+.site-delta.good { color: var(--good); } .site-delta.bad { color: var(--critical, #c0392b); }
+.site-tile-body { display: grid; gap: 1px; color: var(--text-2); }
+.site-tile .btn { justify-self: start; }

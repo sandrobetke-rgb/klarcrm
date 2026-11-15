@@ -4,7 +4,7 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.20 |
+| **Dokumentversion** | 1.21 |
 | **Stand** | 15.11.2026 |
 | **Status** | Testphase (GitHub Codespaces); Zielbetrieb: interner Server F&R |
 
@@ -411,6 +411,24 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 - AUSW-4: Export je Bericht als CSV (Excel, deutsches Zahlenformat), Druck/PDF der Seite (auch „Alle Berichte“).
 - AUSW-5: Lesezugriff für alle Rollen inkl. Gesellschafter.
 
+### 6.11 Standorte der Gruppe
+- STO-1: Stammdaten „Standorte“: Kürzel, Name, Land, Anschrift, Reihenfolge, aktiv. Je Standort **abweichende Sätze**
+  gegenüber den Gruppen-Parametern (Matrix: Lohnsätze, Zuschläge, Zukaufteile, Verpackung/Transport pauschal,
+  Gewinn/Konditionen, Fertigung, CO₂-Faktoren, Strompreis); leeres Feld = Gruppen-Standard.
+- STO-2: Maschinen und Anlagen sind einem Standort zugeordnet (Maschinenstundensatz je Maschine).
+- STO-3: Jede Kalkulation hat einen **Fertigungsstandort** (Teil der Version). Neue Kalkulationen erhalten den
+  Standard-Standort des Benutzers (sonst den ersten Standort) und dessen Sätze. Die Maschinenauswahl zeigt die
+  Maschinen des Standorts; die „≠ Standard“-Markierung bezieht sich auf die Standort-Sätze.
+- STO-4: **Standortwechsel** in der Kalkulation: Standard-Sätze des bisherigen Standorts werden durch die des neuen
+  ersetzt, individuell geänderte Werte bleiben; Spritzgießmaschine wird durch die kleinste vergleichbare Maschine
+  (gleiche Art, Schließkraft ≥ bisher, bei Mehrkomponenten bevorzugt 2K) ersetzt, Arbeitsgänge entsprechend;
+  Hinweise, wenn keine vergleichbare Maschine/Anlage vorhanden ist.
+- STO-5: **Standortvergleich**: dieselbe Kalkulation (Zykluszeit, Material, Mengen gleich) für alle aktiven Standorte
+  mit Maschine, Maschinen- und Lohnsatz, Stück/h, Grenzkosten, Selbstkosten, Preis, Δ % zum aktuellen Standort,
+  Umsatz, CO₂ je Stück; günstigster Standort markiert; „Standort übernehmen“ stellt die Kalkulation um (speichern als
+  neue Version).
+- STO-6: Filter nach Standort in Kalkulationsliste, Auslastung und Auswertungen; Bericht „Standorte“.
+
 ### 6.10 Beschaffung Werkzeuge, Montagelinien, Vorrichtungen, Prüfmittel
 - BES-1: Menüpunkt „Beschaffung“ und Reiter „Beschaffung“ in jeder Kalkulation. Je Vorgang: Nummer (BA-Jahr-lfd. Nr.),
   Art (Spritzgießwerkzeug, Montagelinie, Vorrichtung, Prüfmittel, Sonstiges), Bezeichnung, Kalkulation, Status
@@ -606,3 +624,4 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.18 | 15.11.2026 | **Beschaffung** (Kap. 6.10, BES-1 … 9): Vorgänge für Werkzeuge, Montagelinien, Vorrichtungen und Prüfmittel, Eckdaten aus der Kalkulation, **Werkzeuganfrage** als PDF im Firmenlayout und E-Mail-Entwurf je Lieferant, Angebotsvergleich, Vergabeentscheidung mit Begründung, Übernahme in die Kalkulation als neue Version. Neue Tabellen `procurement_requests`, `procurement_offers` (automatisch angelegt). Seitenhilfe ergänzt. |
 | 1.19 | 15.11.2026 | **Briefkopf erweitert** (PDF-1, PDF-1a): Fax, weitere Standorte, Sitz, Steuernummer, zweite Bankverbindung, Zertifizierungen, Fußzeilen-Zusatz, Logogröße und Logo entfernen; Live-Vorschau; gemeinsamer Briefkopf für Angebot und Werkzeuganfrage. |
 | 1.20 | 15.11.2026 | **Grenzkostenkalkulation** (KAL-28m): direkte Artikelkosten inkl. Verpackung und Transport, Deckungsbeitrag je Stück/p. a./Lieferjahr, Preisuntergrenzen; Strompreis als Eingabe. Rechentest mit Handrechnung ergänzt; gespeicherte Versionen rechnen unverändert (ohne Strompreis = ohne Energie). |
+| 1.21 | 15.11.2026 | **Standorte der Gruppe** (Kap. 6.11, STO-1 … 6): Standort-Stammdaten mit abweichenden Sätzen, Maschinen je Standort, Fertigungsstandort je Kalkulation mit Standortwechsel, Standortvergleich aller Standorte, Standard-Standort je Benutzer, Filter in Liste/Auslastung/Auswertungen. Neue Tabelle `sites`, neue Spalten `machines.site_id`, `calculations.site_id`, `users.site_id` (automatisch). Bestehende Kalkulationen ohne Standort gelten als Standard-Standort. |

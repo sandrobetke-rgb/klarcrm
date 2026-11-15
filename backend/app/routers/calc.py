@@ -14,13 +14,17 @@ from ..database import get_db
 from ..models import (
     STAGE_PROBABILITY, Activity, CalcSettings, CalcTemplate, Calculation, CalculationCall, CalculationVersion, Machine,
     Material, MaterialPrice,
-    Opportunity, PostCalculation, PurchasedPart, Quote, QuoteItem, User,
+    Opportunity, PostCalculation, PurchasedPart, Quote, Site, QuoteItem, User,
 )
 from .quotes import next_number as next_quote_number
 
 machines = make_crud_router(
     model=Machine, create_schema=s.MachineBase, update_schema=s.MachineUpdate, out_schema=s.MachineOut,
-    search_fields=["name", "number", "location"], filter_fields=["active", "kind"], default_sort="name",
+    search_fields=["name", "number", "location"], filter_fields=["active", "kind", "site_id"], default_sort="name",
+)
+sites = make_crud_router(
+    model=Site, create_schema=s.SiteBase, update_schema=s.SiteUpdate, out_schema=s.SiteOut,
+    search_fields=["name", "code", "country"], filter_fields=["active"], default_sort="sort",
 )
 purchased_parts = make_crud_router(
     model=PurchasedPart, create_schema=s.PurchasedPartBase, update_schema=s.PurchasedPartUpdate,
@@ -61,18 +65,38 @@ REASON_LABELS = {
 
 
 # ---------------- Parameter ----------------
-def get_settings(db: Session) -> dict:
+# Parameter, die je Standort abweichen dürfen (Sätze, Zuschläge, Energie, CO₂)
+SITE_KEYS = ("labor_rate_h", "setup_rate_h", "assembly_rate_h", "handling_rate_h", "automation_rate_h", "mgk_pct", "fgk_pct",
+             "scrap_pct", "vwgk_pct", "vtgk_pct", "pm_pct", "quality_pct", "toolshop_pct", "profit_pct", "cash_discount_pct",
+             "rebate_pct", "productivity_pct", "assembly_productivity_pct", "setup_time_h", "setup_persons", "startup_scrap_pcs",
+             "co2_grid_kg_kwh", "co2_scope1_kg_h", "co2_masterbatch_kg_kg", "co2_transport_kg_tkm", "purchased_mgk_pct",
+             "side_mgk_pct", "side_quality_pct", "side_scrap_pct", "side_markup_pct", "energy_price_kwh", "pack_pct",
+             "transport_pct")
+
+
+def get_settings(db: Session, site_id: int | None = None) -> dict:
+    """Gruppen-Parameter, bei Angabe eines Standorts mit dessen Abweichungen überlagert."""
     row = db.get(CalcSettings, 1)
     if not row:
         row = CalcSettings(id=1, data=dict(DEFAULT_SETTINGS))
         db.add(row)
         db.commit()
-    return {**DEFAULT_SETTINGS, **(row.data or {})}
+    st = {**DEFAULT_SETTINGS, **(row.data or {})}
+    site = db.get(Site, site_id) if site_id else None
+    if site and site.settings:
+        st.update({k: v for k, v in site.settings.items() if k in SITE_KEYS and v not in (None, "")})
+    return st
+
+
+def default_site_id(db: Session, user: User | None = None) -> int | None:
+    if user and user.site_id and db.get(Site, user.site_id):
+        return user.site_id
+    return db.scalar(select(Site.id).where(Site.active.is_(True)).order_by(Site.sort, Site.id).limit(1))
 
 
 @router.get("/settings")
-def read_settings(db: Session = Depends(get_db), _: User = Depends(can_read)):
-    return get_settings(db)
+def read_settings(site_id: int | None = None, db: Session = Depends(get_db), _: User = Depends(can_read)):
+    return get_settings(db, site_id)
 
 
 @router.put("/settings")
@@ -87,9 +111,10 @@ def write_settings(data: dict, db: Session = Depends(get_db), _: User = Depends(
     return row.data
 
 
-def default_inputs(db: Session) -> dict:
-    st = get_settings(db)
+def default_inputs(db: Session, site_id: int | None = None) -> dict:
+    st = get_settings(db, site_id)
     inp = dict(DEFAULT_INPUTS)
+    inp["site_id"] = site_id
     for k in ("labor_rate_h", "setup_rate_h", "assembly_rate_h", "handling_rate_h", "automation_rate_h", "mgk_pct", "fgk_pct", "scrap_pct", "vwgk_pct",
               "vtgk_pct", "pm_pct", "quality_pct", "toolshop_pct", "profit_pct", "cash_discount_pct", "rebate_pct", "productivity_pct",
               "assembly_productivity_pct", "setup_time_h", "setup_persons", "startup_scrap_pcs",
@@ -104,8 +129,99 @@ def default_inputs(db: Session) -> dict:
 
 
 @router.get("/defaults")
-def read_defaults(db: Session = Depends(get_db), _: User = Depends(can_read)):
-    return default_inputs(db)
+def read_defaults(site_id: int | None = None, db: Session = Depends(get_db), user: User = Depends(can_read)):
+    return default_inputs(db, site_id or default_site_id(db, user))
+
+
+def _pick_machine(machines: list, cur: "Machine | None", kind: str = "spritzguss", multi_k: bool = False) -> "Machine | None":
+    """Vergleichbare Maschine am Zielstandort: gleiche Art (bei Mehrkomponenten bevorzugt 2K-Maschinen),
+    kleinste mit Schließkraft ≥ aktueller, sonst größte."""
+    cand = [m for m in machines if (m.kind or "spritzguss") == kind]
+    if multi_k:
+        cand = [m for m in cand if "2k" in (m.name or "").lower() or "mehrkomp" in (m.name or "").lower()] or cand
+    if not cand:
+        return None
+    if cur and cur.clamping_force_t:
+        ok = sorted([m for m in cand if (m.clamping_force_t or 0) >= cur.clamping_force_t], key=lambda m: m.clamping_force_t or 0)
+        return ok[0] if ok else max(cand, key=lambda m: m.clamping_force_t or 0)
+    if cur:
+        same = [m for m in cand if m.name == cur.name]
+        if same:
+            return same[0]
+    return sorted(cand, key=lambda m: m.clamping_force_t or 0)[0]
+
+
+def site_inputs(db: Session, inputs: dict, target: Site, cur_site_id: int | None) -> tuple[dict, list]:
+    """Kalkulationseingaben auf einen anderen Standort umstellen: Standard-Sätze des bisherigen Standorts werden durch
+    die des Zielstandorts ersetzt (individuell geänderte Werte bleiben), Maschinen werden durch vergleichbare ersetzt."""
+    old, new = get_settings(db, cur_site_id), get_settings(db, target.id)
+    inp, notes = dict(inputs), []
+    for k in SITE_KEYS:
+        if k not in inp:
+            continue
+        cur = inp.get(k)
+        try:
+            same = cur in (None, "") or abs(float(cur) - float(old.get(k) or 0)) < 1e-9
+        except (TypeError, ValueError):
+            same = False
+        if same:
+            inp[k] = new.get(k)
+        elif new.get(k) != old.get(k):
+            notes.append(f"{k} individuell ({cur}) beibehalten")
+    machines = db.scalars(select(Machine).where(Machine.active.is_(True), Machine.site_id == target.id)).all()
+    cur_m = db.get(Machine, inputs.get("machine_id")) if inputs.get("machine_id") else None
+    if not (cur_m and cur_m.site_id == target.id):
+        multi_k = bool(inputs.get("components"))
+        m = _pick_machine(machines, cur_m, multi_k=multi_k)
+        if m and multi_k and "2k" not in (m.name or "").lower():
+            notes.append("keine 2K-Maschine am Standort – Vergleich mit Einkomponentenmaschine")
+        if m:
+            inp.update(machine_id=m.id, machine_name=m.name, machine_rate_h=m.hourly_rate, maintenance_rate_h=m.maintenance_rate or 0,
+                       productivity_pct=m.productivity_pct or inp.get("productivity_pct"), operator_factor=m.operator_factor,
+                       handling_pct=m.handling_pct or 0, automation_pct=m.automation_pct or 0,
+                       machine_power_kw=m.power_kw or inp.get("machine_power_kw"),
+                       co2_grid_kg_kwh=m.grid_factor if m.grid_factor is not None else inp.get("co2_grid_kg_kwh"))
+        else:
+            notes.append("keine passende Spritzgießmaschine am Standort – Maschine beibehalten")
+    ops = []
+    for o in inputs.get("operations") or []:
+        om = db.get(Machine, o.get("machine_id")) if o.get("machine_id") else None
+        if om and om.site_id != target.id:
+            m = _pick_machine(machines, om, om.kind or "spritzguss")
+            if m:
+                o = {**o, "machine_id": m.id, "name": o.get("name") or m.name, "rate_h": m.hourly_rate,
+                     "maintenance_h": m.maintenance_rate or 0, "power_kw": m.power_kw or 0}
+            else:
+                notes.append(f"Arbeitsgang „{o.get('name')}“: keine vergleichbare Anlage – beibehalten")
+        if o.get("labor_rate_h") == old.get("labor_rate_h"):
+            o = {**o, "labor_rate_h": new.get("labor_rate_h")}
+        ops.append(o)
+    inp["operations"] = ops
+    inp["site_id"] = target.id
+    return inp, notes
+
+
+@router.post("/site-compare")
+def site_compare(inputs: dict, db: Session = Depends(get_db), user: User = Depends(can_read)):
+    """Dieselbe Kalkulation für alle aktiven Standorte rechnen (Standortvergleich)."""
+    cur_site = inputs.get("site_id") or default_site_id(db, user)
+    rows = []
+    for st in db.scalars(select(Site).where(Site.active.is_(True)).order_by(Site.sort, Site.id)).all():
+        inp, notes = (dict(inputs), []) if st.id == cur_site else site_inputs(db, inputs, st, cur_site)
+        inp["site_id"] = st.id
+        res = compute(inp)
+        m = db.get(Machine, inp.get("machine_id")) if inp.get("machine_id") else None
+        rows.append({"site": {"id": st.id, "code": st.code, "name": st.name, "country": st.country}, "current": st.id == cur_site,
+                     "machine": f"{m.number} · {m.name}" if m else (inp.get("machine_name") or "–"),
+                     "machine_rate_h": inp.get("machine_rate_h"), "labor_rate_h": inp.get("labor_rate_h"),
+                     "pieces_per_hour": res["pieces_per_hour"], "self_cost": res["self_cost"], "unit_price": res["unit_price"],
+                     "direct_cost": (res.get("direct_costs") or {}).get("total"), "margin_pct": res["margin_pct"],
+                     "co2_per_piece_kg": (res.get("co2") or {}).get("total"), "annual_revenue": res["annual_revenue"],
+                     "notes": notes, "warnings": res.get("warnings", []), "inputs": inp})
+    base = next((r for r in rows if r["current"]), rows[0] if rows else None)
+    for r in rows:
+        r["delta_pct"] = round((r["unit_price"] / base["unit_price"] - 1) * 100, 2) if base and base["unit_price"] else 0
+    return {"rows": rows, "current_site_id": cur_site}
 
 
 @router.post("/preview")
@@ -128,7 +244,9 @@ def next_calc_number(db: Session) -> str:
     return f"{prefix}{(int(last.split('-')[-1]) + 1 if last else 1):04d}"
 
 
-def apply_results(calc: Calculation, res: dict):
+def apply_results(calc: Calculation, res: dict, inputs: dict | None = None):
+    if inputs is not None and inputs.get("site_id"):
+        calc.site_id = inputs.get("site_id")
     calc.unit_price = res["unit_price"]
     calc.annual_volume = res["annual_volume"]
     calc.annual_revenue = res["annual_revenue"]
@@ -178,6 +296,7 @@ def is_big(c: Calculation, st: dict) -> list[str]:
 def list_calcs(
     q: str | None = None, status: str | None = None, close_reason: str | None = None, big: bool = False,
     feasibility: str | None = None, no_bid_reason: str | None = None, approval_status: str | None = None,
+    site_id: int | None = None,
     account_id: int | None = None, owner_id: int | None = None, opportunity_id: int | None = None,
     sort: str = "-updated_at", limit: int = Query(100, le=1000), offset: int = 0,
     db: Session = Depends(get_db), _: User = Depends(can_read),
@@ -190,6 +309,8 @@ def list_calcs(
                               Calculation.remark.ilike(like)))
     if status:
         stmt = stmt.where(Calculation.status.in_(status.split(",")))
+    if site_id:
+        stmt = stmt.where(Calculation.site_id == site_id)
     if close_reason:
         stmt = stmt.where(Calculation.close_reason == close_reason)
     if feasibility:
@@ -287,12 +408,13 @@ def create_calc(data: s.CalcCreate, db: Session = Depends(get_db), user: User = 
     meta.setdefault("owner_id", user.id)
     meta.setdefault("inquiry_date", date.today())
     calc = Calculation(number=next_calc_number(db), **meta)
-    inputs = normalize({**default_inputs(db), **(data.inputs or {})})
+    inputs = normalize({**default_inputs(db, (data.inputs or {}).get("site_id") or default_site_id(db, user)),
+                        **(data.inputs or {})})
     res = compute(inputs)
     calc.versions.append(CalculationVersion(version_no=1, inputs=inputs, results=res,
                                             change_note="Erstkalkulation", created_by_id=user.id))
     calc.current_version = 1
-    apply_results(calc, res)
+    apply_results(calc, res, inputs)
     db.add(calc)
     db.flush()
     sync_opportunity(db, calc)
@@ -348,7 +470,7 @@ def add_version(calc_id: int, data: s.CalcVersionIn, db: Session = Depends(get_d
     calc.versions.append(CalculationVersion(version_no=no, inputs=inputs, results=res,
                                             change_note=data.change_note, created_by_id=user.id))
     calc.current_version = no
-    apply_results(calc, res)
+    apply_results(calc, res, inputs)
     if calc.status == "anfrage":
         calc.status = "kalkulation"
         calc.probability = max(calc.probability, STATUS_PROBABILITY["kalkulation"])
@@ -674,14 +796,15 @@ def save_analysis(calc_id: int, data: dict, db: Session = Depends(get_db), _: Us
 
 # ---------------- Auslastung ----------------
 @router.get("/utilization")
-def utilization(years: int = Query(5, ge=1, le=10), db: Session = Depends(get_db), _: User = Depends(can_read)):
+def utilization(years: int = Query(5, ge=1, le=10), site_id: int | None = None, db: Session = Depends(get_db),
+                _: User = Depends(can_read)):
     """Maschinenstunden je Jahr: Bestand (Grundauslastung je Maschine mit Auslauf), fest (gewonnene Kalkulationen),
     gewichtet (offen × Wahrscheinlichkeit), potenziell (offen zu 100 %). Laufzeit ab SOP (sonst ab heute bzw. Folgejahr) über die Projektlaufzeit."""
     today = date.today()
     year_list = [today.year + n for n in range(years)]
-    machines = {m.id: m for m in db.scalars(select(Machine))}
+    machines = {m.id: m for m in db.scalars(select(Machine)) if not site_id or m.site_id == site_id}
     rows = {mid: {"machine": {"id": m.id, "name": m.name, "number": m.number,
-                              "clamping_force_t": m.clamping_force_t, "kind": m.kind},
+                              "clamping_force_t": m.clamping_force_t, "kind": m.kind, "site_id": m.site_id},
                   "capacity_h": float(m.available_hours_year or 6000),
                   "years": {y: {"base": float(m.available_hours_year or 6000) * float(m.base_load_pct or 0) / 100
                                 * (1 - float(m.base_load_decline_pct or 0) / 100) ** n,
@@ -861,7 +984,7 @@ def escalation_apply(data: dict, db: Session = Depends(get_db), user: User = Dep
             version_no=no, inputs=inputs, results=res, created_by_id=user.id,
             change_note=f"Preisgleitung {mat.name}: {float(old or 0):.2f} → {mat.price_per_kg:.2f} €/kg".replace(".", ",")))
         c.current_version = no
-        apply_results(c, res)
+        apply_results(c, res, inputs)
         db.flush()
         sync_opportunity(db, c)
         done.append(c.number)
@@ -885,7 +1008,7 @@ def copy_calc(calc_id: int, data: dict, db: Session = Depends(get_db), user: Use
     calc.versions.append(CalculationVersion(version_no=1, inputs=inputs, results=res, created_by_id=user.id,
                                             change_note=f"Kopie von {src.number} V{ver.version_no}"))
     calc.current_version = 1
-    apply_results(calc, res)
+    apply_results(calc, res, inputs)
     db.add(calc)
     db.commit()
     db.refresh(calc)

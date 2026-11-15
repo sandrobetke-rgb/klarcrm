@@ -51,6 +51,7 @@ class UserBase(BaseModel):
     role: Role = "vertrieb"
     active: bool = True
     can_approve: bool | None = False
+    site_id: int | None = None
 
 
 class UserCreate(UserBase):
@@ -63,6 +64,7 @@ class UserUpdate(BaseModel):
     role: Role | None = None
     active: bool | None = None
     can_approve: bool | None = None
+    site_id: int | None = None
     password: str | None = Field(default=None, min_length=8)
 
 
@@ -286,6 +288,7 @@ class MachineBase(BaseModel):
     number: str | None = None
     name: str = Field(min_length=1)
     kind: Literal["spritzguss", "montage", "nachbearbeitung", "pruefung", "sonstige"] | None = "spritzguss"
+    site_id: int | None = None
     clamping_force_t: float | None = None
     hourly_rate: float = 0
     maintenance_rate: float = 0
@@ -429,6 +432,7 @@ class CalcOut(ORM, CalcMeta):
     number: str
     article_name: str
     status: str
+    site_id: int | None = None
     probability: int
     sync_opportunity: bool
     current_version: int
@@ -489,4 +493,24 @@ class PurchasedPartUpdate(PurchasedPartBase):
 
 
 class PurchasedPartOut(ORM, PurchasedPartBase):
+    id: int
+
+
+
+class SiteBase(BaseModel):
+    code: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    country: str | None = None
+    address: str | None = None
+    settings: dict | None = None
+    sort: int = 0
+    active: bool = True
+
+
+class SiteUpdate(SiteBase):
+    code: str | None = None
+    name: str | None = None
+
+
+class SiteOut(ORM, SiteBase):
     id: int

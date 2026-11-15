@@ -299,7 +299,7 @@ def apply_to_calc(rid: int, db: Session = Depends(get_db), user: User = Depends(
             f"({chosen.supplier_name}{', Angebot ' + chosen.offer_no if chosen.offer_no else ''})")
     c.versions.append(CalculationVersion(version_no=no, inputs=inp, results=res, change_note=note, created_by_id=user.id))
     c.current_version = no
-    apply_results(c, res)
+    apply_results(c, res, inp)
     r.applied_version = no
     db.flush()
     sync_opportunity(db, c)

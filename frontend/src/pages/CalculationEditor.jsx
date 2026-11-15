@@ -49,12 +49,12 @@ export default function CalculationEditor() {
   const [calc, setCalc] = useState(null)
   const [error, setError] = useState(null)
   const [tab, setTab] = useState('calc')
-  const [master, setMaster] = useState({ machines: [], materials: [], parts: [], settings: {} })
+  const [master, setMaster] = useState({ machines: [], materials: [], parts: [], settings: {}, sites: [] })
 
   useEffect(() => {
     Promise.all([api.get('/machines?limit=500&active=true'), api.get('/materials?limit=500&active=true'), api.get('/calc/settings'),
-      api.get('/purchased-parts?limit=500&active=true')])
-      .then(([m, mat, st, pp]) => setMaster({ machines: m.items, materials: mat.items, settings: st, parts: pp.items }))
+      api.get('/purchased-parts?limit=500&active=true'), api.get('/sites?limit=50&active=true&sort=sort')])
+      .then(([m, mat, st, pp, si]) => setMaster({ machines: m.items, materials: mat.items, settings: st, parts: pp.items, sites: si.items }))
   }, [])
   useEffect(() => {
     if (id === 'neu') return
@@ -83,6 +83,7 @@ export default function CalculationEditor() {
           <p className="muted">
             {calc.account ? <Link to={`/firmen/${calc.account.id}`}>{calc.account.name}</Link> : 'kein Kunde'}
             {calc.customer_article_no && ` · Kd.-Art.-Nr. ${calc.customer_article_no}`}
+            {master.sites.find((x) => x.id === calc.site_id) && ` · Standort ${master.sites.find((x) => x.id === calc.site_id).name}`}
             {` · Version ${calc.current_version} · ${calc.probability} % Wahrscheinlichkeit`}
             {calc.close_reason && ` · ${reasonLabel(calc.close_reason)}`}
             {calc.no_bid_reason && ` · Kein Angebot: ${noBidLabel(calc.no_bid_reason)}${calc.no_bid_note ? ` (${calc.no_bid_note})` : ''}`}
@@ -228,6 +229,22 @@ function CalcTab({ calc, setCalc, master }) {
   const timer = useRef()
 
   useEffect(() => { setInputs(structuredClone(base.inputs)); setResults(base.results) }, [baseNo, calc.current_version])
+  // Parameter des gewählten Standorts (für Vorbelegung und „≠ Standard“-Markierung)
+  const [siteSettings, setSiteSettings] = useState(null)
+  const [siteNotes, setSiteNotes] = useState(null)
+  useEffect(() => {
+    if (!inputs.site_id) { setSiteSettings(null); return }
+    api.get(`/calc/settings?site_id=${inputs.site_id}`).then(setSiteSettings).catch(() => setSiteSettings(null))
+  }, [inputs.site_id])
+  async function changeSite(sid) {
+    if (!sid) return
+    try {
+      const x = await api.post('/calc/site-compare', inputs)
+      const row = x.rows.find((r) => r.site.id === Number(sid))
+      if (row) { setInputs(row.inputs); setSiteNotes(row.notes) }
+    } catch (e) { setError(e) }
+  }
+  const siteMachines = master.machines.filter((m) => !inputs.site_id || !m.site_id || m.site_id === inputs.site_id || m.id === inputs.machine_id)
   useEffect(() => {
     clearTimeout(timer.current)
     timer.current = setTimeout(() => api.post('/calc/preview', inputs).then(setResults).catch(setError), 250)
@@ -237,7 +254,7 @@ function CalcTab({ calc, setCalc, master }) {
   const set = (k, v) => setInputs((s) => ({ ...s, [k]: v }))
   const machine = master.machines.find((m) => m.id === inputs.machine_id)
   const material = master.materials.find((m) => m.id === inputs.material_id)
-  const S = master.settings
+  const S = siteSettings || master.settings
   // Standardwert je Feld (aus Stammdaten / Parametern) – Abweichungen werden markiert
   const defaults = useMemo(() => ({
     machine_rate_h: machine?.hourly_rate, maintenance_rate_h: machine?.maintenance_rate,
@@ -376,10 +393,17 @@ function CalcTab({ calc, setCalc, master }) {
           </Section>
 
           <Section title="Maschine & Fertigung">
+            {master.sites.length > 0 && <div className="field"><label>Fertigungsstandort</label>
+              <select value={inputs.site_id ?? ''} onChange={(e) => changeSite(e.target.value)} disabled={!canWrite}>
+                {!inputs.site_id && <option value="">– bitte wählen –</option>}
+                {master.sites.map((x) => <option key={x.id} value={x.id}>{x.name}{x.country ? ` (${x.country})` : ''}</option>)}
+              </select>
+              <small className="hint">Wechsel übernimmt Sätze und vergleichbare Maschine des Standorts</small></div>}
+            {siteNotes?.length > 0 && <div className="field span-2"><div className="warn-box small">{siteNotes.join(' · ')}</div></div>}
             <div className="field span-2"><label>Maschine (Stammdaten)</label>
               <select value={inputs.machine_id ?? ''} onChange={(e) => pickMachine(e.target.value)}>
                 <option value="">– frei / manuell –</option>
-                {master.machines.filter((m) => (m.kind || 'spritzguss') === 'spritzguss' || m.id === inputs.machine_id)
+                {siteMachines.filter((m) => (m.kind || 'spritzguss') === 'spritzguss' || m.id === inputs.machine_id)
                   .map((m) => <option key={m.id} value={m.id}>{m.number} · {m.name} · {num2(m.hourly_rate)} €/h</option>)}
               </select></div>
             {F({ k: 'machine_rate_h', label: 'Maschinenstundensatz', unit: '€/h', hint: 'ohne Personal' })}
@@ -425,7 +449,7 @@ function CalcTab({ calc, setCalc, master }) {
             {F({ k: 'assembly_persons', label: 'Personen', unit: 'Pers.', step: 0.5 })}
             {F({ k: 'assembly_rate_h', label: 'Lohnsatz Montage', unit: '€/h' })}
             {F({ k: 'assembly_productivity_pct', label: 'Produktivität Montage', unit: '%' })}
-            <OperationsEditor rows={inputs.operations || []} machines={master.machines} labor={inputs.labor_rate_h} onChange={(v) => set('operations', v)} result={r} />
+            <OperationsEditor rows={inputs.operations || []} machines={siteMachines} labor={inputs.labor_rate_h} onChange={(v) => set('operations', v)} result={r} />
           </Section>
 
           <Section title="Verpackung & Transport">
@@ -549,7 +573,8 @@ function CalcTab({ calc, setCalc, master }) {
       </div>
 
       <aside className="calc-results">
-        <Results r={r} inputs={inputs} set={set} canWrite={canWrite} calc={calc} versionNo={dirty ? `V${latest.version_no + 1} (Entwurf)` : `V${base.version_no}`} />
+        <Results r={r} inputs={inputs} set={set} canWrite={canWrite} calc={calc} versionNo={dirty ? `V${latest.version_no + 1} (Entwurf)` : `V${base.version_no}`}
+          siteCompare={master.sites.length > 1 && <SiteCompareCard inputs={inputs} canWrite={canWrite} onAdopt={(row) => { setInputs(row.inputs); setSiteNotes(row.notes) }} />} />
       </aside>
     </div>
   )
@@ -878,7 +903,49 @@ function YearReductions({ inputs, setInputs, r }) {
   </>
 }
 
-function Results({ r, inputs, set, canWrite, calc, versionNo }) {
+function SiteCompareCard({ inputs, canWrite, onAdopt }) {
+  const [open, setOpen] = useState(false)
+  const [data, setData] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const t = useRef()
+  useEffect(() => {
+    if (!open) return undefined
+    clearTimeout(t.current)
+    t.current = setTimeout(() => { setBusy(true); api.post('/calc/site-compare', inputs).then(setData).finally(() => setBusy(false)) }, 400)
+    return () => clearTimeout(t.current)
+  }, [open, inputs])
+  const best = data ? Math.min(...data.rows.map((x) => x.unit_price)) : null
+  return (
+    <div className="card">
+      <div className="section-head"><h3>Standortvergleich</h3>
+        <button className="btn btn-ghost btn-sm" onClick={() => setOpen(!open)}>{open ? 'ausblenden' : 'Standorte vergleichen'}</button></div>
+      {!open && <p className="muted small" style={{ margin: 0 }}>Dieselbe Kalkulation mit den Sätzen und einer vergleichbaren Maschine jedes Standorts rechnen.</p>}
+      {open && !data && <div className="muted small">Rechne …</div>}
+      {open && data && <>
+        <div className="site-tiles">{data.rows.map((x) => (
+          <div key={x.site.id} className={`site-tile ${x.current ? 'site-cur' : ''} ${x.unit_price === best ? 'site-best' : ''}`}>
+            <div className="site-tile-head">
+              <b>{x.site.name}</b>{x.current && <Badge>aktuell</Badge>}{x.unit_price === best && <Badge tone="good">günstigster</Badge>}
+              <span className="site-price">{fix4(x.unit_price)} €</span>
+              <span className={`site-delta ${x.delta_pct < 0 ? 'good' : x.delta_pct > 0 ? 'bad' : ''}`}>{x.current ? '' : `${x.delta_pct > 0 ? '+' : ''}${num(x.delta_pct, 1)} %`}</span>
+            </div>
+            <div className="site-tile-body small">
+              <span>{x.machine}</span>
+              <span>Satz {num2(x.machine_rate_h)} €/h · Lohn {num2(x.labor_rate_h)} €/h · {num(x.pieces_per_hour, 0)} Stk/h</span>
+              <span>Grenzkosten {fix4(x.direct_cost)} · Selbstkosten {fix4(x.self_cost)} · CO₂ {num(x.co2_per_piece_kg, 3)} kg</span>
+              <span>Umsatz p. a. {eur(x.annual_revenue)}</span>
+            </div>
+            {canWrite && !x.current && <button className="btn btn-ghost btn-sm" onClick={() => onAdopt(x)}>Standort übernehmen</button>}
+          </div>))}</div>
+        {data.rows.some((x) => x.notes.length) && <ul className="hint small site-notes">{data.rows.filter((x) => x.notes.length).map((x) => <li key={x.site.id}><b>{x.site.name}:</b> {x.notes.join(' · ')}</li>)}</ul>}
+        <small className="hint">{busy ? 'aktualisiere … · ' : ''}Zykluszeit, Material und Mengen bleiben gleich; Standard-Sätze werden durch die des Standorts ersetzt, individuell geänderte bleiben.
+          „übernehmen“ stellt die Kalkulation um – danach als neue Version speichern.</small>
+      </>}
+    </div>
+  )
+}
+
+function Results({ r, inputs, set, canWrite, calc, versionNo, siteCompare }) {
   return (
     <div className="stack">
       <div className="card result-card">
@@ -914,6 +981,8 @@ function Results({ r, inputs, set, canWrite, calc, versionNo }) {
           </tbody>
         </table>
       </div>
+
+      {siteCompare}
 
       {r.direct_costs && <DirectCostCard d={r.direct_costs} r={r} inputs={inputs} />}
 

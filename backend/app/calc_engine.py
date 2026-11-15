@@ -121,6 +121,7 @@ DEFAULT_INPUTS = {
     # Preis Jahr 1: "kalkuliert" (= Serienpreis, optional mit Vorab-Einrechnung) oder "manuell" (fester Anlaufpreis;
     # ab Jahr 2 gilt der kalkulierte Serienpreis × Faktor des Jahres)
     "price_year1_mode": "kalkuliert", "price_year1_manual": None,
+    "site_id": None,  # Fertigungsstandort (Sätze/Maschinen des Standorts)
     # Grenzkostenkalkulation: Strompreis für die Energiekosten (0 = ohne Energie, ältere Versionen)
     "energy_price_kwh": 0.0,
     # Vorserie: Kleinstmengen vor Serienstart (0 = kein Vorserienpreis)

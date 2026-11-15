@@ -42,6 +42,7 @@ class TimestampMixin:
 class User(TimestampMixin, Base):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(primary_key=True)
+    site_id: Mapped[int | None] = mapped_column(Integer)                # Standard-Standort für neue Kalkulationen
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     name: Mapped[str] = mapped_column(String(120))
     password_hash: Mapped[str] = mapped_column(String(255))
@@ -235,6 +236,7 @@ class Machine(TimestampMixin, Base):
     handling_pct: Mapped[float | None] = mapped_column(Float)     # Standard-Anteil Mitarbeiter Handling %
     automation_pct: Mapped[float | None] = mapped_column(Float)   # Standard-Anteil Mitarbeiter Automatisierung %
     location: Mapped[str | None] = mapped_column(String(80))
+    site_id: Mapped[int | None] = mapped_column(ForeignKey("sites.id", ondelete="SET NULL"), index=True)
     available_hours_year: Mapped[float | None] = mapped_column(Float, default=6000)  # verfügbare Std/Jahr (Schichtmodell)
     base_load_pct: Mapped[float | None] = mapped_column(Float, default=0)          # Grundauslastung Bestandsaufträge %
     base_load_decline_pct: Mapped[float | None] = mapped_column(Float, default=0)  # Auslauf Bestand je Jahr %
@@ -279,6 +281,7 @@ class Calculation(TimestampMixin, Base):
     """Anfrage / Kalkulation mit Versionen."""
     __tablename__ = "calculations"
     id: Mapped[int] = mapped_column(primary_key=True)
+    site_id: Mapped[int | None] = mapped_column(Integer, index=True)   # Fertigungsstandort (aktuelle Version)
     number: Mapped[str] = mapped_column(String(30), unique=True, index=True)  # KA-2026-0001
     article_name: Mapped[str] = mapped_column(String(200))
     customer_article_no: Mapped[str | None] = mapped_column(String(80))
@@ -591,3 +594,17 @@ class ProcurementOffer(TimestampMixin, Base):
     rating: Mapped[int | None] = mapped_column(Integer)                     # technische Bewertung 1 … 5
     note: Mapped[str | None] = mapped_column(Text)
     request: Mapped["ProcurementRequest"] = relationship(back_populates="offers")
+
+
+
+class Site(TimestampMixin, Base):
+    """Standort der Gruppe mit eigenen Sätzen (Abweichungen von den Gruppen-Parametern)."""
+    __tablename__ = "sites"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(20), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    country: Mapped[str | None] = mapped_column(String(60))
+    address: Mapped[str | None] = mapped_column(String(200))
+    settings: Mapped[dict | None] = mapped_column(JSON)     # nur abweichende Parameter, z. B. {"labor_rate_h": 19}
+    sort: Mapped[int] = mapped_column(Integer, default=0)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
