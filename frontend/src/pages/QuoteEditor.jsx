@@ -1,3 +1,4 @@
+import { LetterFooter, LetterHead } from '../components/Letterhead'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api'
@@ -46,11 +47,7 @@ function PrintQuote({ q, account, app, net, taxSum, tax }) {
   const accent = a.accent_color || '#1f4b99'
   return (
     <div className="print-only print-doc" style={{ '--accent': accent }}>
-      <div className="pq-head">
-        <div className="pq-company"><strong>{a.company_name}</strong><br />{a.street}<br />{a.zip_city}{a.country && a.country !== 'Deutschland' ? `, ${a.country}` : ''}</div>
-        {a.logo_attachment_id && <img className="pq-logo" src="/api/public/logo" alt="" />}
-      </div>
-      <div className="pq-sender">{[a.company_name, a.street, a.zip_city].filter(Boolean).join(' · ')}</div>
+      <LetterHead a={a} />
       <div className="pq-addr-meta">
         <div className="pq-address">
           <strong>{account?.name}</strong><br />
@@ -87,12 +84,7 @@ function PrintQuote({ q, account, app, net, taxSum, tax }) {
       </dl>
       <p className="pre pq-terms">{q.terms || (lang === 'en' ? a.terms_en : a.terms_de)}</p>
       <p>{(lang === 'en' ? a.closing_en : a.closing_de) || ''}<br />{q.owner?.name}<br />{a.company_name}</p>
-      <div className="pq-footer">
-        <div>{a.company_name}<br />{a.street}<br />{a.zip_city}</div>
-        <div>{a.phone && <>Tel. {a.phone}<br /></>}{a.email}<br />{a.website}</div>
-        <div>{a.register}<br />{a.vat_id && <>USt-IdNr. {a.vat_id}<br /></>}{a.managing_directors && <>{lang === 'en' ? 'Managing directors' : 'Geschäftsführung'}: {a.managing_directors}</>}</div>
-        <div>{a.bank_name}<br />{a.iban && <>IBAN {a.iban}<br /></>}{a.bic && <>BIC {a.bic}</>}</div>
-      </div>
+      <LetterFooter a={a} lang={lang} />
     </div>
   )
 }

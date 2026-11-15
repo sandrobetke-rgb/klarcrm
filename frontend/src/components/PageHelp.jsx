@@ -55,7 +55,12 @@ const HELP = [
   ]],
   ['/protokoll', 'Änderungsprotokoll', 'Wer hat wann was geändert (IATF/ISO-Nachweis).', ['Nach Objekt, Benutzer oder Zeitraum filtern. Einträge sind nicht änderbar.']],
   ['/benutzer', 'Benutzer', 'Zugänge und Rollen verwalten.', ['Rollen: Administrator, Vertrieb, Gesellschafter (nur lesen). „Freigabeberechtigt“ für das Vier-Augen-Prinzip.']],
-  ['/einstellungen', 'Firma & Layout', 'Logo, Angebotstexte und Fußzeile für das Angebots-PDF.', ['Texte für Deutsch und Englisch getrennt pflegen.']],
+  ['/einstellungen', 'Firma & Layout', 'Briefkopf für alle Dokumente (Angebote, Werkzeug- und Anlagenanfragen).', [
+    'Firmendaten, Standorte, Registerangaben, Steuernummer, Bankverbindungen und Zertifizierungen eintragen – leere Felder erscheinen nicht.',
+    'Logo hochladen (PNG, JPG oder SVG, am besten mit transparentem Hintergrund), Größe und Akzentfarbe wählen.',
+    'Die Vorschau zeigt Kopf und Fußzeile; mit „Speichern“ gilt alles sofort für neue Ausdrucke.',
+    'Standardtexte für Angebote getrennt für Deutsch und Englisch pflegen.',
+  ]],
   ['/profil', 'Profil', 'Eigenes Konto.', ['Passwort ändern und Outlook-Kalender abonnieren.']],
   ['/', 'Dashboard', 'Tagesüberblick für Vertrieb und Geschäftsführung.', [
     'Kennzahlen anklicken führt zur passenden Liste. Fällige Aufgaben und Hinweise (Glocke) zuerst abarbeiten.',

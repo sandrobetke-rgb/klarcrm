@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth'
 import Attachments from '../components/Attachments'
+import { LetterFooter, LetterHead } from '../components/Letterhead'
 import { BarList } from '../components/charts'
 import { Badge, confirmDelete, EntityForm, ErrorBox, Modal } from '../components/ui'
 import { eur, num } from '../constants'
@@ -355,11 +356,7 @@ function PrintRfq({ r, o, app }) {
   const a = app || {}
   return (
     <div className="print-only print-doc" style={{ '--accent': a.accent_color || '#1f4b99' }}>
-      <div className="pq-head">
-        <div className="pq-company"><strong>{a.company_name}</strong><br />{a.street}<br />{a.zip_city}</div>
-        {a.logo_attachment_id && <img className="pq-logo" src="/api/public/logo" alt="" />}
-      </div>
-      <div className="pq-sender">{[a.company_name, a.street, a.zip_city].filter(Boolean).join(' · ')}</div>
+      <LetterHead a={a} />
       <div className="pq-addr-meta">
         <div className="pq-address"><strong>{o.supplier_name}</strong>{o.location && <><br />{o.location}</>}{o.contact_email && <><br />{o.contact_email}</>}</div>
         <dl className="pq-meta">
@@ -383,12 +380,7 @@ function PrintRfq({ r, o, app }) {
         {r.needed_by ? ` Benötigt wird das ${kindLabel(r.kind)} bis zum ${fmtD(r.needed_by)}.` : ''}</p>
       <p>Bitte senden Sie Ihr Angebot bis zum <b>{fmtD(r.reply_by)}</b>{a.email ? ` an ${a.email}` : ''}.</p>
       <p>Mit freundlichen Grüßen<br />{a.company_name}</p>
-      <div className="pq-footer">
-        <div>{a.company_name}<br />{a.street}<br />{a.zip_city}</div>
-        <div>{a.phone && <>Tel. {a.phone}<br /></>}{a.email}<br />{a.website}</div>
-        <div>{a.register}<br />{a.vat_id && <>USt-IdNr. {a.vat_id}</>}</div>
-        <div>{a.managing_directors && <>Geschäftsführung: {a.managing_directors}</>}</div>
-      </div>
+      <LetterFooter a={a} />
     </div>
   )
 }

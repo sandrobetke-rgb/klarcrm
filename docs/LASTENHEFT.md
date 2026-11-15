@@ -4,7 +4,7 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.18 |
+| **Dokumentversion** | 1.19 |
 | **Stand** | 15.11.2026 |
 | **Status** | Testphase (GitHub Codespaces); Zielbetrieb: interner Server F&R |
 
@@ -514,9 +514,14 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 - OUT-3: Angebot per E-Mail: öffnet Outlook mit Empfänger (Ansprechpartner), Betreff und Text in der Angebotssprache;
   das PDF wird über „Drucken / PDF“ gespeichert und angehängt.
 
-### 7b.4 Angebots-PDF im Firmenlayout
-- PDF-1: Firmeneinstellungen (Administrator): Firmenname, Adresse, Kontakt, Handelsregister, USt-IdNr.,
-  Geschäftsführung, Bank/IBAN/BIC, Akzentfarbe, **Logo**, Standardtexte Einleitung/Bedingungen/Grußformel je Sprache.
+### 7b.4 Briefkopf und Dokumente im Firmenlayout
+- PDF-1: Firmeneinstellungen „Firma & Layout“ (Administrator): Firmenname, Adresse, Land, Telefon, Fax, E-Mail,
+  Website, **weitere Standorte** (z. B. Werk Krupka), Handelsregister, **Sitz der Gesellschaft**, USt-IdNr.,
+  **Steuernummer**, Geschäftsführung, **zwei Bankverbindungen** (Bank/IBAN/BIC), **Zertifizierungen** und optionaler
+  Fußzeilen-Zusatz, Akzentfarbe, **Logo** (hochladen, entfernen, Größe klein/mittel/groß), Standardtexte
+  Einleitung/Bedingungen/Grußformel je Sprache. **Live-Vorschau** des Briefkopfs auf der Einstellungsseite.
+- PDF-1a: Ein gemeinsamer Briefkopf und eine gemeinsame Fußzeile für **alle Dokumente** (Angebot, Werkzeug-/
+  Anlagenanfrage); leere Felder werden ausgelassen.
 - PDF-2: Druckansicht DIN A4: Kopf mit Logo und Firmenname, Absenderzeile, Anschriftfeld, Angebotsdaten,
   Positionstabelle, Summen, Bedingungen, Grußformel, **Fußzeile** mit Firmen-, Register- und Bankdaten.
 - PDF-3: **Sprache Deutsch/Englisch** je Angebot: Beschriftungen, Datums- und Zahlenformat, Anrede, Standardtexte;
@@ -588,3 +593,4 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.16 | 15.11.2026 | **Preis Jahr 1 manuell (Anlaufpreis)**, ab Jahr 2 kalkulierter Serienpreis; Jahresabschläge als Tabelle je Lieferjahr mit zwei gekoppelten Eingabespalten („% ggü. Vorjahr“ und „% vom Serienpreis“), getrennt für Zukaufteile der Nebenkalkulation (KAL-28k). **Fester Vorserienpreis** mit kalkuliertem Wert und Marge als Orientierung (KAL-28l). Rechentests ergänzt. Darstellung: Formularspalten laufen nicht mehr über. |
 | 1.17 | 15.11.2026 | **Abschläge vorab draufschlagen** auch bei manuellem Anlaufpreis, zwei Varianten (Ø Laufzeit = Kalkulation / letztes Jahr ≥ Kalkulation), Marge je Lieferjahr mit Warnung bei Minusgeschäft (KAL-28k). Rechentests ergänzt. |
 | 1.18 | 15.11.2026 | **Beschaffung** (Kap. 6.10, BES-1 … 9): Vorgänge für Werkzeuge, Montagelinien, Vorrichtungen und Prüfmittel, Eckdaten aus der Kalkulation, **Werkzeuganfrage** als PDF im Firmenlayout und E-Mail-Entwurf je Lieferant, Angebotsvergleich, Vergabeentscheidung mit Begründung, Übernahme in die Kalkulation als neue Version. Neue Tabellen `procurement_requests`, `procurement_offers` (automatisch angelegt). Seitenhilfe ergänzt. |
+| 1.19 | 15.11.2026 | **Briefkopf erweitert** (PDF-1, PDF-1a): Fax, weitere Standorte, Sitz, Steuernummer, zweite Bankverbindung, Zertifizierungen, Fußzeilen-Zusatz, Logogröße und Logo entfernen; Live-Vorschau; gemeinsamer Briefkopf für Angebot und Werkzeuganfrage. |

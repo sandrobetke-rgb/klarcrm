@@ -106,6 +106,8 @@ def public_logo(db: Session = Depends(get_db)):
 DEFAULT_APP = {
     "company_name": settings.COMPANY_NAME, "street": "", "zip_city": "", "country": "Deutschland", "phone": "", "email": "",
     "website": "", "register": "", "vat_id": "", "managing_directors": "", "bank_name": "", "iban": "", "bic": "",
+    "fax": "", "tax_no": "", "seat": "", "bank2_name": "", "iban2": "", "bic2": "",
+    "certifications": "", "locations": "", "footer_note": "", "logo_size": "mittel",
     "accent_color": "#1f4b99", "logo_attachment_id": None,
     "intro_de": "vielen Dank für Ihre Anfrage. Gerne unterbreiten wir Ihnen folgendes Angebot:",
     "intro_en": "Thank you for your inquiry. We are pleased to submit the following quotation:",
