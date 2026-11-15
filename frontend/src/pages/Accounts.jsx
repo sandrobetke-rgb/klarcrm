@@ -1,4 +1,6 @@
 import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import ImportButton from '../components/ImportButton'
 import ListPage from '../components/ListPage'
 import { Badge } from '../components/ui'
 import { ACCOUNT_TYPES, fmtDate } from '../constants'
@@ -8,8 +10,10 @@ export const typeTone = { kunde: 'good', interessent: 'info', partner: 'neutral'
 
 export default function Accounts() {
   const nav = useNavigate()
+  const [rev, setRev] = useState(0)
   return (
-    <ListPage
+    <ListPage key={rev}
+      extraActions={<ImportButton entity="accounts" label="Firmen" onDone={() => setRev((x) => x + 1)} />}
       title="Firmen" subtitle="Kunden, Interessenten und Partner" path="/accounts" entityLabel="Firma"
       fields={accountFields} defaultSort="name" newDefaults={{ type: 'interessent', country: 'Deutschland' }}
       onRowClick={(r) => nav(`/firmen/${r.id}`)}

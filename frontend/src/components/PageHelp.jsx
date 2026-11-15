@@ -33,6 +33,7 @@ const HELP = [
     'Maschinen & Anlagen (inkl. Montagelinien, Prüfstände), Stundensätze, Materialien, Zukaufteile, Preisgleitung, Vorlagen und Parameter (Zuschläge, Lohnsätze).',
     'Änderungen wirken auf neue Kalkulationen; gespeicherte Versionen bleiben unverändert (Nachvollziehbarkeit).',
     'Nur Administratoren ändern Parameter; Materialpreisänderungen werden automatisch protokolliert.',
+    'Maschinen, Materialien und Zukaufteile lassen sich per „Importieren“ aus Excel/CSV übernehmen (Administratoren).',
   ]],
   ['/angebote/', 'Angebot', 'Angebot bearbeiten, drucken und versenden.', [
     'Positionen, Texte und Konditionen prüfen; Sprache Deutsch/Englisch wählen.',
@@ -41,8 +42,10 @@ const HELP = [
   ]],
   ['/angebote', 'Angebote', 'Alle Angebote mit Status und Summe.', ['Angebote entstehen meist aus einer Kalkulation („Angebot erstellen“) oder als Sammelangebot.']],
   ['/firmen/', 'Firma', 'Alles zu einem Kunden auf einen Blick.', ['Kontakte, Verkaufschancen, Aktivitäten, Kalkulationen, Angebote und Dokumente des Kunden.']],
-  ['/firmen', 'Firmen', 'Kunden, Interessenten und Lieferanten.', ['Firma anlegen, über die Suche finden, Zeile öffnen für die Kundenakte.']],
-  ['/kontakte', 'Kontakte', 'Ansprechpartner bei den Firmen.', ['E-Mail-Adresse pflegen – sie wird für Angebots-E-Mails verwendet.']],
+  ['/firmen', 'Firmen', 'Kunden, Interessenten und Lieferanten.', ['Firma anlegen, über die Suche finden, Zeile öffnen für die Kundenakte.',
+    '„Importieren“ übernimmt eine Excel- oder CSV-Liste: Vorlage laden oder eigene Liste nehmen, Spalten zuordnen, Vorschau prüfen (neu / aktualisieren / Fehler), dann importieren.']],
+  ['/kontakte', 'Kontakte', 'Ansprechpartner bei den Firmen.', ['E-Mail-Adresse pflegen – sie wird für Angebots-E-Mails verwendet.',
+    '„Importieren“: Kontakte werden über den Firmennamen zugeordnet – deshalb zuerst die Firmen importieren. Vorhandene Kontakte werden an der E-Mail erkannt.']],
   ['/aktivitaeten', 'Aktivitäten', 'Aufgaben, Anrufe, Termine und Wiedervorlagen.', ['Filter „Überfällig“ und „Heute“ nutzen; Termine lassen sich als .ics in Outlook übernehmen.']],
   ['/pipeline', 'Pipeline', 'Verkaufschancen nach Phase.', ['Karten zeigen Volumen und Wahrscheinlichkeit; Chancen aus Kalkulationen werden automatisch aktualisiert.']],
   ['/beschaffung/', 'Beschaffungsvorgang', 'Lieferanten anfragen, Angebote vergleichen, vergeben und in die Kalkulation übernehmen.', [

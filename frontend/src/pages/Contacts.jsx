@@ -1,10 +1,14 @@
 import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import ImportButton from '../components/ImportButton'
 import ListPage from '../components/ListPage'
 import { contactFields } from '../forms'
 
 export default function Contacts() {
+  const [rev, setRev] = useState(0)
   return (
-    <ListPage
+    <ListPage key={rev}
+      extraActions={<ImportButton entity="contacts" label="Kontakte" onDone={() => setRev((x) => x + 1)} />}
       title="Kontakte" subtitle="Ansprechpartner bei Kunden und Interessenten" path="/contacts" entityLabel="Kontakt"
       fields={contactFields} defaultSort="last_name"
       columns={[

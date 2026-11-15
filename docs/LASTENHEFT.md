@@ -4,7 +4,7 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.21 |
+| **Dokumentversion** | 1.22 |
 | **Stand** | 15.11.2026 |
 | **Status** | Testphase (GitHub Codespaces); Zielbetrieb: interner Server F&R |
 
@@ -429,6 +429,22 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
   neue Version).
 - STO-6: Filter nach Standort in Kalkulationsliste, Auslastung und Auswertungen; Bericht „Standorte“.
 
+### 6.12 Datenimport (CSV/Excel)
+- IMP-1: Import für Firmen, Kontakte (Vertrieb und Administrator) sowie Maschinen, Materialien und Zukaufteile
+  (nur Administrator) über „Importieren“ in der jeweiligen Liste; zusätzlich per REST-API (`/api/import/…`,
+  Dokumentation unter `/api/docs`).
+- IMP-2: Formate: CSV mit Semikolon, Komma oder Tab, UTF-8 oder Windows-1252; Excel .xlsx (erstes Blatt); erste Zeile =
+  Überschriften; höchstens 5.000 Zeilen. Vorlage je Typ zum Herunterladen (Pflichtfelder mit *, Beispielzeile).
+- IMP-3: Spalten werden anhand Bezeichnung und üblicher Synonyme automatisch zugeordnet und sind änderbar.
+  Zahlen im deutschen und englischen Format, Datum TT.MM.JJJJ oder ISO, ja/nein, Auswahlwerte (Typ, Maschinenart),
+  Bediener-Anteil in % oder als Faktor, Standort per Name oder Kürzel, Firma eines Kontakts per Firmenname.
+- IMP-4: **Vorschau vor dem Speichern** je Zeile: neu / aktualisieren (mit geänderten Feldern) / unverändert / Fehler
+  (Pflichtfeld fehlt, Wert nicht lesbar, Firma/Standort unbekannt, doppelt in der Datei). Abgleich vorhandener
+  Datensätze: Firma und Material über den Namen, Kontakt über E-Mail (sonst Firma + Name), Maschine über die Nummer,
+  Zukaufteil über Artikel-Nr. bzw. Bezeichnung.
+- IMP-5: Übernahme nur fehlerfreier Zeilen; Aktualisieren vorhandener Datensätze abschaltbar; Ergebnis mit Anzahl neu,
+  aktualisiert, übersprungen und Fehlerliste; jede Änderung im Änderungsprotokoll.
+
 ### 6.10 Beschaffung Werkzeuge, Montagelinien, Vorrichtungen, Prüfmittel
 - BES-1: Menüpunkt „Beschaffung“ und Reiter „Beschaffung“ in jeder Kalkulation. Je Vorgang: Nummer (BA-Jahr-lfd. Nr.),
   Art (Spritzgießwerkzeug, Montagelinie, Vorrichtung, Prüfmittel, Sonstiges), Bezeichnung, Kalkulation, Status
@@ -571,6 +587,9 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 - NFA-9: **Rechentests**: jeder Rechenweg (Schema, Zuschläge, Staffeln, Mehrkomponenten, Familienwerkzeug,
   Amortisation, Verpackung/Transport, CO₂, Nachkalkulation, Stundensatz, Artikelanalyse) ist gegen eine
   Handrechnung automatisiert getestet; Tests laufen bei jedem Push, ein Fehler stoppt den Build.
+- NFA-11: **Validierung**: Vorlage „Validierungsprotokoll und Testplan Pilot“ (Rechenvalidierung gegen die
+  Excel-Kalkulation, Funktionstests, Nachweis automatischer Tests, Änderungsmanagement, Freigabe) als eigenes
+  Dokument; bei Änderungen am Rechenweg erneute Prüfung und Freigabe.
 - NFA-10: **Seitenhilfe**: oben auf jeder Seite eine kurze Anleitung „So arbeiten Sie hier“ (Zweck der Seite und
   Vorgehen in Schritten); auf-/zuklappbar, Zustand je Seite und Browser gemerkt; nicht im Druck.
 - NFA-7: Fußzeile auf allen Seiten inkl. Anmeldung: „© <Jahr> SB/Thinkworks · KlarCRM · built with clarity“ (nicht im Druck).
@@ -625,3 +644,4 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.19 | 15.11.2026 | **Briefkopf erweitert** (PDF-1, PDF-1a): Fax, weitere Standorte, Sitz, Steuernummer, zweite Bankverbindung, Zertifizierungen, Fußzeilen-Zusatz, Logogröße und Logo entfernen; Live-Vorschau; gemeinsamer Briefkopf für Angebot und Werkzeuganfrage. |
 | 1.20 | 15.11.2026 | **Grenzkostenkalkulation** (KAL-28m): direkte Artikelkosten inkl. Verpackung und Transport, Deckungsbeitrag je Stück/p. a./Lieferjahr, Preisuntergrenzen; Strompreis als Eingabe. Rechentest mit Handrechnung ergänzt; gespeicherte Versionen rechnen unverändert (ohne Strompreis = ohne Energie). |
 | 1.21 | 15.11.2026 | **Standorte der Gruppe** (Kap. 6.11, STO-1 … 6): Standort-Stammdaten mit abweichenden Sätzen, Maschinen je Standort, Fertigungsstandort je Kalkulation mit Standortwechsel, Standortvergleich aller Standorte, Standard-Standort je Benutzer, Filter in Liste/Auslastung/Auswertungen. Neue Tabelle `sites`, neue Spalten `machines.site_id`, `calculations.site_id`, `users.site_id` (automatisch). Bestehende Kalkulationen ohne Standort gelten als Standard-Standort. |
+| 1.22 | 15.11.2026 | **Datenimport CSV/Excel** (Kap. 6.12, IMP-1 … 5) für Firmen, Kontakte, Maschinen, Materialien, Zukaufteile mit Vorlage, Spaltenzuordnung, Vorschau und Protokoll; Tests für das Einlesen ergänzt. **Validierungsprotokoll und Testplan** als Vorlage (NFA-11). Neue Abhängigkeit `openpyxl` (Excel). |

@@ -3,6 +3,7 @@ import { api } from '../api'
 import { resetThresholds } from '../components/BigProject'
 import { Escalation, MachineRates, Templates } from './MasterExtras'
 import { useAuth } from '../auth'
+import ImportButton from '../components/ImportButton'
 import ListPage from '../components/ListPage'
 import { Badge, EntityForm, ErrorBox, Modal } from '../components/ui'
 import { MACHINE_KINDS, machineKindLabel, num, num2 } from '../constants'
@@ -166,6 +167,8 @@ function Sites({ tabs, onChange }) {
 export default function MasterData() {
   const [tab, setTab] = useState('machines')
   const [sites, setSites] = useState([])
+  const [rev, setRev] = useState(0)
+  const bump = () => setRev((x) => x + 1)
   useEffect(() => { api.get('/sites?limit=50&sort=sort').then((x) => setSites(x.items)).catch(() => {}) }, [])
   const siteOpts = sites.map((x) => ({ value: x.id, label: x.name }))
   const siteName = (id) => sites.find((x) => x.id === id)?.name
@@ -179,8 +182,8 @@ export default function MasterData() {
   if (tab === 'prices') return <Escalation tabs={tabs} />
   if (tab === 'templates') return <Templates tabs={tabs} />
   if (tab === 'parts') {
-    return <ListPage key="parts" title="Stammdaten · Zukaufteile" subtitle="Einlegeteile, Buchsen, Dichtungen, Clips, Schrauben, Etiketten – in der Kalkulation je Artikel mit Menge auswählbar"
-      path="/purchased-parts" entityLabel="Zukaufteil" fields={partFields} defaultSort="name" newDefaults={{ active: true, price_basis: 1, unit: 'Stk' }} extraActions={tabs}
+    return <ListPage key={`parts-${rev}`} title="Stammdaten · Zukaufteile" subtitle="Einlegeteile, Buchsen, Dichtungen, Clips, Schrauben, Etiketten – in der Kalkulation je Artikel mit Menge auswählbar"
+      path="/purchased-parts" entityLabel="Zukaufteil" fields={partFields} defaultSort="name" newDefaults={{ active: true, price_basis: 1, unit: 'Stk' }} extraActions={<>{tabs}<ImportButton entity="purchased-parts" label="Zukaufteile" adminOnly onDone={bump} /></>}
       columns={[
         { key: 'part_no', label: 'Art.-Nr.', sort: 'part_no' },
         { key: 'name', label: 'Bezeichnung', sort: 'name', render: (r) => <strong>{r.name}</strong> },
@@ -194,8 +197,8 @@ export default function MasterData() {
       ]} />
   }
   if (tab === 'materials') {
-    return <ListPage key="mat" title="Stammdaten · Materialien" subtitle="Preise werden in der Kalkulation vorbelegt und sind dort überschreibbar"
-      path="/materials" entityLabel="Material" fields={materialFields} defaultSort="name" newDefaults={{ active: true }} extraActions={tabs}
+    return <ListPage key={`mat-${rev}`} title="Stammdaten · Materialien" subtitle="Preise werden in der Kalkulation vorbelegt und sind dort überschreibbar"
+      path="/materials" entityLabel="Material" fields={materialFields} defaultSort="name" newDefaults={{ active: true }} extraActions={<>{tabs}<ImportButton entity="materials" label="Materialien" adminOnly onDone={bump} /></>}
       columns={[
         { key: 'name', label: 'Material', sort: 'name', render: (r) => <strong>{r.name}</strong> },
         { key: 'family', label: 'Gruppe', sort: 'family' },
@@ -206,12 +209,12 @@ export default function MasterData() {
         { key: 'active', label: 'Status', render: (r) => (r.active ? <Badge tone="good">aktiv</Badge> : <Badge>inaktiv</Badge>) },
       ]} />
   }
-  return <ListPage key="mach" title="Stammdaten · Maschinen & Anlagen" subtitle="Spritzgießmaschinen, Montagelinien, Nachbearbeitung und Prüfstationen – Stundensätze, Instandhaltung, Produktivität"
+  return <ListPage key={`mach-${rev}`} title="Stammdaten · Maschinen & Anlagen" subtitle="Spritzgießmaschinen, Montagelinien, Nachbearbeitung und Prüfstationen – Stundensätze, Instandhaltung, Produktivität"
     path="/machines" entityLabel="Maschine" defaultSort="number"
     fields={[...machineFields.slice(0, 3), { name: 'site_id', label: 'Standort', type: 'select', options: siteOpts, hint: 'Sätze und Auslastung je Standort' }, ...machineFields.slice(3)]}
     filters={[{ name: 'kind', label: 'Art', options: MACHINE_KINDS.map((k) => ({ ...k, label: machineKindLabel(k.value) })) },
       ...(siteOpts.length ? [{ name: 'site_id', label: 'Standort', options: siteOpts }] : [])]}
-    newDefaults={{ active: true, kind: 'spritzguss', productivity_pct: 85, operator_factor: 0.3, available_hours_year: 6000, base_load_pct: 0, base_load_decline_pct: 0 }} extraActions={tabs}
+    newDefaults={{ active: true, kind: 'spritzguss', productivity_pct: 85, operator_factor: 0.3, available_hours_year: 6000, base_load_pct: 0, base_load_decline_pct: 0 }} extraActions={<>{tabs}<ImportButton entity="machines" label="Maschinen" adminOnly onDone={bump} /></>}
     columns={[
       { key: 'number', label: 'Nr.', sort: 'number' },
       { key: 'name', label: 'Maschine / Anlage', sort: 'name', render: (r) => <><strong>{r.name}</strong><br /><small className="muted">{machineKindLabel(r.kind)}</small></> },

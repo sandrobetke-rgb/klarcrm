@@ -579,3 +579,10 @@ h1 .big-badge { font-size: 12.5px; margin-top: 0; }
 .site-delta.good { color: var(--good); } .site-delta.bad { color: var(--critical, #c0392b); }
 .site-tile-body { display: grid; gap: 1px; color: var(--text-2); }
 .site-tile .btn { justify-self: start; }
+.import-steps { margin: 0 0 10px 18px; padding: 0; display: grid; gap: 6px; }
+.import-summary { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+.import-table { max-height: 46vh; overflow: auto; border: 1px solid var(--border); border-radius: 6px; }
+.import-table th, .import-table td { white-space: nowrap; font-size: 12.5px; }
+.import-table .map-row select { min-width: 150px; font-size: 12px; padding: 3px 4px; }
+.import-table .row-error td { background: rgba(192, 57, 43, 0.06); }
+.import-actions { justify-content: flex-end; margin-top: 10px; }
