@@ -64,6 +64,17 @@ def _table(doc, rows: list[list[str]]):
             _runs(cell.paragraphs[0], (row[j] if j < len(row) else "").strip(), bold=(i == 0 and header), size=8.5)
             if (i == 0 and header) or (not header and j == 0):
                 _shade(cell, "DCE6F2")
+    # Spaltenbreiten nach Textmenge verteilen (17 cm Satzspiegel, min. 2,3 cm je Spalte)
+    lens = [max(4, min(60, sum(len((r[j] if j < len(r) else "")) for r in rows) / len(rows))) for j in range(ncol)]
+    total, width = sum(lens), 17.0
+    cm = [max(2.3, width * x / total) for x in lens]
+    k = width / sum(cm)
+    t.autofit = False
+    for j, w in enumerate(cm):
+        for cell in t.columns[j].cells:
+            cell.width = Cm(w * k)
+    for j, gc in enumerate(t._tbl.tblGrid.findall(qn("w:gridCol"))):  # Raster für LibreOffice/Word
+        gc.set(qn("w:w"), str(int(cm[j] * k * 567)))
     if header:  # Kopfzeile auf jeder Seite wiederholen
         trpr = t.rows[0]._tr.get_or_add_trPr()
         h = OxmlElement("w:tblHeader"); h.set(qn("w:val"), "true"); trpr.append(h)
