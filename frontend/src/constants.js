@@ -29,6 +29,7 @@ export const QUOTE_STATUS = [
   { value: 'versendet', label: 'Versendet' },
   { value: 'angenommen', label: 'Angenommen' },
   { value: 'abgelehnt', label: 'Abgelehnt' },
+  { value: 'ersetzt', label: 'Ersetzt (Revision)' },
 ]
 
 export const ROLES = [
@@ -64,16 +65,21 @@ export const CALC_STATUS = [
 ]
 export const calcStatus = (v) => CALC_STATUS.find((s) => s.value === v) || { label: v, tone: 'neutral' }
 
+// Verlustgründe (REV01-P05): Vorauswahl, „Sonstiges“ mit Pflicht-Freitext
 export const CLOSE_REASONS = [
-  { value: 'artikelpreis_zu_hoch', label: 'Artikelpreis zu hoch' },
   { value: 'werkzeug_zu_teuer', label: 'Werkzeug zu teuer' },
+  { value: 'artikelpreis_zu_hoch', label: 'Preis zu teuer' },
+  { value: 'projekt_eingestellt', label: 'Projekt eingestellt' },
+  { value: 'projekt_kunde_nicht_gewonnen', label: 'Kunde hat Projekt nicht erhalten' },
+  { value: 'vorrichtung_zu_teuer', label: 'Vorrichtung zu teuer' },
   { value: 'investition_zu_teuer', label: 'Investition zu teuer' },
-  { value: 'projekt_kunde_nicht_gewonnen', label: 'Kunde hat Projekt nicht gewonnen' },
-  { value: 'projekt_eingestellt', label: 'Projekt beim Kunden eingestellt' },
   { value: 'lieferzeit', label: 'Lieferzeit / Kapazität' },
   { value: 'technik', label: 'Technisch nicht machbar' },
-  { value: 'sonstiges', label: 'Sonstiges' },
+  { value: 'sonstiges', label: 'Sonstiges (Freitext)' },
 ]
+// Branchen (REV01-S01): Vorauswahl, eigene Eingabe möglich
+export const INDUSTRIES = ['Automotive', 'Energie & Batterie', 'Wasser & Sanitär', 'Heizung, Lüftung & Klima',
+  'Automatisierung & Elektrotechnik', 'Rüstung', 'Drohnentechnik', 'Smart Home', 'Sonstiges']
 export const reasonLabel = (v) => CLOSE_REASONS.find((r) => r.value === v)?.label || v || ''
 
 const n4 = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
@@ -100,7 +106,7 @@ export const INPUT_LABELS = {
   operator_factor: ['Bediener-Anteil (Faktor)', '× 100 = %'], handling_pct: ['Anteil Handling', '%'], handling_rate_h: ['Lohnsatz Handling', '€/h'],
   automation_pct: ['Anteil Automatisierung', '%'], automation_rate_h: ['Lohnsatz Automatisierung', '€/h'],
   setup_staff_min: ['Einrichter-Zeit je Rüstvorgang', 'min'], automation_setup_min: ['Automatisierer-Zeit je Rüstvorgang', 'min'], labor_rate_h: ['Lohnsatz Bediener', '€/h'],
-  setup_time_h: ['Rüstzeit je Los', 'h'], setup_persons: ['Einrichter je Rüstvorgang', 'Pers.'], setup_rate_h: ['Lohnsatz Einrichter', '€/h'],
+  setup_time_h: ['Rüstzeit je Los (h)', 'h'], setup_persons: ['Einrichter je Rüstvorgang', 'Pers.'], setup_rate_h: ['Lohnsatz Einrichter', '€/h'],
   startup_scrap_pcs: ['Anfahrausschuss je Los', 'Stk'],
   assembly_time_s: ['Montagezeit je Stück', 's'], assembly_persons: ['Montage-Personen', 'Pers.'], assembly_rate_h: ['Lohnsatz Montage', '€/h'],
   assembly_productivity_pct: ['Produktivität Montage', '%'],
@@ -113,7 +119,7 @@ export const INPUT_LABELS = {
   price_reductions: ['Jahresabschläge Serienpreis', '% ab Jahr 2'], side_price_reductions: ['Jahresabschläge Zukaufteile NK', '% ab Jahr 2'],
   price_reductions_basis: ['Bezug Jahresabschläge', ''], price_reductions_preload: ['Abschläge vorab eingerechnet', ''], price_reductions_preload_mode: ['Vorab-Einrechnung', ''],
   preseries_qty: ['Vorserienmenge', 'Stk'], preseries_price_manual: ['Vorserienpreis fest', '€/Stk'],
-  price_year1_mode: ['Preis Jahr 1', ''], energy_price_kwh: ['Strompreis', '€/kWh'], price_year1_manual: ['Preis Jahr 1 manuell', '€/Stk'], preseries_lot: ['Losgröße Vorserie', 'Stk'], preseries_setup_h: ['Rüstzeit Vorserie', 'h'],
+  price_year1_mode: ['Preis Jahr 1', ''], energy_price_kwh: ['Strompreis', '€/kWh'], price_year1_manual: ['Preis Jahr 1 manuell', '€/Stk'], preseries_lot: ['Losgröße Vorserie', 'Stk'], preseries_setup_h: ['Rüstzeit Vorserie (h)', 'h'],
   preseries_productivity_pct: ['Produktivität Vorserie', '%'], preseries_scrap_pct: ['Ausschuss Vorserie', '%'], preseries_surcharge_pct: ['Aufschlag Vorserie', '%'],
   side_mgk_pct: ['MGK Nebenkalkulation', '%'], side_quality_pct: ['Qualität Nebenkalkulation', '%'], side_scrap_pct: ['Ausschuss Nebenkalkulation', '%'], side_markup_pct: ['Aufschlag Nebenkalkulation', '%'], family_share_pct: ['Anteil Familienwerkzeug', '%'], family_group: ['Familienwerkzeug', ''],
   amort_quantity: ['Amortisation über', 'Stk'],

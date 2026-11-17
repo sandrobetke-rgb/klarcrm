@@ -16,10 +16,12 @@ Ausgelegt für ein Vertriebsteam von bis zu ca. 12 Personen plus eine reine Lese
 | **Kontakte** | Ansprechpartner je Firma, Suche, Sortierung. |
 | **Pipeline** | Kanban-Board mit Drag & Drop (Lead → Qualifiziert → Angebot → Verhandlung → Gewonnen/Verloren) und Listenansicht. Wahrscheinlichkeit wird je Phase automatisch gesetzt (überschreibbar), Abschlussdatum beim Gewinnen/Verlieren automatisch. |
 | **Aktivitäten** | Anrufe, Termine, E-Mails, Aufgaben, Notizen mit Fälligkeit; Filter überfällig / heute / 7 Tage; Abhaken direkt in der Liste. |
-| **Angebote** | Positionen mit Menge, Einheit, Einzelpreis, Rabatt; Netto/MwSt./Brutto; automatische Nummer (AN-2026-0001), Duplizieren, Status, Druckansicht → PDF über den Browser. |
-| **Kalkulation** | Anfragen mit Kalkulationsnummer (KA-2026-0001), Zuschlagskalkulation Spritzguss (Material, MGK, Maschine, Instandhaltung, Personal, Rüsten, Montage, **Vorserienpreis**, **Jahresabschläge**, **Auswertungen** (Maschinengröße, Kunden, Absagegründe …), **Datenimport aus Excel/CSV**, **mehrere Standorte** mit eigenen Sätzen und Standortvergleich, **Beschaffung** von Werkzeugen und Anlagen mit Werkzeuganfrage und Angebotsvergleich, **weitere Arbeitsgänge 1 … N (Montagelinie, Schweißen, Prüfung …)**, **Zukaufteile aus Stammdaten**, FGK, Ausschuss, Verwaltung, Vertrieb, Projektmanagement, Qualität, Werkzeugbau, Gewinn), Werte je Stück/100/1.000, Versionen mit Vergleich, Verlustgründe, Anrufhistorie mit Ergebnis und Wiedervorlage, Übernahme in Verkaufschance, Angebot per Klick, Nachkalkulation mit Ampel, Staffelpreise je Losgröße, Machbarkeit und „Kein Angebot“ mit Gründen, Artikelanalyse (Schließkraft, Kühlzeit, passende Maschinen, Checkliste), **Sammelangebot** aus mehreren Artikeln per Mehrfachauswahl, Verpackung & Transport, **CO₂-Fußabdruck je Teil/Los/Jahr** mit Ausweis im Angebot. |
+| **Angebote** | Positionen mit Menge, Einheit, Einzelpreis, Rabatt; Netto/MwSt./Brutto; automatische Nummer (A26-0001, Revisionen A26-0001-R1), Duplizieren, Status, Druckansicht → PDF über den Browser. |
+| **Kalkulation** | Anfragen mit Kalkulationsnummer (K26-0001), Zuschlagskalkulation Spritzguss (Material, MGK, Maschine, Instandhaltung, Personal, Rüsten, Montage, **Vorserienpreis**, **Jahresabschläge**, **Auswertungen** (Maschinengröße, Kunden, Absagegründe …), **Datenimport aus Excel/CSV**, **mehrere Standorte** mit eigenen Sätzen und Standortvergleich, **Beschaffung** von Werkzeugen und Anlagen mit Werkzeuganfrage und Angebotsvergleich, **weitere Arbeitsgänge 1 … N (Montagelinie, Schweißen, Prüfung …)**, **Zukaufteile aus Stammdaten**, FGK, Ausschuss, Verwaltung, Vertrieb, Projektmanagement, Qualität, Werkzeugbau, Gewinn), Werte je Stück/100/1.000, Versionen mit Vergleich, Verlustgründe, Anrufhistorie mit Ergebnis und Wiedervorlage, Übernahme in Verkaufschance, Angebot per Klick, Nachkalkulation mit Ampel, Staffelpreise je Losgröße, Machbarkeit und „Kein Angebot“ mit Gründen, Artikelanalyse (Schließkraft, Kühlzeit, passende Maschinen, Checkliste), **Sammelangebot** aus mehreren Artikeln per Mehrfachauswahl, Verpackung & Transport, **CO₂-Fußabdruck je Teil/Los/Jahr** mit Ausweis im Angebot. |
 | **Auslastung** | Maschinenauslastung der nächsten Jahre: Bestand, gewonnene und offene Kalkulationen (gewichtet/maximal) gegen verfügbare Stunden. |
 | **Stammdaten** | Maschinen (Stundensatz, Instandhaltung, Produktivität, Bedienfaktor), Materialien (€/kg), Parameter (Standard-Zuschläge, Gewinn 7 %, Lohnsätze, Ampel-Schwellen). Alles in der Kalkulation überschreibbar. |
+| **Änderungswünsche** | Testrückmeldungen (REV01 ff.) und neue Wünsche mit Status, Umsetzung, Prüfanweisung und Prüfergebnis; Export CSV. |
+| **Dokumentation** | Benutzerbeschreibung und Lastenheft im Programm, Download als Word. |
 | **Benutzer** | Anlegen, Rollen, Deaktivieren, Passwort zurücksetzen. Jeder Nutzer kann sein Passwort selbst ändern. |
 
 ### Rollen
@@ -76,6 +78,10 @@ Die komplette API ist unter **http://localhost:8000/docs** (Swagger) dokumentier
 5. Nach dem ersten Login: **Firma & Layout** (Logo, Briefkopf, Bank, AGB-Text), **Stammdaten** (Maschinen,
    Materialien, Parameter), **Benutzer** (Rollen, Freigabeberechtigung).
 6. Outlook: jeder Benutzer findet unter „Mein Profil“ seine Kalender-Adresse („Kalender hinzufügen → Aus dem Internet“).
+
+**Update auf eine neue Version:** `git pull` und `docker compose up -d --build`. Neue Tabellen/Spalten werden beim Start
+automatisch ergänzt. Ab v1.23 baut das Backend-Image aus der Projektwurzel (damit `docs/` für das Menü
+„Dokumentation“ im Image liegt) – `docker compose` erledigt das automatisch, es ist nichts weiter zu tun.
 
 **Backup (Pflicht):** täglich Datenbank **und** Dokumente sichern und die Wiederherstellung regelmäßig testen:
 ```bash

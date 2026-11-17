@@ -47,20 +47,20 @@ export default function Dashboard() {
         <Kpi label="Offene Pipeline" value={eur(k.open_pipeline.amount)} sub={`${k.open_pipeline.count} Chancen · gewichtet ${eur(k.open_pipeline.weighted)}`} to="/pipeline" />
         <Kpi label={`Forecast ${k.quarter}`} value={eur(k.forecast_quarter.weighted)} sub={`gewichtet · bereits gewonnen ${eur(k.won_quarter.amount)}`} />
         <Kpi label="Gewonnen (lfd. Jahr)" value={eur(k.won_ytd.amount)} sub={`${k.won_ytd.count} Abschlüsse · Ø ${eur(k.avg_deal_won)}`} />
-        <Kpi label="Gewinnquote" value={k.win_rate != null ? `${k.win_rate.toLocaleString('de-DE')} %` : '–'} sub={`${k.won_ytd.count} gewonnen / ${k.lost_ytd.count} verloren`} />
+        <Kpi label="Gewinnquote" value={k.win_rate != null ? `${k.win_rate.toLocaleString('de-DE')} %` : '–'} sub={`${k.won_ytd.count} gewonnen / ${k.lost_ytd.count} verloren · Übersicht ›`} to="/auswertungen" />
         <Kpi label="Offene Angebote" value={eur(k.open_quotes.amount)} sub={`${k.open_quotes.count} versendet`} to="/angebote" />
         <Kpi label="Aufgaben" value={k.activities_overdue} sub={`überfällig · ${k.activities_today} heute fällig`} to="/aktivitaeten" />
       </section>
 
       {cs.data && (
         <section className="kpi-grid">
-          <Kpi label="Anfragen / Kalkulationen offen" value={cs.data.count_open} sub={`${cs.data.overdue_calls} seit > 14 Tagen ohne Anruf`} to="/kalkulationen" />
+          <Kpi label="Anfragen in Bearbeitung" value={cs.data.count_inquiries} sub="noch ohne Angebot (Anfrage / Kalkulation)" to="/kalkulationen?status=kalkulation" />
+          <Kpi label="Angebote beim Kunden" value={cs.data.count_offered} sub={`${eur(cs.data.offered_revenue)} p. a. · ${cs.data.overdue_calls} seit > 14 Tagen ohne Anruf`} to="/kalkulationen?status=angeboten" />
           <Kpi label="Potenzial Jahresumsatz" value={eur(cs.data.open_revenue)} sub={`gewichtet ${eur(cs.data.open_weighted)}`} to="/kalkulationen" />
-          <Kpi label="★ Großprojekte offen" value={cs.data.big_open_count} sub={`${eur(cs.data.big_open_revenue)} p. a. · Invest ${eur(cs.data.big_open_invest)}`} to="/kalkulationen" />
+          <Kpi label="★ Großprojekte offen" value={cs.data.big_open_count} sub={`${eur(cs.data.big_open_revenue)} p. a. · Invest ${eur(cs.data.big_open_invest)}`} to="/kalkulationen?big=true" />
           {ut.data && <Kpi label={`Auslastung ${ut.data.totals[1]?.year} (erwartet)`} value={`${num(ut.data.totals[1]?.pct_expected, 0)} %`}
             sub={`fest ${num(ut.data.totals[1]?.pct_fixed, 0)} % · max. ${num(ut.data.totals[1]?.pct_max, 0)} %`} to="/auslastung" />}
           <Kpi label="Werkzeuge offen" value={eur(cs.data.open_tooling)} sub="Einmalumsatz in offenen Kalkulationen" />
-          <Kpi label="Trefferquote Kalkulationen" value={cs.data.hit_rate != null ? `${cs.data.hit_rate.toLocaleString('de-DE')} %` : '–'} sub={`${cs.data.won_count} gewonnen / ${cs.data.lost_count} verloren`} />
           <Kpi label="Nachkalkulation" value={`${cs.data.traffic_lights.gruen} / ${cs.data.traffic_lights.gelb} / ${cs.data.traffic_lights.rot}`} sub="grün / gelb / rot" to="/kalkulationen" />
         </section>
       )}

@@ -29,7 +29,7 @@ STAGE_PROBABILITY = {
     "verhandlung": 75, "gewonnen": 100, "verloren": 0,
 }
 ACTIVITY_TYPES = ("anruf", "termin", "email", "aufgabe", "notiz")
-QUOTE_STATUS = ("entwurf", "versendet", "angenommen", "abgelehnt")
+QUOTE_STATUS = ("entwurf", "versendet", "angenommen", "abgelehnt", "ersetzt")
 
 
 class TimestampMixin:
@@ -217,7 +217,7 @@ NO_BID_REASONS = ("mengen_zu_klein", "artikel_zu_klein", "artikel_zu_gross", "ke
                   "nicht_herstellbar", "technologie_passt_nicht", "termin_nicht_machbar", "sonstiges")
 CLOSE_REASONS = (
     "artikelpreis_zu_hoch", "werkzeug_zu_teuer", "investition_zu_teuer",
-    "projekt_kunde_nicht_gewonnen", "projekt_eingestellt", "lieferzeit", "technik", "sonstiges",
+    "projekt_kunde_nicht_gewonnen", "projekt_eingestellt", "lieferzeit", "technik", "vorrichtung_zu_teuer", "sonstiges",
 )
 
 
@@ -228,6 +228,10 @@ class Machine(TimestampMixin, Base):
     number: Mapped[str | None] = mapped_column(String(40))
     name: Mapped[str] = mapped_column(String(120))
     kind: Mapped[str | None] = mapped_column(String(30), default="spritzguss")  # spritzguss | montage | nachbearbeitung | pruefung | sonstige
+    status: Mapped[str | None] = mapped_column(String(20), default="bestand")  # bestand | geplant (nur für Kalkulation, REV01-M02)
+    shifts: Mapped[int | None] = mapped_column(Integer)  # Schichtmodell 1/2/3 → verfügbare Std = Schichten × 8 h × 240 Tage
+    delete_requested_by: Mapped[int | None] = mapped_column(Integer)   # Löschantrag (Vier-Augen, REV01-M03)
+    delete_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     clamping_force_t: Mapped[float | None] = mapped_column(Float)
     hourly_rate: Mapped[float] = mapped_column(Float, default=0)        # Maschinenstundensatz €/h (ohne Personal)
     maintenance_rate: Mapped[float] = mapped_column(Float, default=0)   # Instandhaltung €/h
@@ -292,6 +296,7 @@ class Calculation(TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(30), default="anfrage", index=True)
     probability: Mapped[int] = mapped_column(Integer, default=25)
     close_reason: Mapped[str | None] = mapped_column(String(40))
+    close_note: Mapped[str | None] = mapped_column(Text)  # Freitext zum Verlustgrund (Pflicht bei „Sonstiges“, REV01-P05)
     remark: Mapped[str | None] = mapped_column(Text)
     last_call_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     inquiry_date: Mapped[date | None] = mapped_column(Date)
@@ -608,3 +613,26 @@ class Site(TimestampMixin, Base):
     settings: Mapped[dict | None] = mapped_column(JSON)     # nur abweichende Parameter, z. B. {"labor_rate_h": 19}
     sort: Mapped[int] = mapped_column(Integer, default=0)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class ChangeRequest(TimestampMixin, Base):
+    """Änderungsprotokoll: Änderungswünsche und Fehlermeldungen aus Tests (z. B. REV01) – nachverfolgbar bis zur Prüfung."""
+    __tablename__ = "change_requests"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str | None] = mapped_column(String(30), unique=True, index=True)   # REV01-B01, WUN-0001
+    revision: Mapped[str | None] = mapped_column(String(20), index=True)    # REV01
+    area: Mapped[str | None] = mapped_column(String(60))                    # Bereich, z. B. Kalkulation
+    kind: Mapped[str] = mapped_column(String(20), default="wunsch")          # fehler | wunsch | doku
+    title: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str | None] = mapped_column(Text)                   # Wortlaut der Anforderung
+    priority: Mapped[str] = mapped_column(String(10), default="mittel")      # hoch | mittel | niedrig
+    phase: Mapped[int | None] = mapped_column(Integer)                      # Umsetzungsphase 1–4
+    status: Mapped[str] = mapped_column(String(20), default="offen")        # offen | in_arbeit | umgesetzt | geprueft | nachbessern | abgelehnt | zurueckgestellt
+    solution: Mapped[str | None] = mapped_column(Text)                      # Umsetzung (was wurde wie gelöst)
+    req_ids: Mapped[str | None] = mapped_column(String(200))                # Lastenheft-IDs
+    version: Mapped[str | None] = mapped_column(String(20))                 # umgesetzt in Lastenheft-Version
+    test_steps: Mapped[str | None] = mapped_column(Text)                    # Prüfanweisung
+    test_result: Mapped[str | None] = mapped_column(Text)                   # Prüfergebnis / Anmerkung Prüfer
+    tested_by: Mapped[str | None] = mapped_column(String(120))
+    tested_at: Mapped[date | None] = mapped_column(Date)
+    requested_by: Mapped[str | None] = mapped_column(String(120))

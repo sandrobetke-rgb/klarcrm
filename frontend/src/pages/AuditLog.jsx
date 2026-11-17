@@ -15,7 +15,7 @@ export default function AuditLog() {
           <p className="muted">Wer hat wann was geändert – alle Datensätze, mit altem und neuem Wert. Einträge sind nicht änderbar.</p></div>
       </header>
       <div className="filters">
-        <SearchInput value={f.q} onChange={(v) => set('q', v)} placeholder="Datensatz suchen (z. B. KA-2026-0012)…" />
+        <SearchInput value={f.q} onChange={(v) => set('q', v)} placeholder="Datensatz suchen (z. B. K26-0012)…" />
         <select value={f.entity} onChange={(e) => set('entity', e.target.value)}>
           <option value="">Bereich: alle</option>
           {data && Object.entries(data.entities).map(([k, l]) => <option key={k} value={k}>{l}</option>)}

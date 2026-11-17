@@ -4,9 +4,9 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.22 |
-| **Stand** | 15.11.2026 |
-| **Status** | Testphase (GitHub Codespaces); Zielbetrieb: interner Server F&R |
+| **Dokumentversion** | 1.23 |
+| **Stand** | 17.11.2026 |
+| **Status** | Testphase auf internem Server F&R; Testrückmeldung REV01 in Umsetzung (Kap. 13) |
 
 > Dieses Lastenheft wird bei **jeder** Änderung am System mitgezogen. Neue Anforderungen, geänderte Regeln und
 > umgesetzte Punkte werden in der Änderungshistorie (Kapitel 12) dokumentiert. Anforderungen tragen eine feste ID
@@ -64,7 +64,7 @@ von Standardwerten werden markiert; jede Änderung an einer Kalkulation erzeugt 
   je Phase automatisch (überschreibbar); Abschlussdatum wird beim Gewinnen/Verlieren gesetzt.
 - CRM-5: Pipeline als Kanban mit Drag & Drop und als Liste; Summen und gewichtete Summen je Phase.
 - CRM-6: Aktivitäten mit Fälligkeit; Filter überfällig/heute/7 Tage; Abhaken in der Liste.
-- CRM-7: Angebote mit automatischer Nummer (AN-JJJJ-NNNN), Positionen, Rabatt, MwSt., Duplizieren, Druckansicht (PDF).
+- CRM-7: Angebote mit automatischer Nummer (A26-0001, Revisionen A26-0001-R1; bis v1.22: AN-JJJJ-NNNN), Positionen, Rabatt, MwSt., Duplizieren, Druckansicht (PDF).
 - CRM-8: Dashboard mit offener Pipeline, Quartals-Forecast, gewonnenem Umsatz, Gewinnquote, Umsatz je Monat,
   Pipeline je Phase, Vergleich je Vertriebsmitarbeiter, anstehenden Abschlüssen; filterbar je Mitarbeiter.
 
@@ -117,14 +117,14 @@ von Standardwerten werden markiert; jede Änderung an einer Kalkulation erzeugt 
 - STM-8: Gewinn (Standard **7 %**), Skonto, Rabatt.
 - STM-9: Fertigungs-Standards: Produktivität, Montage-Produktivität, Rüstzeit, Einrichter je Rüstvorgang, Anfahrausschuss.
 - STM-10: Ampel-Schwellen der Nachkalkulation (Standard grün bis +3 %, rot ab +10 %).
-- STM-12: Schwellen für **Großprojekte**: Jahresumsatz ab 500.000 € und Invest ab 500.000 € (Standard, änderbar).
+- STM-12: Schwellen für **Großprojekte** und Freigabepflicht: Jahresumsatz ab 250.000 € und Invest ab 250.000 € (Standard, änderbar; bis v1.22: 500.000 €, REV01-F01).
 - STM-11: Nur Administratoren ändern Parameter. Änderungen wirken auf **neue** Kalkulationen; gespeicherte Versionen
   enthalten ihre Werte selbst und bleiben reproduzierbar.
 
 ## 6. Kalkulation (Anfrage → Kalkulation → Angebot → Auftrag)
 
 ### 6.1 Kopfdaten einer Kalkulation
-- KAL-1: Automatische **Kalkulationsnummer** KA-JJJJ-NNNN.
+- KAL-1: Automatische **Kalkulationsnummer** K26-0001 (K + zweistelliges Jahr, REV01-N01; bis v1.22: KA-JJJJ-NNNN).
 - KAL-2: Artikelbezeichnung, **Artikelnummer des Kunden**, eigene Artikelnummer.
 - KAL-3: Kunde, **Ansprechpartner des Kunden**, verknüpfte Verkaufschance (Projekt), Verantwortlicher.
 - KAL-4: Status: Anfrage, In Kalkulation, Angeboten, Verhandlung, Gewonnen, Verloren, **Kein Angebot abgegeben**,
@@ -366,7 +366,8 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 - AUS-1: Matrix Maschine × Jahr (3, 5, 7 oder 10 Jahre) mit Auslastung in % der verfügbaren Stunden.
 - AUS-2: Bestandteile je Zelle: **Bestand** (verfügbare h × Grundauslastung % × (1 − Auslauf %)^Jahr), **fest**
   (gewonnene Kalkulationen), **gewichtet** (offene Kalkulationen × Wahrscheinlichkeit), **potenziell** (offene zu 100 %).
-- AUS-3: Ansichten: Fest (Bestand + gewonnen), Erwartet (+ gewichtet), Maximal (+ alle offenen).
+- AUS-3: Ansichten: Fest (Bestand + gewonnen), Erwartet (+ gewichtet), Maximal (+ alle offenen). „Zu voll“: ab 85 % knapp, ab 100 % überlastet (AUS-5, Seitenhilfe, REV01-K02).
+- AUS-7: Verfügbare Stunden je Anlage über **Schichtmodell**: 1 Schicht = 8 h × 240 Tage = 1.920 h, 2 Schichten = 3.840 h, 3 Schichten = 5.760 h; ohne Schichtmodell frei eingebbar (REV01-K01).
 - AUS-4: Stunden je Kalkulation = Maschinenstunden p. a. inkl. Rüsten der aktuellen Version, ab SOP (sonst ab heute
   bzw. 1. Januar Folgejahr) über die Projektlaufzeit, anteilig im Start- und Endjahr. Nicht berücksichtigt:
   verloren, kein Angebot, zurückgestellt. Kalkulationen ohne Maschine erscheinen als „ohne Maschinenzuordnung“.
@@ -645,3 +646,81 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.20 | 15.11.2026 | **Grenzkostenkalkulation** (KAL-28m): direkte Artikelkosten inkl. Verpackung und Transport, Deckungsbeitrag je Stück/p. a./Lieferjahr, Preisuntergrenzen; Strompreis als Eingabe. Rechentest mit Handrechnung ergänzt; gespeicherte Versionen rechnen unverändert (ohne Strompreis = ohne Energie). |
 | 1.21 | 15.11.2026 | **Standorte der Gruppe** (Kap. 6.11, STO-1 … 6): Standort-Stammdaten mit abweichenden Sätzen, Maschinen je Standort, Fertigungsstandort je Kalkulation mit Standortwechsel, Standortvergleich aller Standorte, Standard-Standort je Benutzer, Filter in Liste/Auslastung/Auswertungen. Neue Tabelle `sites`, neue Spalten `machines.site_id`, `calculations.site_id`, `users.site_id` (automatisch). Bestehende Kalkulationen ohne Standort gelten als Standard-Standort. |
 | 1.22 | 15.11.2026 | **Datenimport CSV/Excel** (Kap. 6.12, IMP-1 … 5) für Firmen, Kontakte, Maschinen, Materialien, Zukaufteile mit Vorlage, Spaltenzuordnung, Vorschau und Protokoll; Tests für das Einlesen ergänzt. **Validierungsprotokoll und Testplan** als Vorlage (NFA-11). Neue Abhängigkeit `openpyxl` (Excel). |
+| 1.23 | 17.11.2026 | **Testrückmeldung REV01, Phase 1** (Kap. 13): Speichern immer sichtbar, Standortwechsel übernimmt Standortsätze (Faktor Maschinenstundensatz), ein Angebot je Kalkulation mit Revisionen, keine Lieferanten im Angebot, freie Zahleneingabe, Maschinen-Löschschutz und Vier-Augen-Löschung, Planmaschinen, Schichtmodell, Verlustgrund Pflicht, Branchenliste, Rüstzeit in Minuten, Nummern A26-/K26-, Freigabe ab 250.000 €, Dashboard-Kacheln, Änderungswünsche & Prüfprotokoll, Dokumentation im Programm mit Word-Download. Phasen 2–4 geplant. |
+
+## 13. Testrückmeldung REV01 (Nov. 2026) – Anforderungen und Umsetzung
+
+Quelle: Dokument „REV01 Verbesserungsmaßnahmen CRM“ (Sandro, Test auf dem internen Server). Jeder Punkt steht mit
+derselben Nummer im Programm unter **Änderungswünsche** (Status, Umsetzung, Prüfanweisung, Prüfergebnis). Die
+Umsetzung erfolgt in vier Phasen:
+
+| Phase | Inhalt | Stand |
+|---|---|---|
+| 1 | Fehler und Sofortmaßnahmen (B01–B05, M01–M03, P05, S01, K01–K02, U01, N01, F01, D01–D04, X01–X02) | umgesetzt in v1.23, Prüfung durch Anwender |
+| 2 | Ablauf Anfrage → Entscheidung → Kalkulation(en) → Angebotskopf mit n Artikeln → Pipeline automatisch, Angebotsverfolgung (P01–P04, P06–P09) | geplant |
+| 3 | Kalkulation erweitern: Mengen je Jahr, Material/Zukaufteile mit Staffeln, Losgrößenvorschlag, Werkzeugblatt, Anlagenblatt, Risikoanalyse, Kickoff, Duplizieren mit Fachzahl (C01–C10) | geplant |
+| 4 | Beschaffung mit Staffeln, Vertriebsziel, Vertriebsbericht, Durchlaufzeit (E01, D05, R01) | geplant |
+
+### 13.1 Phase 1 – umgesetzt (v1.23)
+- REV01-B01: **Speichern der Kalkulation** immer sichtbar: Speicherleiste bleibt beim Scrollen oben, gelb bei
+  ungespeicherten Änderungen, Knopf „💾 Speichern (Version n)“, Tastenkürzel Strg+S, Rückfrage beim Verlassen der Seite.
+- REV01-B02: **Standortwechsel** ersetzt alle Standardsätze durch die des Zielstandorts. Standard ist ein Wert, der dem
+  Gruppenwert oder dem Satz eines beliebigen Standorts entspricht; nur von Hand eingegebene Werte bleiben und werden
+  angezeigt („Alle Sätze des Standorts übernehmen“ ersetzt auch diese). Neuer Standortparameter **Faktor
+  Maschinenstundensatz** (%): gilt, wenn am Zielstandort keine eigene Maschine hinterlegt ist. Standortmatrix zeigt
+  ungespeicherte Änderungen an.
+- REV01-B03: **Ein Angebot je Kalkulation**: „Angebot erstellen / aktualisieren“ aktualisiert ein offenes Angebot im
+  Entwurf (gleiche Nummer); ist es versendet, entsteht eine Revision (-R1, -R2 …), das alte Angebot erhält den
+  Status „ersetzt“. Sammelangebote werden mit allen enthaltenen Kalkulationen neu aufgebaut.
+- REV01-B04: Firmen vom Typ **Lieferant** sind in Angeboten, Kalkulationen und Verkaufschancen nicht wählbar; der
+  Server lehnt Angebote an Lieferanten ab.
+- REV01-B05: **Freie Zahleneingabe** in allen Zahlenfeldern (Komma oder Punkt, Tausenderpunkt), keine Pfeiltasten-Felder.
+- REV01-M01: Maschinen, die in einer **offenen Kalkulation** (aktuelle Version, Hauptmaschine oder Arbeitsgang)
+  verwendet werden, sind nicht löschbar – Hinweis mit Kalkulationsnummern, stattdessen deaktivieren.
+- REV01-M02: Maschinen-Feld **Bestand / Planung**: Bestandsmaschine oder Planmaschine/Neuanlage (nur für Kalkulation).
+- REV01-M03: Löschen von Maschinen nur durch Administratoren im **Vier-Augen-Prinzip** (Löschantrag durch Admin A,
+  Bestätigung durch Admin B; Antrag zurückziehbar; protokolliert).
+- REV01-P05: **Verloren nur mit Grund**: Pipeline (Ziehen auf „Verloren“ öffnet Pflichtdialog) und Kalkulation
+  (Server prüft). Vorauswahl: Werkzeug zu teuer, Preis zu teuer, Projekt eingestellt, Kunde hat Projekt nicht erhalten,
+  Vorrichtung zu teuer, Investition zu teuer, Lieferzeit/Kapazität, technisch nicht machbar, Sonstiges (Freitext Pflicht).
+- REV01-S01: **Branche** mit Vorschlagsliste (Automotive, Energie & Batterie, Wasser & Sanitär, Heizung, Lüftung &
+  Klima, Automatisierung & Elektrotechnik, Rüstung, Drohnentechnik, Smart Home, Sonstiges) und freier Eingabe.
+- REV01-K01: Schichtmodell je Maschine (AUS-7). REV01-K02: Erklärung „Fest/Erwartet/Maximal“ und Ampel (AUS-3).
+- REV01-U01: **Rüstzeit in Minuten** (Kalkulation, Vorserie, Parameter, Standorte); gespeichert weiterhin in Stunden,
+  damit alte Versionen unverändert reproduzierbar bleiben.
+- REV01-N01: **Sprechende Nummern**: Angebote A26-0001, Kalkulationen K26-0001, Beschaffung B26-0001 (Jahr zweistellig);
+  vorhandene Nummern bleiben.
+- REV01-F01: Freigabe- und Großprojektgrenzen **250.000 €** (STM-12); bestehende Installationen werden beim Start
+  einmalig umgestellt, sofern noch der alte Standard 500.000 € eingetragen war.
+- REV01-D01 … D04: Dashboard/Kalkulationsliste: „Anfragen in Bearbeitung“ (noch ohne Angebot) und „Angebote beim
+  Kunden“ getrennt; Großprojekte-Kachel öffnet gefiltert; Gewinnquote führt zu den Auswertungen, Gewonnen/Verloren
+  öffnen gefilterte Listen; Kachel „Trefferquote Kalkulationen“ entfällt. Listen übernehmen Filter aus der Adresse
+  (z. B. `/kalkulationen?big=true`).
+- REV01-X01: **Änderungswünsche & Prüfprotokoll** (Menü): Punkte mit Nummer, Art, Bereich, Priorität, Phase, Status
+  (offen, in Arbeit, umgesetzt – bitte prüfen, geprüft, nachbessern, zurückgestellt, abgelehnt), Anforderung,
+  Umsetzung, Prüfanweisung, Prüfergebnis, Prüfer und Datum; eigene Wünsche erhalten WUN-0001 …; Export CSV.
+  Beim Programmstart werden fehlende REV01-Punkte ergänzt, Einträge aus der Oberfläche werden nie überschrieben.
+- REV01-X02: **Dokumentation** (Menü): Benutzerbeschreibung und Lastenheft im Programm mit Inhaltsverzeichnis und
+  Suche; Download als Word (.docx), erzeugt aus der jeweils installierten Fassung.
+
+### 13.2 Phase 2 bis 4 – geplant (Anforderungen aus REV01)
+- REV01-P01 Pipeline: Phasen Neue Anfrage (automatisch, vor Freigabe zur Kalkulation) · Lead (manuell, Potenzial ohne
+  Anfrage) · Qualifiziert (zur Kalkulation freigegeben, automatisch) · Angebot (automatisch) · Verhandlung/technisches
+  Gespräch (Endrunde, Auswertung gewonnen/verloren aus der Endrunde) · Gewonnen · Verloren (Pflichtgrund).
+- REV01-P02 Entscheidung je Anfrage vor Kalkulationsstart: anbieten · nicht anbieten mit Begründung · anderer Standort ·
+  Sonstiges; bis dahin unter „Neue Anfrage“.
+- REV01-P03 Artikelanalyse vor der Kalkulation mit Vorschlag Maschinengröße und Option „technisches Gespräch
+  erforderlich“; unvollständige Analyse → Angebot nur nach Freigabe durch Vorgesetzten.
+- REV01-P04 Angebotskopf (Kunde, Ansprechpartner) mit n Kalkulationen; Angebotsliste mit Status und letzter Rückmeldung.
+- REV01-P06 Automatische Aufgabe „Angebotsverfolgung“ 5 Tage nach Versand mit Ampel, Wiedervorlage bei „niemanden
+  erreicht“ am nächsten Tag bzw. am gewählten Datum; rot für alle sichtbar inkl. Gesellschafter.
+- REV01-P07 Aktivitäten mit Angebot verknüpfen. REV01-P08 Angebotsdruck mit Positionen 1 / 1.1 Werkzeug / 1.2 Sonstiges /
+  1.3 CO₂ und Staffelpreisen je Lieferjahr (Jahresmenge × Preis). REV01-P09 Wahrscheinlichkeit ohne Umsatzgewichtung.
+- REV01-C01 … C10 Kalkulation: Zukaufteile mit Stück je Bauteil und Staffeln; Mengen je Lieferjahr mit Stunden und
+  Materialbedarf; Material als Freitext mit Staffelpreisen und Einkaufsvorschlag; Losgröße = Jahresmenge/12 (außer
+  erstes Serienjahr); Serienpreis 5+ Lieferjahre; Werkzeugblatt (FOT, PPAP, SOP, Werkzeugangebote WZB 1–4);
+  Duplizieren mit anderer Fachzahl; Risikoanalyse (13 Fragen, hoch > 60 %, mittel 35–60 %, niedrig < 35 %);
+  Stundensatzblatt für zusätzliche Anlagen; Kickoff aus allen Daten bei Auftragsbestätigung.
+- REV01-E01 Beschaffung für Material, Zubehör, Verpackung (Staffeln), Vorrichtungen, Montageanlagen, Prüfmittel,
+  Kameras, Laser, Sonstiges mit Bezug zur Kalkulationsnummer. REV01-D05 Vertriebsziel mit Ampel. REV01-R01
+  Vertriebsbericht je Zeitraum, Durchlaufzeit Anfrage → Angebot (Ziel 10 Arbeitstage, Parameter), Anzahl kalkulierter Artikel.

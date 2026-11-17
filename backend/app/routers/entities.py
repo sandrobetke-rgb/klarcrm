@@ -1,5 +1,6 @@
 from datetime import date, datetime, timedelta, timezone
 
+from fastapi import HTTPException
 from sqlalchemy import or_
 
 from .. import schemas as s
@@ -39,6 +40,9 @@ def opportunity_before_save(values: dict, obj):
         values["probability"] = STAGE_PROBABILITY[values.get("stage") or "lead"]
     if "probability" in values and values["probability"] is None:
         values.pop("probability")
+    if stage == "verloren" and stage != old_stage and not (values.get("lost_reason") or (obj.lost_reason if obj else "") or "").strip():
+        # REV01-P05: Verschieben nach „Verloren“ nur mit Grund
+        raise HTTPException(400, "Verloren nur mit Verlustgrund – bitte Grund angeben")
     if stage in ("gewonnen", "verloren") and stage != old_stage:
         values["closed_at"] = date.today()
     elif stage and stage not in ("gewonnen", "verloren"):

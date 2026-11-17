@@ -26,6 +26,8 @@ import CompanySettings from './pages/CompanySettings'
 import NotificationBell from './components/NotificationBell'
 import { ROLES } from './constants'
 import Footer from './components/Footer'
+import Changes from './pages/Changes'
+import Docs from './pages/Docs'
 
 function Layout() {
   const { user, logout, isAdmin } = useAuth()
@@ -42,6 +44,8 @@ function Layout() {
     ['/angebote', 'Angebote', '€'],
     ['/beschaffung', 'Beschaffung', '⚒'],
     ['/stammdaten', 'Stammdaten', '≡'],
+    ['/aenderungen', 'Änderungswünsche', '✎'],
+    ['/dokumentation', 'Dokumentation', '📖'],
   ]
   if (isAdmin || user.role === 'gesellschafter' || user.can_approve) nav.push(['/protokoll', 'Protokoll', '⎙'])
   if (isAdmin) nav.push(['/benutzer', 'Benutzer', '⚙'], ['/einstellungen', 'Firma & Layout', '✉'])
@@ -100,6 +104,8 @@ function App() {
             <Route path="/beschaffung" element={<ProcurementList />} />
             <Route path="/beschaffung/:id" element={<ProcurementDetail />} />
             <Route path="/protokoll" element={<AuditLog />} />
+            <Route path="/aenderungen" element={<Changes />} />
+            <Route path="/dokumentation" element={<Docs />} />
             <Route path="/einstellungen" element={<CompanySettings />} />
             <Route path="/benutzer" element={<Users />} />
             <Route path="/profil" element={<Profile />} />

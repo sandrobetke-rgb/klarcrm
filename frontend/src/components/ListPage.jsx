@@ -10,13 +10,17 @@ import { confirmDelete, EntityForm, ErrorBox, Modal, Pager, SearchInput, useFetc
  */
 export default function ListPage({
   title, subtitle, path, columns, fields, entityLabel, defaultSort, filters = [], baseParams = {},
-  newDefaults = {}, onRowClick, toForm = (r) => r, extraActions, limit = 50, top, rowClass, bulkBar,
+  newDefaults = {}, onRowClick, toForm = (r) => r, extraActions, limit = 50, top, rowClass, bulkBar, customDelete,
 }) {
   const { canWrite } = useAuth()
   const [q, setQ] = useState('')
   const [sort, setSort] = useState(defaultSort)
   const [offset, setOffset] = useState(0)
-  const [filterVals, setFilterVals] = useState({})
+  // Filter aus der Adresszeile übernehmen (z. B. Dashboard-Kachel → /kalkulationen?big=true)
+  const [filterVals, setFilterVals] = useState(() => {
+    const p = new URLSearchParams(window.location.search)
+    return Object.fromEntries(filters.filter((f) => p.get(f.name)).map((f) => [f.name, p.get(f.name)]))
+  })
   const [editing, setEditing] = useState(null)
   const [selected, setSelected] = useState({})
   const selRows = Object.values(selected)
@@ -31,6 +35,7 @@ export default function ListPage({
     reload()
   }
   async function remove() {
+    if (customDelete) { if (await customDelete(editing)) { setEditing(null); reload() } return }
     if (await confirmDelete(entityLabel, () => api.del(`${path}/${editing.id}`))) {
       setEditing(null)
       reload()

@@ -22,6 +22,8 @@ def make_crud_router(
     before_save: Callable | None = None,
     extra_filters: Callable | None = None,
     delete_dependency=None,
+    before_delete: Callable | None = None,
+    after_create: Callable | None = None,
 ) -> APIRouter:
     router = APIRouter()
     allowed_sort = {c.name for c in model.__table__.columns}
@@ -84,6 +86,8 @@ def make_crud_router(
             setattr(obj, k, v)
         db.add(obj)
         db.commit()
+        if after_create:
+            after_create(db, obj)
         db.refresh(obj)
         return obj
 
@@ -102,10 +106,12 @@ def make_crud_router(
         return obj
 
     @router.delete("/{item_id}", status_code=204)
-    def delete_item(item_id: int, db: Session = Depends(get_db), _: User = Depends(delete_dependency or can_write)):
+    def delete_item(item_id: int, db: Session = Depends(get_db), user: User = Depends(delete_dependency or can_write)):
         obj = db.get(model, item_id)
         if not obj:
             raise HTTPException(404, "Nicht gefunden")
+        if before_delete:
+            before_delete(db, obj, user)  # wirft HTTPException, wenn Löschen nicht zulässig ist
         db.delete(obj)
         db.commit()
 

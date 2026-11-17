@@ -1,3 +1,4 @@
+import re
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -8,18 +9,16 @@ from .. import schemas as s
 from ..auth import can_read, can_write
 from ..config import settings
 from ..database import get_db
-from ..models import Quote, QuoteItem, User
+from ..models import Account, Quote, QuoteItem, User
 
 router = APIRouter()
 
 
 def next_number(db: Session) -> str:
-    year = date.today().year
-    prefix = f"AN-{year}-"
-    last = db.scalar(
-        select(Quote.number).where(Quote.number.like(f"{prefix}%")).order_by(Quote.number.desc()).limit(1)
-    )
-    n = int(last.split("-")[-1]) + 1 if last else 1
+    """Sprechende Angebotsnummer A26-0001 (A + zweistelliges Jahr, REV01-N01). Revisionen tragen -R1, -R2 …"""
+    prefix = f"A{date.today():%y}-"
+    nums = db.scalars(select(Quote.number).where(Quote.number.like(f"{prefix}%"))).all()
+    n = max((int(m.group(1)) for x in nums if (m := re.match(rf"{prefix}(\d+)", x))), default=0) + 1
     return f"{prefix}{n:04d}"
 
 
@@ -67,8 +66,16 @@ def get_quote(quote_id: int, db: Session = Depends(get_db), _: User = Depends(ca
     return obj
 
 
+def _no_supplier(db: Session, account_id: int | None):
+    """Angebote gehen an Kunden/Interessenten, nie an Lieferanten (REV01-B04)."""
+    acc = db.get(Account, account_id) if account_id else None
+    if acc is not None and acc.type == "lieferant":
+        raise HTTPException(400, f"„{acc.name}“ ist als Lieferant angelegt – Angebote nur an Kunden oder Interessenten")
+
+
 @router.post("", response_model=s.QuoteOut, status_code=201)
 def create_quote(data: s.QuoteCreate, db: Session = Depends(get_db), user: User = Depends(can_write)):
+    _no_supplier(db, data.account_id)
     values = data.model_dump(exclude={"items"})
     values["owner_id"] = values.get("owner_id") or user.id
     values["quote_date"] = values.get("quote_date") or date.today()
@@ -89,6 +96,8 @@ def update_quote(quote_id: int, data: s.QuoteUpdate, db: Session = Depends(get_d
     if not quote:
         raise HTTPException(404, "Angebot nicht gefunden")
     values = data.model_dump(exclude_unset=True, exclude={"items"})
+    if "account_id" in values:
+        _no_supplier(db, values["account_id"])
     for k, v in values.items():
         if k == "tax_rate" and v is None:
             continue

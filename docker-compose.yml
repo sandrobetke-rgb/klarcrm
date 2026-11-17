@@ -14,7 +14,9 @@ services:
       retries: 10
 
   backend:
-    build: ./backend
+    build:
+      context: .                      # Projektwurzel, damit docs/ (Lastenheft, Beschreibung) ins Image kommt
+      dockerfile: backend/Dockerfile
     restart: unless-stopped
     depends_on:
       db:

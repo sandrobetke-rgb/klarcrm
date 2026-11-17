@@ -11,7 +11,7 @@ export function useThresholds() {
   useEffect(() => {
     if (cache) return
     pending = pending || api.get('/calc/settings').then((s) => {
-      cache = { revenue: Number(s.big_revenue_threshold || 500000), invest: Number(s.big_invest_threshold || 500000) }
+      cache = { revenue: Number(s.big_revenue_threshold || 250000), invest: Number(s.big_invest_threshold || 250000) }
       return cache
     })
     pending.then(setT)

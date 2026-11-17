@@ -18,10 +18,73 @@ from ..models import (
 )
 from .quotes import next_number as next_quote_number
 
+SHIFT_HOURS = 8 * 240  # REV01-K01: je Schicht 8 h × 240 Arbeitstage
+
+
+def _machine_before_save(values: dict, obj):
+    """Schichtmodell gesetzt → verfügbare Stunden/Jahr = Schichten × 8 h × 240 Tage."""
+    if values.get("shifts"):
+        values["available_hours_year"] = int(values["shifts"]) * SHIFT_HOURS
+    return values
+
+
+def machine_usage(db: Session, machine_id: int, open_only: bool = True) -> list[str]:
+    """Kalkulationen, deren aktuelle Version die Maschine nutzt (Hauptmaschine oder Arbeitsgang)."""
+    q = select(Calculation)
+    if open_only:
+        q = q.where(Calculation.status.notin_(("verloren", "kein_angebot")))
+    used = []
+    for c in db.scalars(q).all():
+        ver = next((v for v in c.versions if v.version_no == c.current_version), None)
+        inp = (ver.inputs if ver else None) or {}
+        if inp.get("machine_id") == machine_id or any(o.get("machine_id") == machine_id for o in inp.get("operations") or []):
+            used.append(c.number)
+    return used
+
+
+def _machine_before_delete(db: Session, m: Machine, user: User):
+    """REV01-M01/M03: Maschine in offener Kalkulation → nicht löschbar (deaktivieren). Löschen nur durch Admin
+    im Vier-Augen-Prinzip: ein Admin stellt den Löschantrag, ein zweiter bestätigt mit DELETE."""
+    if user.role != "admin":
+        raise HTTPException(403, "Maschinen löschen nur Administratoren (Vier-Augen-Prinzip)")
+    used = machine_usage(db, m.id)
+    if used:
+        raise HTTPException(409, f"Maschine wird in offenen Kalkulationen verwendet ({', '.join(used[:8])}"
+                                 f"{' …' if len(used) > 8 else ''}) – bitte deaktivieren statt löschen")
+    if not m.delete_requested_by:
+        raise HTTPException(409, "Erst Löschantrag stellen – ein zweiter Administrator bestätigt die Löschung")
+    if m.delete_requested_by == user.id:
+        raise HTTPException(409, "Vier-Augen-Prinzip: Die Löschung muss ein anderer Administrator bestätigen")
+
+
 machines = make_crud_router(
     model=Machine, create_schema=s.MachineBase, update_schema=s.MachineUpdate, out_schema=s.MachineOut,
-    search_fields=["name", "number", "location"], filter_fields=["active", "kind", "site_id"], default_sort="name",
+    search_fields=["name", "number", "location"], filter_fields=["active", "kind", "site_id", "status"], default_sort="name",
+    before_save=_machine_before_save, before_delete=_machine_before_delete,
 )
+
+
+@machines.post("/{machine_id}/delete-request", response_model=s.MachineOut)
+def machine_delete_request(machine_id: int, cancel: bool = False, db: Session = Depends(get_db), user: User = Depends(admin_only)):
+    """Löschantrag stellen bzw. zurückziehen (Vier-Augen-Prinzip)."""
+    m = db.get(Machine, machine_id)
+    if not m:
+        raise HTTPException(404, "Maschine nicht gefunden")
+    if cancel:
+        m.delete_requested_by, m.delete_requested_at = None, None
+    else:
+        used = machine_usage(db, m.id)
+        if used:
+            raise HTTPException(409, f"Maschine wird in offenen Kalkulationen verwendet ({', '.join(used[:8])}) – bitte deaktivieren statt löschen")
+        m.delete_requested_by, m.delete_requested_at = user.id, datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(m)
+    return m
+
+
+@machines.get("/{machine_id}/usage")
+def machine_usage_api(machine_id: int, db: Session = Depends(get_db), _: User = Depends(can_read)):
+    return {"open": machine_usage(db, machine_id), "all": machine_usage(db, machine_id, open_only=False)}
 sites = make_crud_router(
     model=Site, create_schema=s.SiteBase, update_schema=s.SiteUpdate, out_schema=s.SiteOut,
     search_fields=["name", "code", "country"], filter_fields=["active"], default_sort="sort",
@@ -56,11 +119,11 @@ NO_BID_LABELS = {
 }
 FEASIBILITY_LABELS = {"herstellbar": "Herstellbar", "bedingt_herstellbar": "Bedingt herstellbar",
                       "anpassungen_erforderlich": "Anpassungen erforderlich", "nicht_herstellbar": "Nicht herstellbar"}
-REASON_LABELS = {
-    "artikelpreis_zu_hoch": "Artikelpreis zu hoch", "werkzeug_zu_teuer": "Werkzeug zu teuer",
-    "investition_zu_teuer": "Investition zu teuer", "projekt_kunde_nicht_gewonnen": "Kunde hat Projekt nicht gewonnen",
-    "projekt_eingestellt": "Projekt beim Kunden eingestellt", "lieferzeit": "Lieferzeit / Kapazität",
-    "technik": "Technisch nicht machbar", "sonstiges": "Sonstiges",
+REASON_LABELS = {  # Verlustgründe (REV01-P05)
+    "werkzeug_zu_teuer": "Werkzeug zu teuer", "artikelpreis_zu_hoch": "Preis zu teuer",
+    "projekt_eingestellt": "Projekt eingestellt", "projekt_kunde_nicht_gewonnen": "Kunde hat Projekt nicht erhalten",
+    "vorrichtung_zu_teuer": "Vorrichtung zu teuer", "investition_zu_teuer": "Investition zu teuer",
+    "lieferzeit": "Lieferzeit / Kapazität", "technik": "Technisch nicht machbar", "sonstiges": "Sonstiges",
 }
 
 
@@ -71,7 +134,21 @@ SITE_KEYS = ("labor_rate_h", "setup_rate_h", "assembly_rate_h", "handling_rate_h
              "rebate_pct", "productivity_pct", "assembly_productivity_pct", "setup_time_h", "setup_persons", "startup_scrap_pcs",
              "co2_grid_kg_kwh", "co2_scope1_kg_h", "co2_masterbatch_kg_kg", "co2_transport_kg_tkm", "purchased_mgk_pct",
              "side_mgk_pct", "side_quality_pct", "side_scrap_pct", "side_markup_pct", "energy_price_kwh", "pack_pct",
-             "transport_pct")
+             "transport_pct", "machine_rate_pct")
+
+# Klartext für Hinweise beim Standortwechsel
+SITE_LABELS = {
+    "labor_rate_h": "Lohnsatz Bediener", "setup_rate_h": "Lohnsatz Einrichter", "assembly_rate_h": "Lohnsatz Montage",
+    "handling_rate_h": "Lohnsatz Handling", "automation_rate_h": "Lohnsatz Automatisierung", "mgk_pct": "MGK",
+    "fgk_pct": "FGK", "scrap_pct": "Ausschuss", "vwgk_pct": "VwGK", "vtgk_pct": "VtGK", "pm_pct": "Projektmanagement",
+    "quality_pct": "Qualität", "toolshop_pct": "Werkzeugbau", "profit_pct": "Gewinn", "cash_discount_pct": "Skonto",
+    "rebate_pct": "Rabatt", "productivity_pct": "Produktivität", "assembly_productivity_pct": "Produktivität Montage",
+    "setup_time_h": "Rüstzeit", "setup_persons": "Rüstpersonen", "startup_scrap_pcs": "Anfahrausschuss",
+    "co2_grid_kg_kwh": "CO₂-Faktor Strom", "co2_scope1_kg_h": "CO₂ Scope 1", "co2_masterbatch_kg_kg": "CO₂ Masterbatch",
+    "co2_transport_kg_tkm": "CO₂ Transport", "purchased_mgk_pct": "MGK Zukaufteile", "side_mgk_pct": "Nebenkalk. MGK",
+    "side_quality_pct": "Nebenkalk. Qualität", "side_scrap_pct": "Nebenkalk. Ausschuss", "side_markup_pct": "Nebenkalk. Aufschlag",
+    "energy_price_kwh": "Strompreis", "pack_pct": "Verpackung", "transport_pct": "Transport",
+}
 
 
 def get_settings(db: Session, site_id: int | None = None) -> dict:
@@ -151,23 +228,32 @@ def _pick_machine(machines: list, cur: "Machine | None", kind: str = "spritzguss
     return sorted(cand, key=lambda m: m.clamping_force_t or 0)[0]
 
 
-def site_inputs(db: Session, inputs: dict, target: Site, cur_site_id: int | None) -> tuple[dict, list]:
-    """Kalkulationseingaben auf einen anderen Standort umstellen: Standard-Sätze des bisherigen Standorts werden durch
-    die des Zielstandorts ersetzt (individuell geänderte Werte bleiben), Maschinen werden durch vergleichbare ersetzt."""
+def site_inputs(db: Session, inputs: dict, target: Site, cur_site_id: int | None, force: bool = False) -> tuple[dict, list]:
+    """Kalkulationseingaben auf einen anderen Standort umstellen (REV01-B02).
+    Ein Satz gilt als Standardwert, wenn er dem Gruppenstandard oder dem Satz IRGENDEINES Standorts entspricht
+    (Kalkulationen von vor der Standortpflege tragen Gruppenwerte) – Standardwerte werden durch die des Zielstandorts
+    ersetzt. Nur wirklich von Hand eingegebene Werte bleiben stehen; force=True übernimmt auch diese."""
     old, new = get_settings(db, cur_site_id), get_settings(db, target.id)
+    group = get_settings(db, None)
+    others = [get_settings(db, x) for x in db.scalars(select(Site.id).where(Site.active.is_(True))).all()]
     inp, notes = dict(inputs), []
-    for k in SITE_KEYS:
-        if k not in inp:
-            continue
-        cur = inp.get(k)
+
+    def is_std(k, cur):
+        if cur in (None, ""):
+            return True
         try:
-            same = cur in (None, "") or abs(float(cur) - float(old.get(k) or 0)) < 1e-9
+            return any(abs(float(cur) - float(st.get(k) or 0)) < 1e-9 for st in [old, group, *others])
         except (TypeError, ValueError):
-            same = False
-        if same:
+            return False
+
+    for k in SITE_KEYS:
+        if k not in inp or k == "machine_rate_pct" or (k == "productivity_pct" and inp.get("machine_id")):
+            continue  # Produktivität kommt von der Maschine
+        cur = inp.get(k)
+        if force or is_std(k, cur):
             inp[k] = new.get(k)
-        elif new.get(k) != old.get(k):
-            notes.append(f"{k} individuell ({cur}) beibehalten")
+        elif new.get(k) != cur:
+            notes.append(f"{SITE_LABELS.get(k, k)}: von Hand eingegeben ({_de(float(cur))}) – beibehalten, Standort: {_de(float(new.get(k) or 0))}")
     machines = db.scalars(select(Machine).where(Machine.active.is_(True), Machine.site_id == target.id)).all()
     cur_m = db.get(Machine, inputs.get("machine_id")) if inputs.get("machine_id") else None
     if not (cur_m and cur_m.site_id == target.id):
@@ -182,7 +268,16 @@ def site_inputs(db: Session, inputs: dict, target: Site, cur_site_id: int | None
                        machine_power_kw=m.power_kw or inp.get("machine_power_kw"),
                        co2_grid_kg_kwh=m.grid_factor if m.grid_factor is not None else inp.get("co2_grid_kg_kwh"))
         else:
-            notes.append("keine passende Spritzgießmaschine am Standort – Maschine beibehalten")
+            # Keine Maschine am Standort hinterlegt: Maschine bleibt, Stundensatz über Standortfaktor (Standard 100 %)
+            f_new = float(new.get("machine_rate_pct") or 100) / 100
+            f_old = float(old.get("machine_rate_pct") or 100) / 100
+            base = (cur_m.hourly_rate if cur_m else float(inputs.get("machine_rate_h") or 0) / (f_old or 1))
+            hand = cur_m is not None and abs(float(inputs.get("machine_rate_h") or 0) - cur_m.hourly_rate * f_old) > 0.01
+            if force or not hand:
+                inp["machine_rate_h"] = round(base * f_new, 2)
+            notes.append("keine Maschine am Standort hinterlegt – Maschine beibehalten"
+                         + (f", Stundensatz × {_de(f_new * 100, 0)} % Standortfaktor" if abs(f_new - 1) > 1e-9 else
+                            " (Maschinen in den Stammdaten dem Standort zuordnen oder Standortfaktor Maschinenstundensatz pflegen)"))
     ops = []
     for o in inputs.get("operations") or []:
         om = db.get(Machine, o.get("machine_id")) if o.get("machine_id") else None
@@ -202,12 +297,12 @@ def site_inputs(db: Session, inputs: dict, target: Site, cur_site_id: int | None
 
 
 @router.post("/site-compare")
-def site_compare(inputs: dict, db: Session = Depends(get_db), user: User = Depends(can_read)):
+def site_compare(inputs: dict, force: bool = False, db: Session = Depends(get_db), user: User = Depends(can_read)):
     """Dieselbe Kalkulation für alle aktiven Standorte rechnen (Standortvergleich)."""
     cur_site = inputs.get("site_id") or default_site_id(db, user)
     rows = []
     for st in db.scalars(select(Site).where(Site.active.is_(True)).order_by(Site.sort, Site.id)).all():
-        inp, notes = (dict(inputs), []) if st.id == cur_site else site_inputs(db, inputs, st, cur_site)
+        inp, notes = (dict(inputs), []) if st.id == cur_site else site_inputs(db, inputs, st, cur_site, force)
         inp["site_id"] = st.id
         res = compute(inp)
         m = db.get(Machine, inp.get("machine_id")) if inp.get("machine_id") else None
@@ -238,7 +333,8 @@ def meta(_: User = Depends(can_read)):
 
 # ---------------- Kalkulationen ----------------
 def next_calc_number(db: Session) -> str:
-    prefix = f"KA-{date.today().year}-"
+    """Sprechende Kalkulationsnummer K26-0001 (K + zweistelliges Jahr, REV01-N01)."""
+    prefix = f"K{date.today():%y}-"
     last = db.scalar(select(Calculation.number).where(Calculation.number.like(f"{prefix}%"))
                      .order_by(Calculation.number.desc()).limit(1))
     return f"{prefix}{(int(last.split('-')[-1]) + 1 if last else 1):04d}"
@@ -272,7 +368,8 @@ def sync_opportunity(db: Session, calc: Calculation):
             opp.stage = new_stage
             opp.closed_at = date.today() if new_stage in ("gewonnen", "verloren") else None
         if calc.status == "verloren":
-            opp.lost_reason = REASON_LABELS.get(calc.close_reason)
+            opp.lost_reason = REASON_LABELS.get(calc.close_reason) + (f": {calc.close_note}" if calc.close_note else "") \
+                if calc.close_reason else None
         elif calc.status == "kein_angebot":
             opp.lost_reason = "Kein Angebot: " + (NO_BID_LABELS.get(calc.no_bid_reason) or "ohne Grund") + \
                 (f" ({calc.no_bid_note})" if calc.no_bid_note else "")
@@ -379,6 +476,10 @@ def calc_stats(owner_id: int | None = None, db: Session = Depends(get_db), _: Us
         "big_open_invest": round(sum(c.invest for c in big_open), 2),
         "big_revenue_threshold": st["big_revenue_threshold"], "big_invest_threshold": st["big_invest_threshold"],
         "count_total": len(rows), "count_open": len(open_),
+        # REV01-D01: klar getrennt – Anfragen noch ohne Angebot vs. Angebote beim Kunden
+        "count_inquiries": sum(1 for c in open_ if c.status in ("anfrage", "kalkulation")),
+        "count_offered": sum(1 for c in open_ if c.status in ("angeboten", "verhandlung")),
+        "offered_revenue": round(sum(rev(c) for c in open_ if c.status in ("angeboten", "verhandlung")), 2),
         "open_revenue": round(sum(rev(c) for c in open_), 2),
         "open_weighted": round(sum(rev(c) * c.probability / 100 for c in open_), 2),
         "open_tooling": round(sum(c.one_time_revenue for c in open_), 2),
@@ -432,8 +533,15 @@ def update_calc(calc_id: int, data: s.CalcMeta, db: Session = Depends(get_db), _
     old_opp = calc.opportunity_id
     if "status" in values and "probability" not in values and values["status"] != calc.status:
         values["probability"] = STATUS_PROBABILITY[values["status"]]
+    if values.get("status") == "verloren" and calc.status != "verloren":
+        reason = values.get("close_reason") or calc.close_reason
+        if not reason:
+            raise HTTPException(400, "Verloren nur mit Verlustgrund – bitte Grund auswählen")
+        if reason == "sonstiges" and not (values.get("close_note") or calc.close_note or "").strip():
+            raise HTTPException(400, "Verlustgrund „Sonstiges“: bitte Begründung als Freitext eingeben")
     if values.get("status") and values["status"] != "verloren":
         values.setdefault("close_reason", None)
+        values.setdefault("close_note", None)
     if values.get("status") and values["status"] != "kein_angebot":
         values.setdefault("no_bid_reason", None)
     for k, v in values.items():
@@ -532,8 +640,11 @@ L = {
 }
 
 
-def build_quote(db: Session, pairs: list, user: User, lang: str = "de") -> Quote:
-    """Angebot aus einer oder mehreren Kalkulationen (je mit Version). Serienteile zuerst, danach Einmalkosten."""
+def build_quote(db: Session, pairs: list, user: User, lang: str = "de", target: Quote | None = None,
+                number: str | None = None) -> Quote:
+    """Angebot aus einer oder mehreren Kalkulationen (je mit Version). Serienteile zuerst, danach Einmalkosten.
+    target: bestehendes Entwurfs-Angebot wird aktualisiert statt ein zweites anzulegen (REV01-B03).
+    number: feste Nummer, z. B. für eine Revision A26-0001-R1."""
     calcs = [c for c, _ in pairs]
     missing = [f"{c.number} ({', '.join(c.approval_reasons)})" for c in calcs if c.approval_reasons and not c.is_approved]
     if missing:
@@ -549,12 +660,17 @@ def build_quote(db: Session, pairs: list, user: User, lang: str = "de") -> Quote
     app_st = {**DEFAULT_APP, **((db.get(AppSettings, 1).data or {}) if db.get(AppSettings, 1) else {})}
     title = first.article_name if single else \
         f"{t['bulk']} {len(calcs)} {t['articles']}" + (f" – {first.account.name}" if first.account else "")
-    quote = Quote(number=next_quote_number(db), title=title, account_id=first.account_id,
-                  contact_id=first.contact_id, opportunity_id=opp_ids.pop() if len(opp_ids) == 1 else None,
-                  owner_id=user.id, status="entwurf", quote_date=date.today(),
-                  valid_until=date.today() + timedelta(days=30), tax_rate=19,
-                  intro_text=app_st[f"intro_{lang}"], terms=app_st[f"terms_{lang}"], language=lang,
-                  calculation_ids=[c.id for c in calcs])
+    if target is not None:
+        quote = target
+        quote.calculation_ids = [c.id for c in calcs]
+        quote.title = quote.title or title
+    else:
+        quote = Quote(number=number or next_quote_number(db), title=title, account_id=first.account_id,
+                      contact_id=first.contact_id, opportunity_id=opp_ids.pop() if len(opp_ids) == 1 else None,
+                      owner_id=user.id, status="entwurf", quote_date=date.today(),
+                      valid_until=date.today() + timedelta(days=30), tax_rate=19,
+                      intro_text=app_st[f"intro_{lang}"], terms=app_st[f"terms_{lang}"], language=lang,
+                      calculation_ids=[c.id for c in calcs])
     items, one_time = [], []
     for calc, ver in pairs:
         r, inp = ver.results, ver.inputs
@@ -615,6 +731,9 @@ def build_quote(db: Session, pairs: list, user: User, lang: str = "de") -> Quote
         for o in [o for o in r["one_time"] if o["price"]]:
             label = o["label"] if single else f"{o['label']} – {calc.article_name}"
             one_time.append(dict(description=f"{label} ({t['once']})", quantity=1, unit="psch", unit_price=o["price"]))
+    if target is not None:
+        quote.items.clear()
+        db.flush()
     quote.items = [QuoteItem(position=n, **it) for n, it in enumerate(items + one_time, start=1)]
     db.add(quote)
     for calc in calcs:
@@ -627,18 +746,56 @@ def build_quote(db: Session, pairs: list, user: User, lang: str = "de") -> Quote
     return quote
 
 
+def open_quotes_for(db: Session, calc_id: int) -> list[Quote]:
+    """Offene Angebote (Entwurf oder versendet), in denen die Kalkulation steckt – neueste zuerst."""
+    rows = db.scalars(select(Quote).where(Quote.status.in_(("entwurf", "versendet"))).order_by(Quote.id.desc())).unique().all()
+    return [q for q in rows if calc_id in (q.calculation_ids or [])]
+
+
+def revision_number(db: Session, number: str) -> str:
+    base = number.split("-R")[0]
+    nums = db.scalars(select(Quote.number).where(Quote.number.like(f"{base}-R%"))).all()
+    n = max((int(x.rsplit("-R", 1)[1]) for x in nums if x.rsplit("-R", 1)[1].isdigit()), default=0) + 1
+    return f"{base}-R{n}"
+
+
+def _pairs(calcs: list) -> list:
+    return [(c, next(v for v in c.versions if v.version_no == c.current_version)) for c in calcs]
+
+
 @calcs.post("/{calc_id}/quote")
-def create_quote(calc_id: int, version_no: int | None = None, lang: str = "de", db: Session = Depends(get_db),
-                 user: User = Depends(can_write)):
+def create_quote(calc_id: int, version_no: int | None = None, lang: str = "de", mode: str = "auto",
+                 db: Session = Depends(get_db), user: User = Depends(can_write)):
+    """Angebot zur Kalkulation (REV01-B03): Es gibt je Kalkulation höchstens ein offenes Angebot.
+    - offener Entwurf vorhanden → wird mit der aktuellen Version aktualisiert (gleiche Nummer)
+    - bereits versendet → Revision (A26-0001-R1), das alte Angebot wird „ersetzt“
+    - mode=new erzwingt ein zusätzliches, eigenständiges Angebot"""
     calc = db.get(Calculation, calc_id)
     if not calc:
         raise HTTPException(404, "Kalkulation nicht gefunden")
     ver = next((v for v in calc.versions if v.version_no == (version_no or calc.current_version)), None)
     if not ver:
         raise HTTPException(404, "Version nicht gefunden")
-    quote = build_quote(db, [(calc, ver)], user, lang)
+    existing = open_quotes_for(db, calc_id) if mode != "new" else []
+    action = "neu"
+    if existing:
+        q = existing[0]
+        others = [db.get(Calculation, i) for i in (q.calculation_ids or []) if i != calc_id]
+        others = [c for c in others if c and c.status not in ("verloren", "kein_angebot")]
+        pairs = [(c, v) for c, v in _pairs(others)] + [(calc, ver)]
+        pairs.sort(key=lambda p: (q.calculation_ids or []).index(p[0].id) if p[0].id in (q.calculation_ids or []) else 999)
+        if q.status == "entwurf":
+            quote = build_quote(db, pairs, user, q.language or lang, target=q)
+            action = "aktualisiert"
+        else:
+            quote = build_quote(db, pairs, user, q.language or lang, number=revision_number(db, q.number))
+            quote.contact_id, quote.opportunity_id, quote.intro_text, quote.terms = q.contact_id, q.opportunity_id, q.intro_text, q.terms
+            q.status = "ersetzt"
+            action = "revision"
+    else:
+        quote = build_quote(db, [(calc, ver)], user, lang)
     db.commit()
-    return {"quote_id": quote.id, "number": quote.number}
+    return {"quote_id": quote.id, "number": quote.number, "action": action}
 
 
 @quote_bulk.post("/quote")
@@ -661,8 +818,7 @@ def create_bulk_quote(data: dict, db: Session = Depends(get_db), user: User = De
     if closed:
         raise HTTPException(400, f"Verlorene bzw. nicht angebotene Kalkulationen ausnehmen: {', '.join(closed)}")
     calcs.sort(key=lambda c: c.number)
-    pairs = [(c, next(v for v in c.versions if v.version_no == c.current_version)) for c in calcs]
-    quote = build_quote(db, pairs, user, (data or {}).get("lang", "de"))
+    quote = build_quote(db, _pairs(calcs), user, (data or {}).get("lang", "de"))
     db.commit()
     return {"quote_id": quote.id, "number": quote.number, "count": len(calcs)}
 

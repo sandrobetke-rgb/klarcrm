@@ -115,7 +115,7 @@ export default function Reports() {
         <div className="field"><label>Vertrieb</label><RefSelect kind="user" value={f.owner_id} onChange={(v) => setF({ ...f, owner_id: v })} /></div>
         {sites.length > 1 && <div className="field"><label>Standort</label><select value={f.site_id} onChange={(e) => setF({ ...f, site_id: e.target.value })}>
           <option value="">alle</option>{sites.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select></div>}
-        <div className="field"><label>Kunde</label><RefSelect kind="account" value={f.account_id} onChange={(v) => setF({ ...f, account_id: v })} /></div>
+        <div className="field"><label>Kunde</label><RefSelect kind="customer" value={f.account_id} onChange={(v) => setF({ ...f, account_id: v })} /></div>
       </div>
       <ErrorBox error={error} />
       {s && <div className="kpi-grid">

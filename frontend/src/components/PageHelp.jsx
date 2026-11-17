@@ -24,7 +24,9 @@ const HELP = [
     '„CSV“ exportiert die Tabelle für Excel, „Drucken / PDF“ druckt die Seite (z. B. „Alle Berichte“ für die Gesellschafterrunde).',
   ]],
   ['/auslastung', 'Auslastung kommende Jahre', 'Maschinen- und Anlagenstunden aus Bestand und Kalkulationen im Verhältnis zur Kapazität.', [
-    'Ansicht wählen: Fest (Bestand + gewonnen), Erwartet (+ offene gewichtet mit Wahrscheinlichkeit), Maximal (+ alle offenen).',
+    '„Fest“ heißt: sicher belegt – Grundauslastung aus Bestandsaufträgen plus gewonnene Kalkulationen. „Erwartet“ rechnet offene Anfragen mit ihrer Wahrscheinlichkeit dazu, „Maximal“ alle offenen zu 100 % (falls alles kommt).',
+    'Ampel je Maschine und Jahr: unter 60 % frei · 60–85 % gut ausgelastet · 85–100 % knapp (Engpass prüfen) · ab 100 % überlastet ⚠ – zu voll wird es also ab 85 %, spätestens ab 100 %.',
+    'Kapazität: Schichtmodell je Maschine in den Stammdaten (1 Schicht = 8 h × 240 Tage = 1.920 h, 2 Schichten = 3.840 h, 3 Schichten = 5.760 h). Planmaschinen zählen nicht zum Bestand.',
     'Zeile anklicken zeigt, welche Kalkulationen bzw. Arbeitsgänge die Stunden verursachen.',
     'Kapazität, Grundauslastung und Auslauf je Maschine pflegen Sie in den Stammdaten.',
   ]],
@@ -58,7 +60,15 @@ const HELP = [
     'Neuer Vorgang über „+ Beschaffung anlegen“ oder direkt in der Kalkulation im Reiter „Beschaffung“ (dann mit Eckdaten aus der Kalkulation).',
     'Liste zeigt je Vorgang Anzahl Angebote, günstigstes Angebot und die Vergabeentscheidung.',
   ]],
-  ['/protokoll', 'Änderungsprotokoll', 'Wer hat wann was geändert (IATF/ISO-Nachweis).', ['Nach Objekt, Benutzer oder Zeitraum filtern. Einträge sind nicht änderbar.']],
+  ['/protokoll', 'Systemprotokoll (Audit-Trail)', 'Wer hat wann was an Daten geändert (IATF/ISO-Nachweis). Für Änderungswünsche am Programm: Menü „Änderungswünsche“.', ['Nach Objekt, Benutzer oder Zeitraum filtern. Einträge sind nicht änderbar.']],
+  ['/aenderungen', 'Änderungswünsche & Prüfprotokoll', 'Alle Testrückmeldungen (z. B. REV01) und neuen Wünsche an das Programm – mit Status, Umsetzung und Prüfung.', [
+    '„+ Änderungswunsch“ erfasst einen neuen Punkt (Nummer WUN-0001 … automatisch).',
+    'Umgesetzte Punkte stehen auf „Umgesetzt – bitte prüfen“: Zeile öffnen, Prüfanweisung durchgehen, Prüfergebnis eintragen und Status „Geprüft ✓“ oder „Nachbessern“ setzen.',
+    'Phasen: 1 Fehler & Sofortmaßnahmen · 2 Anfrage → Angebot → Pipeline · 3 Kalkulationsblätter · 4 Beschaffung, Dashboard, Berichte. Export als CSV für Excel.',
+  ]],
+  ['/dokumentation', 'Dokumentation', 'Benutzerbeschreibung und Lastenheft der installierten Version.', [
+    'Links das Inhaltsverzeichnis, oben die Suche. „Als Word herunterladen“ erzeugt die aktuelle Fassung als .docx.',
+  ]],
   ['/benutzer', 'Benutzer', 'Zugänge und Rollen verwalten.', ['Rollen: Administrator, Vertrieb, Gesellschafter (nur lesen). „Freigabeberechtigt“ für das Vier-Augen-Prinzip.']],
   ['/einstellungen', 'Firma & Layout', 'Briefkopf für alle Dokumente (Angebote, Werkzeug- und Anlagenanfragen).', [
     'Firmendaten, Standorte, Registerangaben, Steuernummer, Bankverbindungen und Zertifizierungen eintragen – leere Felder erscheinen nicht.',

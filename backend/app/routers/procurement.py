@@ -61,7 +61,7 @@ class DecideIn(BaseModel):
 
 
 def _num(db: Session) -> str:
-    prefix = f"BA-{date.today().year}-"
+    prefix = f"B{date.today():%y}-"
     last = db.scalar(select(ProcurementRequest.number).where(ProcurementRequest.number.like(f"{prefix}%"))
                      .order_by(ProcurementRequest.number.desc()).limit(1))
     return f"{prefix}{(int(last.split('-')[-1]) + 1 if last else 1):04d}"

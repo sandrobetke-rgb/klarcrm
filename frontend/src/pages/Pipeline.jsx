@@ -7,6 +7,7 @@ import { confirmDelete, EntityForm, ErrorBox, Modal, RefSelect, SearchInput, use
 import { eur, fmtDate, STAGES, stageLabel } from '../constants'
 import { opportunityFields } from '../forms'
 import { bigReasons, useThresholds } from '../components/BigProject'
+import LostReasonDialog from '../components/LostReasonDialog'
 
 export default function Pipeline() {
   const [view, setView] = useState('board')
@@ -48,14 +49,18 @@ function Board({ toggle }) {
   const [editing, setEditing] = useState(null)
   const list = items && data && items.src === data ? items.list : data?.items || []
 
-  async function move(id, stage) {
+  const [lostAsk, setLostAsk] = useState(null)
+  const [moveErr, setMoveErr] = useState(null)
+  async function move(id, stage, extra = {}) {
     const opp = list.find((o) => o.id === id)
     if (!opp || opp.stage === stage) return
+    if (stage === 'verloren' && !extra.lost_reason) { setLostAsk(id); return }  // Grund ist Pflicht
     // optimistisch umsortieren
     setItems({ src: data, list: list.map((o) => (o.id === id ? { ...o, stage } : o)) })
+    setMoveErr(null)
     try {
-      await api.patch(`/opportunities/${id}`, { stage })
-    } finally {
+      await api.patch(`/opportunities/${id}`, { stage, ...extra })
+    } catch (e) { setMoveErr(e) } finally {
       reload()
     }
   }
@@ -74,6 +79,9 @@ function Board({ toggle }) {
 
   return (
     <div className="page page-wide">
+      {lostAsk && <LostReasonDialog onCancel={() => setLostAsk(null)}
+        onConfirm={({ label, note }) => { const id = lostAsk; setLostAsk(null); move(id, 'verloren', { lost_reason: note ? `${label}: ${note}` : label }) }} />}
+      <ErrorBox error={moveErr} />
       <header className="page-head">
         <div>
           <h1>Pipeline</h1>

@@ -7,6 +7,7 @@ import ImportButton from '../components/ImportButton'
 import ListPage from '../components/ListPage'
 import { Badge, EntityForm, ErrorBox, Modal } from '../components/ui'
 import { MACHINE_KINDS, machineKindLabel, num, num2 } from '../constants'
+import NumInput from '../components/NumInput'
 
 const machineFields = [
   { name: 'number', label: 'Maschinen-Nr.' },
@@ -20,7 +21,9 @@ const machineFields = [
   { name: 'operator_factor', label: 'Standard-Anteil Bediener %', type: 'number', step: 'any', scale: 100, hint: '30 = ein Bediener für ca. 3 Maschinen, 100 = fest an der Maschine, 120 = mit Springer' },
   { name: 'handling_pct', label: 'Standard-Anteil Handling %', type: 'number', step: 'any', hint: '0 … 100' },
   { name: 'automation_pct', label: 'Standard-Anteil Automatisierung %', type: 'number', step: 'any', hint: '0 … 100, z. B. bei Roboterzelle' },
-  { name: 'available_hours_year', label: 'Verfügbare Stunden / Jahr', type: 'number', step: 'any', hint: 'Schichtmodell, z. B. 3-Schicht ≈ 6.000 h' },
+  { name: 'status', label: 'Bestand / Planung', type: 'select', required: true, options: [{ value: 'bestand', label: 'Bestandsmaschine (vorhanden)' }, { value: 'geplant', label: 'Planmaschine / Neuanlage (nur für Kalkulation)' }], hint: 'Planmaschinen erscheinen in der Kalkulation, aber nicht in der Auslastung des Bestands' },
+  { name: 'shifts', label: 'Schichtmodell', type: 'select', options: [{ value: '1', label: '1 Schicht · 8 h × 240 Tage = 1.920 h' }, { value: '2', label: '2 Schichten · 16 h × 240 Tage = 3.840 h' }, { value: '3', label: '3 Schichten · 24 h × 240 Tage = 5.760 h' }], hint: 'setzt die verfügbaren Stunden; leer = Stunden frei eingeben' },
+  { name: 'available_hours_year', label: 'Verfügbare Stunden / Jahr', type: 'number', step: 'any', hint: 'wird bei gewähltem Schichtmodell automatisch berechnet' },
   { name: 'base_load_pct', label: 'Grundauslastung Bestandsaufträge %', type: 'number', step: 'any', hint: 'für die Auslastungsvorschau' },
   { name: 'base_load_decline_pct', label: 'Auslauf Bestand % je Jahr', type: 'number', step: 'any', hint: 'z. B. 10 = Bestand sinkt jährlich um 10 %' },
   { name: 'power_kw', label: 'Leistungsaufnahme inkl. Peripherie (kW)', type: 'number', step: 'any', hint: 'für den CO₂-Fußabdruck' },
@@ -72,10 +75,10 @@ const PARAMS = [
   ['Verpackung & Transport (pauschal)', [['pack_pct', 'Verpackung', '% auf HK'], ['transport_pct', 'Transport', '% auf HK']]],
   ['Gewinn & Konditionen', [['profit_pct', 'Gewinn', '%'], ['cash_discount_pct', 'Skonto', '%'], ['rebate_pct', 'Rabatt', '%']]],
   ['Fertigung', [['productivity_pct', 'Produktivität (ohne Maschine)', '%'], ['assembly_productivity_pct', 'Produktivität Montage', '%'],
-    ['setup_time_h', 'Rüstzeit je Los', 'h'], ['setup_persons', 'Einrichter je Rüstvorgang', 'Pers.'], ['startup_scrap_pcs', 'Anfahrausschuss je Los', 'Stk']]],
+    ['setup_time_h', 'Rüstzeit je Los', 'min', 60], ['setup_persons', 'Einrichter je Rüstvorgang', 'Pers.'], ['startup_scrap_pcs', 'Anfahrausschuss je Los', 'Stk']]],
   ['CO₂-Fußabdruck', [['co2_grid_kg_kwh', 'Strom-Emissionsfaktor', 'kg CO₂e/kWh'], ['co2_scope1_kg_h', 'Werksemissionen Scope 1', 'kg CO₂e/Masch.-h'],
     ['co2_masterbatch_kg_kg', 'Masterbatch', 'kg CO₂e/kg'], ['co2_transport_kg_tkm', 'Lkw-Transport', 'kg CO₂e/tkm']]],
-  ['Stundensatz & Preisgleitung', [['space_cost_m2_year', 'Raumkosten', '€/m² · Jahr'], ['energy_price_kwh', 'Strompreis', '€/kWh'], ['escalation_threshold_pct', 'Preisgleitklausel ab Änderung', '± %']]],
+  ['Stundensatz & Preisgleitung', [['space_cost_m2_year', 'Raumkosten', '€/m² · Jahr'], ['energy_price_kwh', 'Strompreis', '€/kWh'], ['machine_rate_pct', 'Faktor Maschinenstundensatz (Standort ohne eigene Maschine)', '%'], ['escalation_threshold_pct', 'Preisgleitklausel ab Änderung', '± %']]],
   ['Großprojekte (Hervorhebung)', [['big_revenue_threshold', 'Ab Jahresumsatz', '€'], ['big_invest_threshold', 'Ab Invest (Einmalkosten)', '€']]],
   ['Nachkalkulation (Ampel)', [['nk_green_pct', 'Grün bis Abweichung Selbstkosten', '%'], ['nk_red_pct', 'Rot ab Abweichung Selbstkosten', '%']]],
 ]
@@ -85,7 +88,7 @@ const SITE_KEYS = ['labor_rate_h', 'setup_rate_h', 'assembly_rate_h', 'handling_
   'scrap_pct', 'vwgk_pct', 'vtgk_pct', 'pm_pct', 'quality_pct', 'toolshop_pct', 'profit_pct', 'cash_discount_pct', 'rebate_pct',
   'productivity_pct', 'assembly_productivity_pct', 'setup_time_h', 'setup_persons', 'startup_scrap_pcs', 'co2_grid_kg_kwh',
   'co2_scope1_kg_h', 'co2_masterbatch_kg_kg', 'co2_transport_kg_tkm', 'purchased_mgk_pct', 'side_mgk_pct', 'side_quality_pct',
-  'side_scrap_pct', 'side_markup_pct', 'energy_price_kwh', 'pack_pct', 'transport_pct']
+  'side_scrap_pct', 'side_markup_pct', 'energy_price_kwh', 'pack_pct', 'transport_pct', 'machine_rate_pct']
 const siteFields = [
   { name: 'code', label: 'Kürzel', required: true }, { name: 'name', label: 'Name', required: true },
   { name: 'country', label: 'Land' }, { name: 'address', label: 'Anschrift' },
@@ -121,6 +124,8 @@ function Sites({ tabs, onChange }) {
     } catch (e) { setErr(e) }
   }
   const groups = PARAMS.map(([t, rows]) => [t, rows.filter(([k]) => SITE_KEYS.includes(k))]).filter(([, rows]) => rows.length)
+  const norm = (o) => JSON.stringify(Object.entries(o || {}).filter(([, v]) => v !== null && v !== '').sort())
+  const matrixDirty = sites.some((st) => norm(draft[st.id]) !== norm(st.settings))
   return (
     <div className="page">
       <div className="page-head">
@@ -140,17 +145,20 @@ function Sites({ tabs, onChange }) {
         {isAdmin && <div style={{ padding: 12 }}><button className="btn btn-ghost btn-sm" onClick={() => setEdit({ active: true, sort: sites.length })}>+ Standort</button></div>}
       </div>
       <div className="card">
-        <div className="section-head"><h3>Sätze je Standort</h3>{isAdmin && <button className="btn btn-primary" onClick={saveAll}>Speichern</button>}</div>
+        <div className={`section-head version-bar-sticky ${matrixDirty ? 'is-dirty' : ''}`}><h3>Sätze je Standort</h3>
+          {matrixDirty && <span className="badge badge-info">ungespeicherte Änderungen – erst nach „Speichern“ wirksam</span>}
+          {isAdmin && <button className="btn btn-primary" disabled={!matrixDirty} onClick={saveAll}>Speichern</button>}</div>
         <div className="table-wrap"><table className="table table-compact site-matrix">
           <thead><tr><th>Parameter</th><th className="num">Gruppe (Standard)</th>{sites.map((st) => <th key={st.id} className="num">{st.name}</th>)}</tr></thead>
           <tbody>{groups.map(([t, rows]) => [
             <tr key={t} className="group-row"><td colSpan={2 + sites.length}><b>{t}</b></td></tr>,
-            ...rows.map(([k, l, u]) => (
-              <tr key={k}><td>{l} <span className="muted small">{u}</span></td><td className="num muted">{group[k] ?? '–'}</td>
+            ...rows.map(([k, l, u, sc = 1]) => (
+              <tr key={k}><td>{l} <span className="muted small">{u}</span></td><td className="num muted">{group[k] != null ? Math.round(group[k] * sc * 1e6) / 1e6 : '–'}</td>
                 {sites.map((st) => {
                   const v = draft[st.id]?.[k]
-                  return <td key={st.id} className="num"><input type="number" step="any" className={`num ${v != null ? 'site-over' : ''}`} disabled={!isAdmin}
-                    value={v ?? ''} placeholder={group[k] ?? ''} onChange={(e) => setVal(st.id, k, e.target.value)} /></td>
+                  return <td key={st.id} className="num"><NumInput type="number" step="any" className={`num ${v != null ? 'site-over' : ''}`} disabled={!isAdmin}
+                    value={v == null ? '' : Math.round(v * sc * 1e6) / 1e6} placeholder={group[k] != null ? String(Math.round(group[k] * sc * 1e6) / 1e6) : ''}
+                    onChange={(e) => setVal(st.id, k, e.target.value === '' ? '' : Number(e.target.value) / sc)} /></td>
                 })}</tr>)),
           ])}</tbody>
         </table></div>
@@ -165,6 +173,7 @@ function Sites({ tabs, onChange }) {
 }
 
 export default function MasterData() {
+  const { user } = useAuth()
   const [tab, setTab] = useState('machines')
   const [sites, setSites] = useState([])
   const [rev, setRev] = useState(0)
@@ -214,16 +223,35 @@ export default function MasterData() {
     fields={[...machineFields.slice(0, 3), { name: 'site_id', label: 'Standort', type: 'select', options: siteOpts, hint: 'Sätze und Auslastung je Standort' }, ...machineFields.slice(3)]}
     filters={[{ name: 'kind', label: 'Art', options: MACHINE_KINDS.map((k) => ({ ...k, label: machineKindLabel(k.value) })) },
       ...(siteOpts.length ? [{ name: 'site_id', label: 'Standort', options: siteOpts }] : [])]}
-    newDefaults={{ active: true, kind: 'spritzguss', productivity_pct: 85, operator_factor: 0.3, available_hours_year: 6000, base_load_pct: 0, base_load_decline_pct: 0 }} extraActions={<>{tabs}<ImportButton entity="machines" label="Maschinen" adminOnly onDone={bump} /></>}
+    toForm={(r) => ({ ...r, shifts: r.shifts ? String(r.shifts) : '' })}
+    customDelete={async (m) => {
+      // REV01-M01/M03: nicht löschbar, wenn in offener Kalkulation; Löschen im Vier-Augen-Prinzip
+      try {
+        const u = await api.get(`/machines/${m.id}/usage`)
+        if (u.open.length) { window.alert(`Die Maschine wird in offenen Kalkulationen verwendet (${u.open.join(', ')}).\nBitte stattdessen deaktivieren („Aktiv“ abwählen).`); return false }
+        if (!m.delete_requested_by) {
+          if (!window.confirm('Löschantrag stellen? Ein zweiter Administrator muss die Löschung bestätigen (Vier-Augen-Prinzip).')) return false
+          await api.post(`/machines/${m.id}/delete-request`); window.alert('Löschantrag gestellt.'); return true
+        }
+        if (m.delete_requested_by === user?.id) {
+          if (window.confirm('Sie haben den Löschantrag gestellt – ein anderer Administrator muss bestätigen. Antrag zurückziehen?')) { await api.post(`/machines/${m.id}/delete-request?cancel=true`); return true }
+          return false
+        }
+        if (!window.confirm(`Löschung bestätigen? ${u.all.length ? `Die Maschine steht in abgeschlossenen Kalkulationen (${u.all.join(', ')}) – diese behalten ihre gespeicherten Werte.` : ''} Das kann nicht rückgängig gemacht werden.`)) return false
+        await api.del(`/machines/${m.id}`); return true
+      } catch (e) { window.alert(e.message || String(e)); return false }
+    }}
+    newDefaults={{ active: true, status: 'bestand', kind: 'spritzguss', productivity_pct: 85, operator_factor: 0.3, available_hours_year: 6000, base_load_pct: 0, base_load_decline_pct: 0 }} extraActions={<>{tabs}<ImportButton entity="machines" label="Maschinen" adminOnly onDone={bump} /></>}
     columns={[
       { key: 'number', label: 'Nr.', sort: 'number' },
-      { key: 'name', label: 'Maschine / Anlage', sort: 'name', render: (r) => <><strong>{r.name}</strong><br /><small className="muted">{machineKindLabel(r.kind)}</small></> },
+      { key: 'name', label: 'Maschine / Anlage', sort: 'name', render: (r) => <><strong>{r.name}</strong><br /><small className="muted">{machineKindLabel(r.kind)}</small>
+        {r.status === 'geplant' && <> <Badge tone="info">Planmaschine</Badge></>}{r.delete_requested_by && <> <Badge tone="critical">Löschantrag</Badge></>}</> },
       { key: 'clamping_force_t', label: 'Schließkraft', sort: 'clamping_force_t', className: 'num', render: (r) => (r.clamping_force_t ? `${num(r.clamping_force_t)} t` : '–') },
       { key: 'hourly_rate', label: '€/h Maschine', sort: 'hourly_rate', className: 'num', render: (r) => num2(r.hourly_rate) },
       { key: 'maintenance_rate', label: '€/h Instandh.', className: 'num', render: (r) => num2(r.maintenance_rate) },
       { key: 'productivity_pct', label: 'Produktivität', className: 'num', render: (r) => `${num(r.productivity_pct, 1)} %` },
       { key: 'operator_factor', label: 'Personal', className: 'num', render: (r) => <>{num((r.operator_factor || 0) * 100, 0)} % Bed.{r.handling_pct ? <><br /><small className="muted">{num(r.handling_pct, 0)} % Handling</small></> : null}{r.automation_pct ? <><br /><small className="muted">{num(r.automation_pct, 0)} % Autom.</small></> : null}</> },
-      { key: 'available_hours_year', label: 'h/Jahr', className: 'num', render: (r) => num(r.available_hours_year) },
+      { key: 'available_hours_year', label: 'h/Jahr', className: 'num', render: (r) => <>{num(r.available_hours_year)}{r.shifts ? <><br /><small className="muted">{r.shifts}-schichtig</small></> : null}</> },
       { key: 'base_load_pct', label: 'Grundlast', className: 'num', render: (r) => `${num(r.base_load_pct, 0)} % (−${num(r.base_load_decline_pct, 0)} %/J.)` },
       { key: 'power_kw', label: 'kW', className: 'num', render: (r) => (r.power_kw != null ? num(r.power_kw, 1) : '–') },
       { key: 'site_id', label: 'Standort', render: (r) => siteName(r.site_id) || r.location || '–' },
@@ -259,10 +287,10 @@ function Params({ tabs }) {
             <div key={title} className="card">
               <h3>{title}</h3>
               <div className="form-grid">
-                {fields.map(([k, l, u]) => (
+                {fields.map(([k, l, u, sc = 1]) => (
                   <div key={k} className="field"><label>{l} <span className="unit">{u}</span></label>
-                    <input type="number" step="any" className="num" value={vals[k] ?? ''}
-                      onChange={(e) => { setMsg(null); setVals({ ...vals, [k]: e.target.value === '' ? '' : Number(e.target.value) }) }} /></div>
+                    <NumInput type="number" step="any" className="num" value={vals[k] === '' || vals[k] == null ? '' : Math.round(vals[k] * sc * 1e6) / 1e6}
+                      onChange={(e) => { setMsg(null); setVals({ ...vals, [k]: e.target.value === '' ? '' : Number(e.target.value) / sc }) }} /></div>
                 ))}
               </div>
             </div>

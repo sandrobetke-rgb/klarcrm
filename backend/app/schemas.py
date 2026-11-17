@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 Role = Literal["admin", "vertrieb", "gesellschafter"]
 Stage = Literal["lead", "qualifiziert", "angebot", "verhandlung", "gewonnen", "verloren"]
 ActivityType = Literal["anruf", "termin", "email", "aufgabe", "notiz"]
-QuoteStatus = Literal["entwurf", "versendet", "angenommen", "abgelehnt"]
+QuoteStatus = Literal["entwurf", "versendet", "angenommen", "abgelehnt", "ersetzt"]
 AccountType = Literal["interessent", "kunde", "partner", "lieferant"]
 
 
@@ -281,13 +281,16 @@ Feasibility = Literal["herstellbar", "bedingt_herstellbar", "anpassungen_erforde
 NoBidReason = Literal["mengen_zu_klein", "artikel_zu_klein", "artikel_zu_gross", "keine_maschine_kapazitaet",
                       "nicht_herstellbar", "technologie_passt_nicht", "termin_nicht_machbar", "sonstiges"]
 CloseReason = Literal["artikelpreis_zu_hoch", "werkzeug_zu_teuer", "investition_zu_teuer",
-                      "projekt_kunde_nicht_gewonnen", "projekt_eingestellt", "lieferzeit", "technik", "sonstiges"]
+                      "projekt_kunde_nicht_gewonnen", "projekt_eingestellt", "lieferzeit", "technik",
+                      "vorrichtung_zu_teuer", "sonstiges"]
 
 
 class MachineBase(BaseModel):
     number: str | None = None
     name: str = Field(min_length=1)
     kind: Literal["spritzguss", "montage", "nachbearbeitung", "pruefung", "sonstige"] | None = "spritzguss"
+    status: Literal["bestand", "geplant"] | None = "bestand"
+    shifts: int | None = Field(default=None, ge=1, le=3)
     site_id: int | None = None
     clamping_force_t: float | None = None
     hourly_rate: float = 0
@@ -319,6 +322,8 @@ class MachineUpdate(MachineBase):
 
 class MachineOut(ORM, MachineBase):
     id: int
+    delete_requested_by: int | None = None
+    delete_requested_at: datetime | None = None
 
 
 class MaterialBase(BaseModel):
@@ -352,6 +357,7 @@ class CalcMeta(BaseModel):
     status: CalcStatus | None = None
     probability: int | None = Field(default=None, ge=0, le=100)
     close_reason: CloseReason | None = None
+    close_note: str | None = None
     remark: str | None = None
     last_call_at: datetime | None = None
     inquiry_date: date | None = None
@@ -514,3 +520,36 @@ class SiteUpdate(SiteBase):
 
 class SiteOut(ORM, SiteBase):
     id: int
+
+
+class ChangeRequestBase(BaseModel):
+    code: str | None = None
+    revision: str | None = None
+    area: str | None = None
+    kind: Literal["fehler", "wunsch", "doku"] = "wunsch"
+    title: str = Field(min_length=1)
+    description: str | None = None
+    priority: Literal["hoch", "mittel", "niedrig"] = "mittel"
+    phase: int | None = None
+    status: Literal["offen", "in_arbeit", "umgesetzt", "geprueft", "nachbessern", "abgelehnt", "zurueckgestellt"] = "offen"
+    solution: str | None = None
+    req_ids: str | None = None
+    version: str | None = None
+    test_steps: str | None = None
+    test_result: str | None = None
+    tested_by: str | None = None
+    tested_at: date | None = None
+    requested_by: str | None = None
+
+
+class ChangeRequestUpdate(ChangeRequestBase):
+    title: str | None = None
+    kind: Literal["fehler", "wunsch", "doku"] | None = None
+    priority: Literal["hoch", "mittel", "niedrig"] | None = None
+    status: Literal["offen", "in_arbeit", "umgesetzt", "geprueft", "nachbessern", "abgelehnt", "zurueckgestellt"] | None = None
+
+
+class ChangeRequestOut(ORM, ChangeRequestBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime

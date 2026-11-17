@@ -3,6 +3,7 @@ import { api } from '../api'
 import { useAuth } from '../auth'
 import { ErrorBox } from '../components/ui'
 import { num } from '../constants'
+import NumInput from '../components/NumInput'
 
 const REL = [['gering', 'gering'], ['mittel', 'mittel'], ['hoch', 'hoch']]
 const RECYCLE = [['gut', 'gut (Monomaterial, sortenrein)'], ['eingeschraenkt', 'eingeschränkt'], ['schlecht', 'schlecht (Verbund, nicht trennbar)']]
@@ -37,7 +38,7 @@ export default function LifecycleTab({ calc, setCalc }) {
             <tr><td><b>1 · Rohstoffe</b></td>
               <td className="small">{inp.material_name || '–'}{(inp.components || []).map((c) => ` + ${c.material_name || c.label}`)}<br />{g(co2.material)}{share(co2.material)}</td>
               <td><div className="lc-grid">
-                <label>Rezyklatanteil % <input type="number" disabled={!canWrite} className="num" value={lc.recycled_pct ?? ''} onChange={(e) => set('recycled_pct', e.target.value === '' ? '' : Number(e.target.value))} /></label>
+                <label>Rezyklatanteil % <NumInput type="number" disabled={!canWrite} className="num" value={lc.recycled_pct ?? ''} onChange={(e) => set('recycled_pct', e.target.value === '' ? '' : Number(e.target.value))} /></label>
                 <label>Biobasierter Anteil {sel('biobased', [['nein', 'nein'], ['teilweise', 'teilweise'], ['ja', 'ja']])}</label>
                 <label className="span-2">Anmerkung {txt('raw_note', 'z. B. Rezyklat beim Kunden freigegeben?')}</label>
               </div></td></tr>

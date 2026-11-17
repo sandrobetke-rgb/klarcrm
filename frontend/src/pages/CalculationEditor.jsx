@@ -16,18 +16,20 @@ import AuditTable from '../components/AuditTable'
 import Attachments from '../components/Attachments'
 import CallPanel, { LastCall } from '../components/CallPanel'
 import { BigBadge } from '../components/BigProject'
+import NumInput from '../components/NumInput'
 
 export const calcMetaFields = [
   { name: 'article_name', label: 'Artikelbezeichnung', required: true, span: true },
   { name: 'customer_article_no', label: 'Artikelnummer Kunde' },
   { name: 'own_article_no', label: 'Eigene Artikelnummer' },
-  { name: 'account_id', label: 'Kunde', type: 'account' },
+  { name: 'account_id', label: 'Kunde', type: 'customer' },
   { name: 'contact_id', label: 'Ansprechpartner Kunde', type: 'contact', dependsOn: 'account_id' },
   { name: 'opportunity_id', label: 'Verkaufschance (Projekt)', type: 'opportunity', dependsOn: 'account_id' },
   { name: 'owner_id', label: 'Verantwortlich', type: 'user' },
   { name: 'status', label: 'Status', type: 'select', required: true, options: CALC_STATUS },
   { name: 'probability', label: 'Wahrscheinlichkeit Auftrag %', type: 'number', min: 0, max: 100, hint: 'Wird beim Statuswechsel vorgeschlagen, frei änderbar' },
-  { name: 'close_reason', label: 'Grund bei Verlust', type: 'select', options: CLOSE_REASONS, hint: 'nur bei Status „Verloren“' },
+  { name: 'close_reason', label: 'Grund bei Verlust', type: 'select', options: CLOSE_REASONS, hint: 'Pflicht bei Status „Verloren“' },
+  { name: 'close_note', label: 'Begründung Verlust (Freitext)', hint: 'Pflicht bei „Sonstiges“' },
   { name: 'no_bid_reason', label: 'Grund „Kein Angebot“', type: 'select', options: NO_BID_REASONS, hint: 'nur bei Status „Kein Angebot abgegeben“' },
   { name: 'no_bid_note', label: 'Erläuterung (Freitext)', hint: 'z. B. bei „Sonstiges“' },
   { name: 'feasibility', label: 'Machbarkeit', type: 'select', options: FEASIBILITY, hint: 'Vorschlag siehe Reiter Artikelanalyse' },
@@ -85,7 +87,7 @@ export default function CalculationEditor() {
             {calc.customer_article_no && ` · Kd.-Art.-Nr. ${calc.customer_article_no}`}
             {master.sites.find((x) => x.id === calc.site_id) && ` · Standort ${master.sites.find((x) => x.id === calc.site_id).name}`}
             {` · Version ${calc.current_version} · ${calc.probability} % Wahrscheinlichkeit`}
-            {calc.close_reason && ` · ${reasonLabel(calc.close_reason)}`}
+            {calc.close_reason && ` · ${reasonLabel(calc.close_reason)}${calc.close_note ? `: ${calc.close_note}` : ''}`}
             {calc.no_bid_reason && ` · Kein Angebot: ${noBidLabel(calc.no_bid_reason)}${calc.no_bid_note ? ` (${calc.no_bid_note})` : ''}`}
             {calc.opportunity && <> · Chance: <Link to="/pipeline">{calc.opportunity.name}</Link></>}
           </p>
@@ -163,7 +165,7 @@ function NewCalc() {
         </div>
       )}
       <div className="card card-flush">
-        <EntityForm fields={calcMetaFields.filter((f) => !['close_reason', 'last_call_at', 'no_bid_reason', 'no_bid_note', 'feasibility', 'feasibility_note'].includes(f.name))}
+        <EntityForm fields={calcMetaFields.filter((f) => !['close_reason', 'close_note', 'last_call_at', 'no_bid_reason', 'no_bid_note', 'feasibility', 'feasibility_note'].includes(f.name))}
           initial={{ status: 'anfrage', sync_opportunity: true, inquiry_date: new Date().toISOString().slice(0, 10) }}
           submitLabel="Anlegen und kalkulieren"
           onSubmit={async (v) => {
@@ -206,7 +208,7 @@ function HeaderActions({ calc, setCalc, onDelete, onCall }) {
       <button className="btn btn-ghost" onClick={async () => {
         setErr(null)
         try { const r = await api.post(`/calculations/${calc.id}/quote?lang=${lang}`); nav(`/angebote/${r.quote_id}`) } catch (e) { setErr(e) }
-      }}>→ Angebot erstellen</button>
+      }} title="Gibt es schon ein offenes Angebot zu dieser Kalkulation, wird es aktualisiert (Entwurf) bzw. als Revision neu erstellt (versendet) – kein zweites Angebot.">→ Angebot erstellen / aktualisieren</button>
       <select className="lang-select" value={lang} onChange={(e) => setLang(e.target.value)} title="Sprache des Angebots"><option value="de">DE</option><option value="en">EN</option></select>
       {isAdmin && <button className="btn btn-danger-ghost" onClick={onDelete}>Löschen</button>}
       <ErrorBox error={err} />
@@ -236,12 +238,16 @@ function CalcTab({ calc, setCalc, master }) {
     if (!inputs.site_id) { setSiteSettings(null); return }
     api.get(`/calc/settings?site_id=${inputs.site_id}`).then(setSiteSettings).catch(() => setSiteSettings(null))
   }, [inputs.site_id])
-  async function changeSite(sid) {
+  // REV01-B02: Standortwechsel übernimmt die Sätze des Standorts; von Hand eingegebene Werte bleiben,
+  // lassen sich aber mit „alle übernehmen“ ebenfalls ersetzen
+  const [siteFrom, setSiteFrom] = useState(null)
+  async function changeSite(sid, force = false) {
     if (!sid) return
     try {
-      const x = await api.post('/calc/site-compare', inputs)
+      const src = force && siteFrom ? siteFrom : inputs
+      const x = await api.post(`/calc/site-compare${force ? '?force=true' : ''}`, src)
       const row = x.rows.find((r) => r.site.id === Number(sid))
-      if (row) { setInputs(row.inputs); setSiteNotes(row.notes) }
+      if (row) { if (!force) setSiteFrom(inputs); setInputs(row.inputs); setSiteNotes(row.notes) }
     } catch (e) { setError(e) }
   }
   const siteMachines = master.machines.filter((m) => !inputs.site_id || !m.site_id || m.site_id === inputs.site_id || m.id === inputs.machine_id)
@@ -251,6 +257,25 @@ function CalcTab({ calc, setCalc, master }) {
     return () => clearTimeout(timer.current)
   }, [inputs])
 
+  // REV01-B01: ungespeicherte Änderungen nicht verlieren – Warnung beim Verlassen, Strg+S speichert
+  useEffect(() => {
+    if (!dirty) return
+    const onUnload = (e) => { e.preventDefault(); e.returnValue = '' }
+    const onClick = (e) => {
+      const a = e.target.closest?.('a[href]')
+      if (a && !a.target && a.getAttribute('href').startsWith('/') && !window.confirm('Die Kalkulation hat ungespeicherte Änderungen. Seite trotzdem verlassen?')) {
+        e.preventDefault(); e.stopPropagation()
+      }
+    }
+    window.addEventListener('beforeunload', onUnload)
+    document.addEventListener('click', onClick, true)
+    return () => { window.removeEventListener('beforeunload', onUnload); document.removeEventListener('click', onClick, true) }
+  }, [dirty])
+  useEffect(() => {
+    const onKey = (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); if (dirty && canWrite && !saving) saveVersion() } }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
   const set = (k, v) => setInputs((s) => ({ ...s, [k]: v }))
   const machine = master.machines.find((m) => m.id === inputs.machine_id)
   const material = master.materials.find((m) => m.id === inputs.material_id)
@@ -301,7 +326,7 @@ function CalcTab({ calc, setCalc, master }) {
   return (
     <div className="calc-layout">
       <div className="calc-inputs">
-        <div className="card version-bar no-print">
+        <div className={`card version-bar version-bar-sticky no-print ${dirty ? 'is-dirty' : ''}`}>
           <label className="inline-label">Basis
             <select value={baseNo} onChange={(e) => setBaseNo(Number(e.target.value))}>
               {[...calc.versions].reverse().map((v) => (
@@ -314,7 +339,7 @@ function CalcTab({ calc, setCalc, master }) {
           {canWrite && <>
             <input className="note-input" placeholder="Was wurde geändert? (für Versionshistorie)" value={note} onChange={(e) => setNote(e.target.value)} />
             <button className="btn btn-primary" disabled={!dirty || saving} onClick={saveVersion}>
-              {saving ? 'Speichert…' : `Als Version ${latest.version_no + 1} speichern`}</button>
+              {saving ? 'Speichert…' : `💾 Speichern (Version ${latest.version_no + 1})`}</button>
             {dirty && <button className="btn btn-ghost" onClick={() => setInputs(structuredClone(base.inputs))}>Verwerfen</button>}
           </>}
         </div>
@@ -327,7 +352,7 @@ function CalcTab({ calc, setCalc, master }) {
             <div className="field span-3"><label>Staffelpreise – weitere Losgrößen <span className="unit">Stk (bis zu 3)</span></label>
               <div className="tier-inputs">
                 {[0, 1, 2].map((n) => (
-                  <input key={n} type="number" step="any" className="num" placeholder={`Staffel ${n + 1}`}
+                  <NumInput key={n} type="number" step="any" className="num" placeholder={`Staffel ${n + 1}`}
                     value={(inputs.lot_tiers || [])[n] ?? ''}
                     onChange={(e) => {
                       const t = [...(inputs.lot_tiers || [])]
@@ -345,7 +370,7 @@ function CalcTab({ calc, setCalc, master }) {
             <div className="field span-3"><label>Staffelpreise – Jahresmengen <span className="unit">Stk/Jahr (bis zu 3)</span></label>
               <div className="tier-inputs">
                 {[0, 1, 2].map((n) => (
-                  <input key={n} type="number" step="any" className="num" placeholder={`Menge ${n + 1}`}
+                  <NumInput key={n} type="number" step="any" className="num" placeholder={`Menge ${n + 1}`}
                     value={(inputs.volume_tiers || [])[n] ?? ''}
                     onChange={(e) => {
                       const t = [...(inputs.volume_tiers || [])]
@@ -399,7 +424,11 @@ function CalcTab({ calc, setCalc, master }) {
                 {master.sites.map((x) => <option key={x.id} value={x.id}>{x.name}{x.country ? ` (${x.country})` : ''}</option>)}
               </select>
               <small className="hint">Wechsel übernimmt Sätze und vergleichbare Maschine des Standorts</small></div>}
-            {siteNotes?.length > 0 && <div className="field span-2"><div className="warn-box small">{siteNotes.join(' · ')}</div></div>}
+            {siteNotes?.length > 0 && <div className="field span-2"><div className="warn-box small">
+              <ul className="site-notes">{siteNotes.map((n) => <li key={n}>{n}</li>)}</ul>
+              {siteNotes.some((n) => n.includes('von Hand')) && <button type="button" className="btn btn-ghost btn-sm"
+                onClick={() => changeSite(inputs.site_id, true)}>Alle Sätze des Standorts übernehmen (auch von Hand eingegebene)</button>}
+            </div></div>}
             <div className="field span-2"><label>Maschine (Stammdaten)</label>
               <select value={inputs.machine_id ?? ''} onChange={(e) => pickMachine(e.target.value)}>
                 <option value="">– frei / manuell –</option>
@@ -432,7 +461,7 @@ function CalcTab({ calc, setCalc, master }) {
           </Section>
 
           <Section title="Rüsten">
-            {F({ k: 'setup_time_h', label: 'Rüstzeit je Los', unit: 'h', step: 0.25 })}
+            {F({ k: 'setup_time_h', label: 'Rüstzeit je Los', unit: 'min', step: 15, scale: 60 })}
             {F({ k: 'startup_scrap_pcs', label: 'Anfahrausschuss je Los', unit: 'Stk', step: 10 })}
             <div className="field" />
             {F({ k: 'setup_persons', label: 'Einrichter', unit: 'Pers.', step: 0.5 })}
@@ -532,7 +561,7 @@ function CalcTab({ calc, setCalc, master }) {
             {F({ k: 'preseries_qty', label: 'Vorserienmenge gesamt', unit: 'Stk', step: 50, hint: '0 = kein Vorserienpreis' })}
             {Number(inputs.preseries_qty) > 0 && <>
               {F({ k: 'preseries_lot', label: 'Losgröße Vorserie', unit: 'Stk', step: 50, hint: 'leer = gesamte Menge in einem Los' })}
-              {F({ k: 'preseries_setup_h', label: 'Rüstzeit Vorserie', unit: 'h', step: 0.25, hint: `leer = wie Serie (${num(inputs.setup_time_h, 2)} h)` })}
+              {F({ k: 'preseries_setup_h', label: 'Rüstzeit Vorserie', unit: 'min', step: 15, scale: 60, hint: `leer = wie Serie (${num((Number(inputs.setup_time_h) || 0) * 60, 0)} min)` })}
               {F({ k: 'preseries_productivity_pct', label: 'Produktivität Vorserie', unit: '%', hint: `leer = wie Serie (${num(inputs.productivity_pct, 0)} %)` })}
               {F({ k: 'preseries_scrap_pct', label: 'Ausschuss Vorserie', unit: '%', step: 0.5, hint: `leer = wie Serie (${num(inputs.scrap_pct, 1)} %)` })}
               {F({ k: 'preseries_surcharge_pct', label: 'Aufschlag Vorserie', unit: '%', step: 1, hint: 'z. B. für Handling, Sonderprüfung' })}
@@ -605,7 +634,7 @@ function PctField({ label, value, def, presets, max = 100, onChange }) {
       <div className="pct-field">
         <div className="seg pct-presets">{presets.map((p) => (
           <button key={p} type="button" className={value !== '' && value != null && Math.abs(Number(value) - p) < 1e-6 ? 'on' : ''} onClick={() => onChange(p)}>{p} %</button>))}</div>
-        <input type="number" step="any" min="0" max={max} className="num" value={value === '' || value == null ? '' : Math.round(Number(value) * 100) / 100}
+        <NumInput type="number" step="any" min="0" max={max} className="num" value={value === '' || value == null ? '' : Math.round(Number(value) * 100) / 100}
           title="individueller Satz, z. B. 25" onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))} />
       </div>
       {changed && <button type="button" className="std-reset" onClick={() => onChange(def)} title="Auf Maschinen-Standard zurücksetzen">≠ Standard {num(def, 1)} % ↺</button>}
@@ -613,15 +642,17 @@ function PctField({ label, value, def, presets, max = 100, onChange }) {
   )
 }
 
-function NumField({ k, label, unit, value, def, onChange, step = 'any', hint }) {
-  const changed = def != null && value !== '' && value != null && Number(value) !== Number(def)
+function NumField({ k, label, unit, value, def, onChange, step = 'any', hint, scale = 1 }) {
+  // scale: Anzeige in anderer Einheit als gespeichert (z. B. Rüstzeit in min, gespeichert in h → scale 60)
+  const changed = def != null && value !== '' && value != null && Math.abs(Number(value) - Number(def)) > 1e-9
+  const show = (v) => (v === '' || v == null ? v : Math.round(Number(v) * scale * 1e6) / 1e6)
   return (
     <div className={`field ${changed ? 'field-changed' : ''}`}>
       <label htmlFor={`in-${k}`}>{label}{unit && <span className="unit"> {unit}</span>}</label>
-      <input id={`in-${k}`} type="number" step={step} className="num" value={value ?? ''}
-        onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))} />
+      <NumInput id={`in-${k}`} type="number" step={step} className="num" value={show(value) ?? ''}
+        onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value) / scale)} />
       {changed
-        ? <button type="button" className="std-reset" onClick={() => onChange(def)} title="Auf Standardwert zurücksetzen">≠ Standard {num(def, 4)} ↺</button>
+        ? <button type="button" className="std-reset" onClick={() => onChange(def)} title="Auf Standardwert zurücksetzen">≠ Standard {num(show(def), 4)} ↺</button>
         : hint && <small className="hint">{hint}</small>}
     </div>
   )
@@ -644,7 +675,7 @@ function ListSection({ title, hint, rows, onChange, cols, empty, children }) {
                   ? <input type="checkbox" checked={!!row[c.k]} onChange={(e) => upd(i, c.k, e.target.checked)} />
                   : c.type === 'select'
                   ? <select value={row[c.k]} onChange={(e) => upd(i, c.k, e.target.value)}>{c.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
-                  : <input type={c.type || 'text'} step="any" className={c.type === 'number' ? 'num' : ''} value={row[c.k] ?? ''}
+                  : <NumInput type={c.type || 'text'} step="any" className={c.type === 'number' ? 'num' : ''} value={row[c.k] ?? ''}
                     onChange={(e) => upd(i, c.k, c.type === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value)} />}
                 </td>))}
               <td><button type="button" className="icon-btn" title="Entfernen" onClick={() => onChange(rows.filter((_, j) => j !== i))}>×</button></td>
@@ -694,7 +725,7 @@ function OperationsEditor({ rows, machines, labor, onChange, result }) {
                 <td className="num">{num(res?.pieces_per_hour, 0)}</td>
                 <td className="num">{num(res?.hours_year, 0)}</td>
                 {cols.map(([k]) => (
-                  <td key={k}><input type="number" step="any" className="num" value={o[k] ?? ''} onChange={(e) => upd(i, { [k]: e.target.value === '' ? '' : Number(e.target.value) })} /></td>
+                  <td key={k}><NumInput type="number" step="any" className="num" value={o[k] ?? ''} onChange={(e) => upd(i, { [k]: e.target.value === '' ? '' : Number(e.target.value) })} /></td>
                 ))}
                 <td><button type="button" className="icon-btn" title="Entfernen" onClick={() => onChange(rows.filter((_, j) => j !== i))}>×</button></td>
               </tr>)
@@ -727,7 +758,7 @@ function PurchasedEditor({ rows, parts, onChange, result }) {
                 <option value="">– frei –</option>{parts.map((x) => <option key={x.id} value={x.id}>{x.part_no ? `${x.part_no} · ` : ''}{x.name}</option>)}</select></td>
               <td><input value={p.name || ''} onChange={(e) => upd(i, { name: e.target.value })} /></td>
               {['qty', 'price_per_piece', 'co2_kg_per_piece'].map((k) => (
-                <td key={k}><input type="number" step="any" className="num" value={p[k] ?? ''} onChange={(e) => upd(i, { [k]: e.target.value === '' ? '' : Number(e.target.value) })} /></td>
+                <td key={k}><NumInput type="number" step="any" className="num" value={p[k] ?? ''} onChange={(e) => upd(i, { [k]: e.target.value === '' ? '' : Number(e.target.value) })} /></td>
               ))}
               <td className="num"><b>{fix4(result?.purchased_items?.[i]?.cost)}</b></td>
               <td className="center"><input type="checkbox" checked={!!p.side} title="Nebenkalkulation (für teure Zukaufteile)" onChange={(e) => upd(i, { side: e.target.checked })} /></td>
@@ -760,7 +791,7 @@ function ComponentsEditor({ rows, materials, onChange, result }) {
               <td><select value={c.material_id ?? ''} onChange={(e) => pick(i, e.target.value)}>
                 <option value="">– frei –</option>{materials.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></td>
               {['price_kg', 'part_weight_g', 'sprue_weight_g', 'regrind_pct', 'co2_kg_kg'].map((k) => (
-                <td key={k}><input type="number" step="any" className="num" value={c[k] ?? ''} onChange={(e) => upd(i, { [k]: e.target.value === '' ? '' : Number(e.target.value) })} /></td>
+                <td key={k}><NumInput type="number" step="any" className="num" value={c[k] ?? ''} onChange={(e) => upd(i, { [k]: e.target.value === '' ? '' : Number(e.target.value) })} /></td>
               ))}
               <td className="num">{fix4(result?.components?.[i]?.cost)}</td>
               <td><button type="button" className="icon-btn" onClick={() => onChange(rows.filter((_, j) => j !== i))}>×</button></td>
@@ -851,7 +882,7 @@ function YearReductions({ inputs, setInputs, r }) {
       </select></div>
     {manual ? (
       <div className="field"><label>Preis Jahr 1 manuell <span className="unit">€/Stk</span></label>
-        <input type="number" step="any" className="num" value={inputs.price_year1_manual ?? ''}
+        <NumInput type="number" step="any" className="num" value={inputs.price_year1_manual ?? ''}
           onChange={(e) => setInputs((x) => ({ ...x, price_year1_manual: e.target.value === '' ? '' : Number(e.target.value) }))} />
         <small className="hint">kalkulierter Serienpreis {eur4(r.unit_price)}</small></div>
     ) : <div className="field" />}
@@ -879,14 +910,14 @@ function YearReductions({ inputs, setInputs, r }) {
                 <td className="num muted">–</td><td className="num muted">{manual ? 'manuell' : '100 %'}</td>
                 {side && <><td className="num muted">–</td><td className="num muted">100 %</td></>}
               </> : <>
-                <td className="num"><input type="number" step="any" className="num" value={rnd((1 - f / fm[y - 1]) * 100)}
+                <td className="num"><NumInput type="number" step="any" className="num" value={rnd((1 - f / fm[y - 1]) * 100)}
                   onChange={(e) => setStep('price_reductions', fm, y, e.target.value)} /></td>
-                <td className="num"><input type="number" step="any" className="num" value={rnd(f * 100)}
+                <td className="num"><NumInput type="number" step="any" className="num" value={rnd(f * 100)}
                   onChange={(e) => setPct('price_reductions', fm, y, e.target.value)} /></td>
                 {side && <>
-                  <td className="num"><input type="number" step="any" className="num" value={rnd((1 - fs[y] / fs[y - 1]) * 100)}
+                  <td className="num"><NumInput type="number" step="any" className="num" value={rnd((1 - fs[y] / fs[y - 1]) * 100)}
                     onChange={(e) => setStep('side_price_reductions', fs, y, e.target.value)} /></td>
-                  <td className="num"><input type="number" step="any" className="num" value={rnd(fs[y] * 100)}
+                  <td className="num"><NumInput type="number" step="any" className="num" value={rnd(fs[y] * 100)}
                     onChange={(e) => setPct('side_price_reductions', fs, y, e.target.value)} /></td>
                 </>}
               </>}
@@ -1048,7 +1079,7 @@ function Results({ r, inputs, set, canWrite, calc, versionNo, siteCompare }) {
         <h3>Verkaufspreis festlegen</h3>
         <div className="field">
           <label>Preis manuell (€/Stk) – leer = kalkulierter Preis</label>
-          <input type="number" step="0.0001" className="num" disabled={!canWrite} value={inputs.price_override ?? ''}
+          <NumInput type="number" step="0.0001" className="num" disabled={!canWrite} value={inputs.price_override ?? ''}
             onChange={(e) => set('price_override', e.target.value === '' ? null : Number(e.target.value))} />
           <small className="hint">{r.price_source === 'manuell' ? 'Gewinn ergibt sich als Differenz zu den Selbstkosten.' : `Kalkuliert mit ${num(inputs.profit_pct, 1)} % Gewinn auf Selbstkosten.`}</small>
         </div>

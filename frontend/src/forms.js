@@ -1,9 +1,9 @@
-import { ACCOUNT_TYPES, ACTIVITY_TYPES, QUOTE_STATUS, STAGES } from './constants'
+import { ACCOUNT_TYPES, ACTIVITY_TYPES, INDUSTRIES, QUOTE_STATUS, STAGES } from './constants'
 
 export const accountFields = [
   { name: 'name', label: 'Firmenname', required: true, span: true },
   { name: 'type', label: 'Typ', type: 'select', options: ACCOUNT_TYPES, required: true },
-  { name: 'industry', label: 'Branche' },
+  { name: 'industry', label: 'Branche', type: 'combo', options: INDUSTRIES, hint: 'Auswahl oder eigene Eingabe' },
   { name: 'phone', label: 'Telefon' },
   { name: 'email', label: 'E-Mail', type: 'email' },
   { name: 'website', label: 'Website', span: true },
@@ -31,7 +31,7 @@ export const contactFields = [
 
 export const opportunityFields = [
   { name: 'name', label: 'Bezeichnung', required: true, span: true },
-  { name: 'account_id', label: 'Firma', type: 'account', required: true },
+  { name: 'account_id', label: 'Firma', type: 'customer', required: true },
   { name: 'contact_id', label: 'Ansprechpartner', type: 'contact', dependsOn: 'account_id' },
   { name: 'stage', label: 'Phase', type: 'select', required: true, options: STAGES.map((s) => ({ value: s.key, label: s.label })) },
   { name: 'amount', label: 'Volumen (€ netto)', type: 'number', step: '0.01', min: 0 },
@@ -39,7 +39,7 @@ export const opportunityFields = [
   { name: 'close_date', label: 'Erw. Abschluss', type: 'date' },
   { name: 'source', label: 'Quelle', hint: 'z. B. Messe, Website, Empfehlung' },
   { name: 'owner_id', label: 'Verantwortlich', type: 'user' },
-  { name: 'lost_reason', label: 'Verlustgrund (falls verloren)', span: true },
+  { name: 'lost_reason', label: 'Verlustgrund (Pflicht bei „Verloren“)', span: true, hint: 'Werkzeug zu teuer · Preis zu teuer · Projekt eingestellt · Kunde hat Projekt nicht erhalten · Vorrichtung zu teuer · Sonstiges: …' },
   { name: 'description', label: 'Beschreibung', type: 'textarea', span: true },
 ]
 
@@ -57,7 +57,7 @@ export const activityFields = [
 
 export const quoteHeadFields = [
   { name: 'title', label: 'Titel', required: true, span: true },
-  { name: 'account_id', label: 'Firma', type: 'account', required: true },
+  { name: 'account_id', label: 'Firma', type: 'customer', required: true },
   { name: 'contact_id', label: 'Ansprechpartner', type: 'contact', dependsOn: 'account_id' },
   { name: 'opportunity_id', label: 'Verkaufschance', type: 'opportunity', dependsOn: 'account_id' },
   { name: 'status', label: 'Status', type: 'select', required: true, options: QUOTE_STATUS },

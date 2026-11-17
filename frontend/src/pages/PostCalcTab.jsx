@@ -4,6 +4,7 @@ import { useAuth } from '../auth'
 import { confirmDelete, ErrorBox } from '../components/ui'
 import { eur, eur4, fix4, fmtDate, INPUT_LABELS, LIGHTS, num } from '../constants'
 import { Light } from './Calculations'
+import NumInput from '../components/NumInput'
 
 const ACTUAL_FIELDS = [
   'cycle_time_s', 'cavities', 'productivity_pct', 'scrap_pct', 'material_price_kg', 'part_weight_g', 'sprue_weight_g',
@@ -119,7 +120,7 @@ function ActField({ k, label, unit, act, setAct, plan, hint }) {
   return (
     <div className={`field ${act[k] !== undefined && act[k] !== '' ? 'field-changed' : ''}`}>
       <label>{label} <span className="unit">{unit}</span></label>
-      <input type="number" step="any" className="num" placeholder={plan != null ? num(plan, 4) : ''} value={act[k] ?? ''}
+      <NumInput type="number" step="any" className="num" placeholder={plan != null ? num(plan, 4) : ''} value={act[k] ?? ''}
         onChange={(e) => setAct({ ...act, [k]: e.target.value === '' ? '' : Number(e.target.value) })} />
       {hint && <small className="hint">{hint}</small>}
     </div>

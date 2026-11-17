@@ -11,7 +11,7 @@ from .context import current_user_id
 from .database import Base, SessionLocal, engine, ensure_columns
 from .models import User
 from . import events  # noqa: F401  (Session-Ereignisse registrieren)
-from .routers import audit, calc, dashboard, entities, imports, procurement, quotes, reports, users, workflow
+from .routers import audit, calc, dashboard, docs, entities, imports, procurement, quotes, reports, users, workflow
 
 
 def init_db():
@@ -21,6 +21,20 @@ def init_db():
         # Bestandsmaschinen ohne Art (vor v1.12) sind Spritzgießmaschinen
         db.execute(text("UPDATE machines SET kind = 'spritzguss' WHERE kind IS NULL"))
         db.commit()
+        # REV01: Freigabegrenzen von 500.000 € auf 250.000 € (einmalig, nur wenn noch der alte Standard steht)
+        from .models import CalcSettings  # noqa: PLC0415
+        cs = db.get(CalcSettings, 1)
+        if cs and not (cs.data or {}).get("_rev01_thresholds"):
+            d = dict(cs.data or {})
+            for k in ("big_revenue_threshold", "big_invest_threshold"):
+                if float(d.get(k) or 500000) == 500000:
+                    d[k] = 250000.0
+            d["_rev01_thresholds"] = True
+            cs.data = d
+            db.commit()
+        # Änderungsprotokoll REV01 übernehmen (nur fehlende Punkte, Status aus der Oberfläche bleibt)
+        from .rev01 import seed_rev01  # noqa: PLC0415
+        seed_rev01(db)
         if not db.scalar(select(func.count()).select_from(User)):
             db.add(User(
                 email=settings.ADMIN_EMAIL.lower(), name="Administrator",
@@ -78,6 +92,8 @@ app.include_router(calc.sites, prefix="/api/sites", tags=["Stammdaten"])
 app.include_router(calc.router, prefix="/api/calc", tags=["Kalkulation"])
 app.include_router(calc.quote_bulk, prefix="/api/calculations-bulk", tags=["Kalkulation"])
 app.include_router(calc.calcs, prefix="/api/calculations", tags=["Kalkulation"])
+app.include_router(docs.changes, prefix="/api/changes", tags=["Änderungsprotokoll"])
+app.include_router(docs.router, prefix="/api/docs", tags=["Dokumentation"])
 
 
 @app.get("/api/health")

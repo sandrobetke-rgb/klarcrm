@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, qs } from '../api'
 import { contactName } from '../constants'
+import NumInput from './NumInput'
 
 export function Modal({ title, onClose, children, wide }) {
   useEffect(() => {
@@ -56,6 +57,8 @@ export function useFetch(path, deps = []) {
 // Auswahllisten für Verknüpfungen
 const REF = {
   account: { path: '/accounts', params: { sort: 'name', limit: 500 }, label: (r) => r.name },
+  // Kunden/Interessenten ohne Lieferanten – für Angebote, Kalkulationen, Verkaufschancen (REV01-B04)
+  customer: { path: '/accounts', params: { sort: 'name', limit: 500 }, label: (r) => r.name, rowFilter: (r) => r.type !== 'lieferant' },
   contact: { path: '/contacts', params: { sort: 'last_name', limit: 500 }, label: (r) => `${contactName(r)}${r.account ? ' · ' + r.account.name : ''}`, dep: 'account_id' },
   opportunity: { path: '/opportunities', params: { sort: 'name', limit: 500 }, label: (r) => r.name, dep: 'account_id' },
 }
@@ -70,7 +73,7 @@ export function RefSelect({ kind, value, onChange, filter, required, id }) {
     }
     const params = { ...cfg.params }
     if (cfg.dep && filter) params[cfg.dep] = filter
-    api.get(cfg.path + qs(params)).then((d) => setRows(d.items))
+    api.get(cfg.path + qs(params)).then((d) => setRows(cfg.rowFilter ? d.items.filter((r) => cfg.rowFilter(r) || r.id === value) : d.items))
   }, [kind, filter])
   const label = kind === 'user' ? (r) => r.name : cfg.label
   return (
@@ -132,7 +135,7 @@ export function EntityForm({ fields, initial, onSubmit, onCancel, onDelete, subm
           const id = `f-${f.name}`
           const v = values[f.name]
           let input
-          if (['account', 'contact', 'user', 'opportunity'].includes(f.type)) {
+          if (['account', 'customer', 'contact', 'user', 'opportunity'].includes(f.type)) {
             input = <RefSelect id={id} kind={f.type} value={v} required={f.required}
               filter={f.dependsOn ? values[f.dependsOn] : undefined} onChange={(x) => set(f.name, x)} />
           } else if (f.type === 'select') {
@@ -142,6 +145,11 @@ export function EntityForm({ fields, initial, onSubmit, onCancel, onDelete, subm
                 {f.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             )
+          } else if (f.type === 'combo') {
+            // Vorauswahl mit freier Eingabe (z. B. Branche)
+            input = <><input id={id} list={`${id}-list`} value={v ?? ''} required={f.required} autoComplete="off"
+              onChange={(e) => set(f.name, e.target.value)} placeholder="auswählen oder eingeben" />
+              <datalist id={`${id}-list`}>{f.options.map((o) => <option key={o} value={o} />)}</datalist></>
           } else if (f.type === 'textarea') {
             input = <textarea id={id} rows={f.rows || 3} value={v ?? ''} onChange={(e) => set(f.name, e.target.value)} />
           } else if (f.type === 'checkbox') {
@@ -150,7 +158,7 @@ export function EntityForm({ fields, initial, onSubmit, onCancel, onDelete, subm
             input = <input id={id} type="datetime-local" value={toLocalInput(v)} required={f.required}
               onChange={(e) => set(f.name, e.target.value)} />
           } else {
-            input = <input id={id} type={f.type || 'text'} step={f.step} min={f.min} max={f.max}
+            input = <NumInput id={id} type={f.type || 'text'} step={f.step} min={f.min} max={f.max}
               value={v ?? ''} required={f.required} onChange={(e) => set(f.name, e.target.value)} />
           }
           return (

@@ -8,6 +8,7 @@ import { contactName, eur, fmtDate, QUOTE_STATUS } from '../constants'
 import { quoteTone } from './Quotes'
 import { BigBadge } from '../components/BigProject'
 import Attachments from '../components/Attachments'
+import NumInput from '../components/NumInput'
 
 const emptyItem = () => ({ description: '', quantity: 1, unit: 'Stk', unit_price: 0, discount_pct: 0 })
 const greeting = (c, lang = 'de') => {
@@ -206,12 +207,12 @@ export default function QuoteEditor() {
               <select disabled={ro} value={q.status} onChange={(e) => set('status', e.target.value)}>
                 {QUOTE_STATUS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select></div>
-            <div className="field"><label>Firma *</label><RefSelect kind="account" value={q.account_id} onChange={(v) => { set('account_id', v) }} /></div>
+            <div className="field"><label>Firma *</label><RefSelect kind="customer" value={q.account_id} onChange={(v) => { set('account_id', v) }} /></div>
             <div className="field"><label>Ansprechpartner</label><RefSelect kind="contact" filter={q.account_id} value={q.contact_id} onChange={(v) => set('contact_id', v)} /></div>
             <div className="field"><label>Verkaufschance</label><RefSelect kind="opportunity" filter={q.account_id} value={q.opportunity_id} onChange={(v) => set('opportunity_id', v)} /></div>
             <div className="field"><label>Angebotsdatum</label><input disabled={ro} type="date" value={q.quote_date || ''} onChange={(e) => set('quote_date', e.target.value)} /></div>
             <div className="field"><label>Gültig bis</label><input disabled={ro} type="date" value={q.valid_until || ''} onChange={(e) => set('valid_until', e.target.value)} /><small className="hint">Leer = 30 Tage</small></div>
-            <div className="field"><label>MwSt. %</label><input disabled={ro} type="number" step="0.1" value={q.tax_rate ?? ''} placeholder={String(cfg.default_tax_rate)} onChange={(e) => set('tax_rate', e.target.value === '' ? null : Number(e.target.value))} /></div>
+            <div className="field"><label>MwSt. %</label><NumInput disabled={ro} type="number" step="0.1" value={q.tax_rate ?? ''} placeholder={String(cfg.default_tax_rate)} onChange={(e) => set('tax_rate', e.target.value === '' ? null : Number(e.target.value))} /></div>
             <div className="field span-3"><label>Einleitungstext</label><textarea disabled={ro} rows={2} value={q.intro_text || ''} onChange={(e) => set('intro_text', e.target.value)} /></div>
           </div>
         </div>
@@ -224,10 +225,10 @@ export default function QuoteEditor() {
                 <tr key={idx}>
                   <td>{idx + 1}</td>
                   <td><textarea rows={Math.min(8, Math.max(1, (it.description || '').split('\n').reduce((n, l) => n + Math.max(1, Math.ceil(l.length / 75)), 0)))} disabled={ro} value={it.description} onChange={(e) => setItem(idx, 'description', e.target.value)} placeholder="Artikel / Leistung" /></td>
-                  <td><input disabled={ro} type="number" step="any" className="num" value={it.quantity} onChange={(e) => setItem(idx, 'quantity', e.target.value)} /></td>
+                  <td><NumInput disabled={ro} type="number" step="any" className="num" value={it.quantity} onChange={(e) => setItem(idx, 'quantity', e.target.value)} /></td>
                   <td><input disabled={ro} value={it.unit} onChange={(e) => setItem(idx, 'unit', e.target.value)} /></td>
-                  <td><input disabled={ro} type="number" step="any" className="num" value={it.unit_price} onChange={(e) => setItem(idx, 'unit_price', e.target.value)} /></td>
-                  <td><input disabled={ro} type="number" step="any" min="0" max="100" className="num" value={it.discount_pct} onChange={(e) => setItem(idx, 'discount_pct', e.target.value)} /></td>
+                  <td><NumInput disabled={ro} type="number" step="any" className="num" value={it.unit_price} onChange={(e) => setItem(idx, 'unit_price', e.target.value)} /></td>
+                  <td><NumInput disabled={ro} type="number" step="any" min="0" max="100" className="num" value={it.discount_pct} onChange={(e) => setItem(idx, 'discount_pct', e.target.value)} /></td>
                   <td className="num"><strong>{eur(lineTotal(it), true)}</strong></td>
                   <td className="row-actions">
                     {!ro && <>

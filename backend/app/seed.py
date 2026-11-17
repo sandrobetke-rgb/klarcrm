@@ -92,7 +92,7 @@ def run():
             db.add(o)
             db.flush()
             if stage in ("angebot", "verhandlung", "gewonnen"):
-                qt = Quote(number=f"AN-{today.year}-{o.id:04d}", title=o.name, account_id=acc.id,
+                qt = Quote(number=f"A{today:%y}-{o.id:04d}", title=o.name, account_id=acc.id,
                            contact_id=contacts[0].id, opportunity_id=o.id, owner_id=owner.id,
                            status={"angebot": "versendet", "verhandlung": "versendet", "gewonnen": "angenommen"}[stage],
                            quote_date=today - timedelta(days=random.randint(1, 40)),
@@ -313,7 +313,7 @@ def seed_calc(db):
             inp["extras"].append({"label": "Bedrucken Tampondruck", "amount": 0.035, "basis": "stueck", "category": "fertigung"})
         inp = normalize(inp)
         owner = users[idx % len(users)]
-        calc = Calculation(number=f"KA-{date.today().year}-{idx + 1:04d}", article_name=art, customer_article_no=kd,
+        calc = Calculation(number=f"K{date.today():%y}-{idx + 1:04d}", article_name=art, customer_article_no=kd,
                            own_article_no=f"FR-{30100 + idx}", account_id=acc.id if acc else None,
                            contact_id=acc.contacts[0].id if acc and acc.contacts else None,
                            status=status, probability=STATUS_PROBABILITY[status],

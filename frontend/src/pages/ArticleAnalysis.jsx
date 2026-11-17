@@ -3,6 +3,7 @@ import { api } from '../api'
 import { useAuth } from '../auth'
 import { Badge, ErrorBox } from '../components/ui'
 import { feasibility, FEASIBILITY, num, num2 } from '../constants'
+import NumInput from '../components/NumInput'
 
 const STATUS = [
   { value: 'offen', label: 'offen' }, { value: 'ok', label: 'ok' },
@@ -50,7 +51,7 @@ export default function ArticleAnalysis({ calc, setCalc }) {
   const sug = res && feasibility(res.suggestion)
   const numIn = (k, label, unit, src = a, onCh = (v) => set(k, v), placeholder) => (
     <div className="field" key={k}><label>{label} <span className="unit">{unit}</span></label>
-      <input type="number" step="any" className="num" value={src[k] ?? ''} placeholder={placeholder}
+      <NumInput type="number" step="any" className="num" value={src[k] ?? ''} placeholder={placeholder}
         onChange={(e) => onCh(e.target.value === '' ? '' : Number(e.target.value))} /></div>
   )
 

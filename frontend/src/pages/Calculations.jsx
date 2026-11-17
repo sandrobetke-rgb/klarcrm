@@ -23,19 +23,21 @@ function Stats() {
   return (
     <section className="calc-stats">
       <div className="kpi-grid">
-        <div className="kpi"><span className="kpi-label">Offene Anfragen</span><span className="kpi-value">{data.count_open}</span>
-          <span className="kpi-sub">{data.overdue_calls} seit &gt; 14 Tagen nicht angerufen</span></div>
+        <a className="kpi kpi-link" href="/kalkulationen?status=kalkulation"><span className="kpi-label">Anfragen in Bearbeitung</span><span className="kpi-value">{data.count_inquiries}</span>
+          <span className="kpi-sub">noch ohne Angebot</span></a>
+        <a className="kpi kpi-link" href="/kalkulationen?status=angeboten"><span className="kpi-label">Angebote beim Kunden</span><span className="kpi-value">{data.count_offered}</span>
+          <span className="kpi-sub">{data.overdue_calls} seit &gt; 14 Tagen nicht angerufen</span></a>
         <div className="kpi"><span className="kpi-label">Potenzial Jahresumsatz (offen)</span><span className="kpi-value">{eur(data.open_revenue)}</span>
           <span className="kpi-sub">gewichtet {eur(data.open_weighted)}</span></div>
-        <div className="kpi kpi-big"><span className="kpi-label">★ Großprojekte offen</span><span className="kpi-value">{data.big_open_count}</span>
-          <span className="kpi-sub">Umsatz p. a. {eur(data.big_open_revenue)} · Invest {eur(data.big_open_invest)}</span></div>
+        <a className="kpi kpi-big kpi-link" href="/kalkulationen?big=true"><span className="kpi-label">★ Großprojekte offen</span><span className="kpi-value">{data.big_open_count}</span>
+          <span className="kpi-sub">Umsatz p. a. {eur(data.big_open_revenue)} · Invest {eur(data.big_open_invest)}</span></a>
         <div className={`kpi ${data.approvals_open ? 'kpi-big' : ''}`}><span className="kpi-label">Freigaben</span><span className="kpi-value">{data.approvals_open}</span>
           <span className="kpi-sub">angefragt · {data.approvals_missing} weitere nötig, noch nicht angefragt</span></div>
         <div className="kpi"><span className="kpi-label">Werkzeuge / Einmalumsatz (offen)</span><span className="kpi-value">{eur(data.open_tooling)}</span></div>
-        <div className="kpi"><span className="kpi-label">Gewonnen</span><span className="kpi-value">{eur(data.won_revenue)}</span>
-          <span className="kpi-sub">{data.won_count} Artikel · Trefferquote {data.hit_rate != null ? `${num(data.hit_rate, 1)} %` : '–'}</span></div>
-        <div className="kpi"><span className="kpi-label">Verloren</span><span className="kpi-value">{eur(data.lost_revenue)}</span>
-          <span className="kpi-sub">{data.lost_count} Artikel</span></div>
+        <a className="kpi kpi-link" href="/kalkulationen?status=gewonnen"><span className="kpi-label">Gewonnen</span><span className="kpi-value">{eur(data.won_revenue)}</span>
+          <span className="kpi-sub">{data.won_count} Artikel</span></a>
+        <a className="kpi kpi-link" href="/kalkulationen?status=verloren"><span className="kpi-label">Verloren</span><span className="kpi-value">{eur(data.lost_revenue)}</span>
+          <span className="kpi-sub">{data.lost_count} Artikel</span></a>
         <div className="kpi"><span className="kpi-label">Nachkalkulation</span>
           <span className="kpi-value lights-row">
             <span><Light value="gruen" /> {data.traffic_lights.gruen}</span>
