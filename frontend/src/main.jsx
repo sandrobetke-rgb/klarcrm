@@ -27,34 +27,41 @@ import NotificationBell from './components/NotificationBell'
 import { ROLES } from './constants'
 import Footer from './components/Footer'
 import Changes from './pages/Changes'
+import Inquiries, { InquiryDetail } from './pages/Inquiries'
 import Docs from './pages/Docs'
 
 function Layout() {
   const { user, logout, isAdmin } = useAuth()
   if (!user) return <Navigate to="/login" replace />
+  // Menü in Arbeitsreihenfolge (Anfrage → Kalkulation → Angebot → Verfolgung), Gruppen als Zwischenüberschrift
   const nav = [
     ['/', 'Dashboard', '▦'],
+    ['#', 'Vertrieb'],
+    ['/anfragen', 'Anfragen', '✉'],
     ['/pipeline', 'Pipeline', '⇶'],
+    ['/kalkulationen', 'Kalkulationen', '∑'],
+    ['/angebote', 'Angebote', '€'],
+    ['/aktivitaeten', 'Aktivitäten', '✓'],
+    ['#', 'Kunden'],
     ['/firmen', 'Firmen', '▣'],
     ['/kontakte', 'Kontakte', '☺'],
-    ['/aktivitaeten', 'Aktivitäten', '✓'],
-    ['/kalkulationen', 'Kalkulation', '∑'],
+    ['#', 'Planung & Analyse'],
     ['/auslastung', 'Auslastung', '▤'],
     ['/auswertungen', 'Auswertungen', '◔'],
-    ['/angebote', 'Angebote', '€'],
     ['/beschaffung', 'Beschaffung', '⚒'],
+    ['#', 'System'],
     ['/stammdaten', 'Stammdaten', '≡'],
     ['/aenderungen', 'Änderungswünsche', '✎'],
     ['/dokumentation', 'Dokumentation', '📖'],
   ]
   if (isAdmin || user.role === 'gesellschafter' || user.can_approve) nav.push(['/protokoll', 'Protokoll', '⎙'])
-  if (isAdmin) nav.push(['/benutzer', 'Benutzer', '⚙'], ['/einstellungen', 'Firma & Layout', '✉'])
+  if (isAdmin) nav.push(['/benutzer', 'Benutzer', '⚙'], ['/einstellungen', 'Firma & Layout', '✎'])
   return (
     <div className="app">
       <aside className="sidebar">
         <div className="brand"><span className="logo">K</span> KlarCRM</div>
         <nav>
-          {nav.map(([to, label, icon]) => (
+          {nav.map(([to, label, icon], i) => to === '#' ? <div key={`g${i}`} className="nav-group">{label}</div> : (
             <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => (isActive ? 'active' : '')}>
               <span className="nav-icon" aria-hidden>{icon}</span>{label}
             </NavLink>
@@ -90,6 +97,8 @@ function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/pipeline" element={<Pipeline />} />
+            <Route path="/anfragen" element={<Inquiries />} />
+            <Route path="/anfragen/:id" element={<InquiryDetail />} />
             <Route path="/firmen" element={<Accounts />} />
             <Route path="/firmen/:id" element={<AccountDetail />} />
             <Route path="/kontakte" element={<Contacts />} />

@@ -30,17 +30,20 @@ export const contactFields = [
 ]
 
 export const opportunityFields = [
-  { name: 'name', label: 'Bezeichnung', required: true, span: true },
-  { name: 'account_id', label: 'Firma', type: 'customer', required: true },
+  { name: 'name', label: 'Bezeichnung / Projekt', required: true, span: true, hint: 'z. B. „Gehäusefamilie Wallbox 2027“ – frei eingebbar' },
+  { name: 'kind', label: 'Art', type: 'select', required: true, options: [{ value: 'anfrage', label: 'Kundenanfrage (mit Artikeln)' }, { value: 'lead', label: 'Lead – Potenzial ohne Anfrage' }] },
+  { name: 'stage', label: 'Phase', type: 'select', required: true, options: STAGES.map((s) => ({ value: s.key, label: s.label })), hint: 'wird aus Entscheidung und Angebot automatisch gesetzt' },
+  { name: 'account_id', label: 'Kunde / Interessent', type: 'customer', required: true },
   { name: 'contact_id', label: 'Ansprechpartner', type: 'contact', dependsOn: 'account_id' },
-  { name: 'stage', label: 'Phase', type: 'select', required: true, options: STAGES.map((s) => ({ value: s.key, label: s.label })) },
-  { name: 'amount', label: 'Volumen (€ netto)', type: 'number', step: '0.01', min: 0 },
-  { name: 'probability', label: 'Wahrscheinlichkeit %', type: 'number', min: 0, max: 100, hint: 'Leer lassen = automatisch je Phase' },
-  { name: 'close_date', label: 'Erw. Abschluss', type: 'date' },
-  { name: 'source', label: 'Quelle', hint: 'z. B. Messe, Website, Empfehlung' },
+  { name: 'inquiry_date', label: 'Anfrage eingegangen am', type: 'date' },
+  { name: 'due_date', label: 'Angebotsabgabe bis', type: 'date' },
+  { name: 'amount', label: 'Volumen (€ netto)', type: 'number', step: '0.01', min: 0, hint: 'bei Anfragen mit Artikeln automatisch aus den Kalkulationen' },
+  { name: 'probability', label: 'Wahrscheinlichkeit Auftrag %', type: 'number', min: 0, max: 100, hint: 'Wahrscheinlichkeit, dass der gesamte Auftrag kommt; leer = je Phase' },
+  { name: 'close_date', label: 'Erw. Entscheidung Kunde', type: 'date' },
+  { name: 'source', label: 'Quelle', type: 'combo', options: ['Bestandskunde', 'Messe', 'Website', 'Empfehlung', 'Ausschreibung', 'Kaltakquise'], hint: 'Auswahl oder eigene Eingabe' },
   { name: 'owner_id', label: 'Verantwortlich', type: 'user' },
-  { name: 'lost_reason', label: 'Verlustgrund (Pflicht bei „Verloren“)', span: true, hint: 'Werkzeug zu teuer · Preis zu teuer · Projekt eingestellt · Kunde hat Projekt nicht erhalten · Vorrichtung zu teuer · Sonstiges: …' },
-  { name: 'description', label: 'Beschreibung', type: 'textarea', span: true },
+  { name: 'lost_reason', label: 'Verlust- / Absagegrund', span: true, hint: 'Pflicht bei „Verloren“ und „Nicht angeboten“ – beim Ziehen in der Pipeline per Dialog' },
+  { name: 'description', label: 'Beschreibung / Notizen', type: 'textarea', span: true },
 ]
 
 export const activityFields = [
@@ -49,7 +52,8 @@ export const activityFields = [
   { name: 'subject', label: 'Betreff', required: true, span: true },
   { name: 'account_id', label: 'Firma', type: 'account' },
   { name: 'contact_id', label: 'Kontakt', type: 'contact', dependsOn: 'account_id' },
-  { name: 'opportunity_id', label: 'Verkaufschance', type: 'opportunity', dependsOn: 'account_id' },
+  { name: 'opportunity_id', label: 'Anfrage / Projekt', type: 'opportunity', dependsOn: 'account_id' },
+  { name: 'quote_id', label: 'Angebot', type: 'quote', dependsOn: 'account_id', hint: 'Aktivität mit einem Angebot verknüpfen' },
   { name: 'owner_id', label: 'Zuständig', type: 'user' },
   { name: 'description', label: 'Beschreibung / Ergebnis', type: 'textarea', span: true },
   { name: 'done', label: 'Erledigt', type: 'checkbox' },

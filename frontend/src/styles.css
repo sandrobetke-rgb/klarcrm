@@ -593,7 +593,7 @@ h1 .big-badge { font-size: 12.5px; margin-top: 0; }
 .site-notes { margin: 0 0 6px; padding-left: 18px; }
 .reason-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; }
 .radio-row { display: flex; gap: 8px; align-items: center; justify-content: flex-start; font-weight: normal; cursor: pointer; text-align: left; margin: 0; }
-.radio-row input[type=radio] { width: auto; flex: 0 0 auto; margin: 0; }
+.radio-row input[type=radio], .radio-row input[type=checkbox] { width: auto; flex: 0 0 auto; margin: 0; }
 a.kpi-link { color: inherit; text-decoration: none; } a.kpi-link:hover { border-color: var(--primary, #1e40af); }
 .clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; max-width: 460px; }
 
@@ -612,3 +612,37 @@ a.kpi-link { color: inherit; text-decoration: none; } a.kpi-link:hover { border-
 .markdown code { background: #f1f5f9; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
 .markdown mark { background: #fde68a; }
 @media (max-width: 900px) { .docs-layout { grid-template-columns: 1fr; } .docs-toc { position: static; max-height: none; } }
+.notice-ok { display: flex; align-items: center; gap: 8px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+.notice-ok .btn-x { margin-left: auto; background: none; border: 0; font-size: 18px; cursor: pointer; color: inherit; }
+
+/* Anfragen (REV01 Phase 2) */
+.stepper { display: flex; list-style: none; padding: 0; margin: 0 0 16px; gap: 4px; flex-wrap: wrap; counter-reset: s; }
+.stepper li { flex: 1 1 0; min-width: 96px; display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: #f1f5f9; border-radius: 8px; font-size: 13px; color: #64748b; }
+.stepper li span { display: inline-flex; width: 22px; height: 22px; border-radius: 50%; align-items: center; justify-content: center; background: #cbd5e1; color: #fff; font-size: 12px; font-weight: 600; flex: 0 0 22px; }
+.stepper li.done { background: #ecfdf5; color: #065f46; } .stepper li.done span { background: #059669; }
+.stepper li.current { background: #eff6ff; color: #1e3a8a; font-weight: 600; box-shadow: inset 0 0 0 2px #3b82f6; } .stepper li.current span { background: #2563eb; }
+.kv { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 6px 12px; margin: 0; }
+.kv dt { color: #64748b; } .kv dd { margin: 0; }
+tr.clickable { cursor: pointer; } tr.clickable:hover td { background: #f8fafc; }
+.decision-box { margin: 6px 0; padding: 10px 12px; border: 1px solid #fde68a; background: #fffbeb; min-width: 360px; }
+.decision-inline { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.timeline { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.timeline li { display: flex; gap: 10px; } .timeline li.done { opacity: .75; }
+.timeline .tl-icon { width: 26px; height: 26px; border-radius: 50%; background: #eef2ff; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 26px; }
+.deal-meta { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.nav-group { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #64748b; padding: 12px 12px 4px; }
+.decision-line { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 0 0 10px; }
+.decision-gate { margin-bottom: 12px; }
+.link-btn { background: none; border: 0; padding: 0; color: var(--primary, #1e40af); text-decoration: underline; cursor: pointer; font: inherit; }
+/* Angebot: Positionsstruktur und Verfolgung (REV01-P06/P08) */
+.pq-table tr.pq-sub td:first-child { padding-left: 14px; color: #475569; }
+.pq-table tr.pq-sub td { font-size: 0.95em; }
+.pq-table tr.pq-info td { color: #475569; font-style: italic; }
+.pq-table tr.pq-main td { border-top: 1px solid #cbd5e1; }
+.items-table tr.item-sub td:nth-child(2) textarea { margin-left: 14px; width: calc(100% - 14px); }
+.pos-input { width: 44px; text-align: center; padding: 4px 2px; }
+.followup-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+.followup-bar > span:first-child { font-weight: 600; }
+.lights { display: inline-flex; gap: 10px; font-size: 0.8em; }
+.l-rot { color: #dc2626; } .l-gelb { color: #d97706; } .l-gruen { color: #059669; }
+.pq-table td:nth-child(2), .pq-table th:nth-child(2) { width: 56%; }

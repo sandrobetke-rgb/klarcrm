@@ -118,6 +118,11 @@ def analyze(a: dict, inputs: dict, machines: list[dict]) -> dict:
         "suitable_machines": [{"id": m["id"], "name": m["name"], "number": m.get("number"),
                                "clamping_force_t": m["clamping_force_t"], "hourly_rate": m.get("hourly_rate")} for m in suitable],
         "selected_machine_ok": selected_ok, "capacity_ok": capacity_ok,
+        # Vorschlag Maschinengröße (REV01-P03): kleinste passende Maschine bzw. nötige Schließkraftklasse
+        "suggested_machine": ({"id": suitable[0]["id"], "name": suitable[0]["name"], "clamping_force_t": suitable[0]["clamping_force_t"]}
+                              if suitable else None),
+        "suggested_size_t": next((c for c in (25, 50, 80, 100, 150, 200, 250, 300, 400, 500, 650, 800, 1000, 1300, 1600, 2000)
+                                  if c >= force_t), round(force_t)),
         "issues": issues, "hints": hints, "open_checks": len(open_), "critical_checks": len(critical),
         "suggestion": suggestion,
         "checklist_items": [{"key": k, "label": l} for k, l in CHECKLIST],

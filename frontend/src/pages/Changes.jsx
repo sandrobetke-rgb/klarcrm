@@ -12,6 +12,12 @@ export const CR_STATUS = [
   { value: 'abgelehnt', label: 'Abgelehnt', tone: 'neutral' },
 ]
 const KIND = [{ value: 'fehler', label: 'Fehler' }, { value: 'wunsch', label: 'Wunsch' }, { value: 'doku', label: 'Dokumentation' }]
+const kindLabel = (v) => KIND.find((k) => k.value === v)?.label || v || '–'
+// Vorschläge – Art und Bereich sind frei eingebbar
+const KIND_OPTIONS = ['Fehler', 'Wunsch', 'Dokumentation', 'Verbesserung', 'Frage', 'Schulung']
+const AREAS = ['Allgemein', 'Dashboard', 'Pipeline', 'Anfrage', 'Artikelanalyse', 'Kalkulation', 'Zukaufteile', 'Material', 'Werkzeug',
+  'Angebot', 'Angebotsdruck', 'Aktivitäten', 'Firmen', 'Kontakte', 'Beschaffung', 'Auslastung', 'Auswertungen', 'Stammdaten',
+  'Standorte', 'Benutzer', 'Dokumentation']
 const PRIO = [{ value: 'hoch', label: 'hoch' }, { value: 'mittel', label: 'mittel' }, { value: 'niedrig', label: 'niedrig' }]
 const PHASES = [
   { value: '1', label: 'Phase 1 – Fehler & Sofortmaßnahmen' },
@@ -23,8 +29,8 @@ const st = (v) => CR_STATUS.find((s) => s.value === v) || CR_STATUS[0]
 
 const fields = [
   { name: 'title', label: 'Titel', required: true, span: true },
-  { name: 'kind', label: 'Art', type: 'select', required: true, options: KIND },
-  { name: 'area', label: 'Bereich', hint: 'z. B. Kalkulation, Angebot, Pipeline' },
+  { name: 'kind', label: 'Art', type: 'combo', required: true, options: KIND_OPTIONS, hint: 'Auswahl oder eigene Eingabe' },
+  { name: 'area', label: 'Bereich', type: 'combo', options: AREAS, hint: 'Auswahl oder eigene Eingabe' },
   { name: 'priority', label: 'Priorität', type: 'select', required: true, options: PRIO },
   { name: 'phase', label: 'Phase', type: 'select', options: PHASES },
   { name: 'description', label: 'Anforderung / Fehlerbeschreibung', type: 'textarea', rows: 4, span: true },
@@ -58,7 +64,7 @@ function Summary() {
     <section>
       <div className="kpi-grid">
         <div className="kpi"><span className="kpi-label">Punkte gesamt</span><span className="kpi-value">{items.length}</span>
-          <span className="kpi-sub">{count((r) => r.kind === 'fehler')} Fehler · {count((r) => r.kind === 'wunsch')} Wünsche</span></div>
+          <span className="kpi-sub">{count((r) => ['fehler', 'Fehler'].includes(r.kind))} Fehler · {count((r) => ['wunsch', 'Wunsch'].includes(r.kind))} Wünsche</span></div>
         {CR_STATUS.slice(0, 5).map((s) => (
           <a key={s.value} className="kpi kpi-link" href={`/aenderungen?status=${s.value}`}><span className="kpi-label">{s.label}</span>
             <span className="kpi-value">{count((r) => r.status === s.value)}</span></a>))}
@@ -78,15 +84,15 @@ export default function Changes() {
   return (
     <ListPage title="Änderungswünsche & Prüfprotokoll" subtitle="Testrückmeldungen (REV01 ff.) und neue Wünsche – erfassen, umsetzen, prüfen, abhaken"
       path="/changes" entityLabel="Änderungswunsch" fields={fields} defaultSort="code" limit={200}
-      newDefaults={{ kind: 'wunsch', priority: 'mittel', status: 'offen' }}
-      toForm={(r) => ({ ...r, phase: r.phase ? String(r.phase) : '' })}
-      top={<Summary />}
+      newDefaults={{ kind: 'Wunsch', priority: 'mittel', status: 'offen' }}
+      toForm={(r) => ({ ...r, kind: kindLabel(r.kind), phase: r.phase ? String(r.phase) : '' })}
+      top={(n) => <Summary key={n} />}
       rowClass={(r) => (r.status === 'nachbessern' ? 'row-big' : '')}
       filters={[{ name: 'status', label: 'Status', options: CR_STATUS }, { name: 'phase', label: 'Phase', options: PHASES },
         { name: 'kind', label: 'Art', options: KIND }, { name: 'priority', label: 'Priorität', options: PRIO }]}
       columns={[
         { key: 'code', label: 'Nr.', sort: 'code', render: (r) => <strong>{r.code}</strong> },
-        { key: 'title', label: 'Punkt', sort: 'title', render: (r) => <>{r.title}<br /><small className="muted">{r.area} · {KIND.find((k) => k.value === r.kind)?.label}</small></> },
+        { key: 'title', label: 'Punkt', sort: 'title', render: (r) => <>{r.title}<br /><small className="muted">{r.area || '–'} · {kindLabel(r.kind)}</small></> },
         { key: 'priority', label: 'Prio', sort: 'priority', render: (r) => <Badge tone={r.priority === 'hoch' ? 'critical' : r.priority === 'mittel' ? 'warning' : 'neutral'}>{r.priority}</Badge> },
         { key: 'phase', label: 'Phase', sort: 'phase', className: 'num', render: (r) => r.phase || '–' },
         { key: 'status', label: 'Status', sort: 'status', render: (r) => <Badge tone={st(r.status).tone}>{st(r.status).label}</Badge> },

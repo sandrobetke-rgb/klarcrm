@@ -63,16 +63,24 @@ ITEMS = [
      "Neue Anfrage = Lead (automatisch, vor Freigabe zur Kalkulation); Lead = manuell, potenzielle Neukunden ohne Anfrage; "
      "Qualifiziert = Anfrage zur Kalkulation freigegeben (automatisch); Angebot (automatisch); Verhandlung/technisches Gespräch = Endrunde "
      "(auswerten, wie viele gewonnene/verlorene Projekte in der Endrunde waren); Gewonnen; Verloren mit Pflichtgrund. "
-     "Unter „Neue Anfrage“ bei Verkaufschance frei eingeben können.", O, None, None, "PIP"),
+     "Unter „Neue Anfrage“ bei Verkaufschance frei eingeben können.", U,
+     'Pipeline-Phasen Lead · Neue Anfrage · Qualifiziert · Angebot · Verhandlung/techn. Gespräch · Gewonnen · Verloren (+ „Nicht angeboten“). Eine Karte je Anfrage. Neue Anfrage → Qualifiziert (Entscheidung „anbieten“) → Angebot (Angebot versendet) laufen automatisch. Verhandlung markiert die Endrunde (Dashboard: gewonnen/verloren aus der Endrunde). „+ Neue Anfrage“ mit freier Eingabe von Projekt, Kunde, Eingang, Abgabetermin.',
+     'Pipeline: „+ Neue Anfrage“ anlegen → Karte unter Neue Anfrage. Artikel anlegen, „anbieten“ entscheiden → Karte springt auf Qualifiziert. Angebot versenden → Angebot. Karte auf Verhandlung ziehen → Endrunde.', "PIP"),
     ("REV01-P02", "Anfrage / Artikelanalyse", "wunsch", "hoch", 2, "Entscheidung je Anfrage vor Kalkulationsstart",
      "Jede Anfrage braucht vor Kalkulationsstart eine Entscheidung, bis dahin unter Leads: Artikel wird angeboten · nicht angeboten mit "
-     "Begründung · angeboten anderer Standort · Sonstiges (Freitext).", O, None, None, "KAL"),
+     "Begründung · angeboten anderer Standort · Sonstiges (Freitext).", U,
+     'Je Artikel Entscheidung vor Kalkulationsstart: anbieten · nicht anbieten (Begründung Pflicht) · anderer Standort (Kalkulation wird mit dessen Sätzen neu angelegt) · Sonstiges (Freitext). Ohne Entscheidung lässt sich keine Version speichern; die Anfrage bleibt unter „Neue Anfrage“. „Alle offenen anbieten“ in der Anfrage.',
+     'Neuen Artikel anlegen, Wert ändern, speichern → Hinweis „Entscheidung fehlt“. Entscheidung „anbieten“ → speichern geht. „Nicht anbieten“ ohne Begründung → nicht möglich.', "KAL"),
     ("REV01-P03", "Artikelanalyse", "wunsch", "hoch", 2, "Artikelanalyse vor der Kalkulation, Maschinengröße vorschlagen, „technisches Gespräch erforderlich“",
      "Nach der Analyse Option „technisches Gespräch erforderlich“; Maschinengröße in der Artikelanalyse vorschlagen; Analyse vor Kalkulation. "
-     "Vor „Angebot erstellen“ prüfen, ob die Artikelanalyse vollständig ist – sonst Freigabe-Workflow an den Vorgesetzten.", O, None, None, "ANA"),
+     "Vor „Angebot erstellen“ prüfen, ob die Artikelanalyse vollständig ist – sonst Freigabe-Workflow an den Vorgesetzten.", U,
+     'Artikelanalyse ist Reiter 1 vor der Kalkulation, mit Vorschlag Maschinengröße (Schließkraftklasse und kleinste vorhandene Maschine) und Haken „technisches Gespräch erforderlich“ (markiert die Anfrage, legt Aufgabe an). Unvollständige Analyse (offene Prüfpunkte oder keine Machbarkeit) ist Freigabegrund – Angebot erst nach Freigabe durch den Vorgesetzten.',
+     'Artikelanalyse mit offenen Prüfpunkten speichern → Freigabeleiste „Artikelanalyse unvollständig“. Angebot erstellen → Hinweis Freigabe erforderlich. Haken techn. Gespräch → Badge in der Anfrage + Aufgabe.', "ANA"),
     ("REV01-P04", "Angebot", "wunsch", "hoch", 2, "Angebotskopf mit n Kalkulationen (Angebotserstellung)",
      "Angebotskopf mit Kunde und Ansprechpartner, darunter n Kalkulationen/Artikel. Erst Kopf anlegen, dann Kalkulationen darunter; "
-     "weitere Kalkulationen im Angebot wählen. Eine Anfrage × Kalkulationen. Angebotsliste mit Status und letzter Rückmeldung/Anruf.", O, None, None, "ANG"),
+     "weitere Kalkulationen im Angebot wählen. Eine Anfrage × Kalkulationen. Angebotsliste mit Status und letzter Rückmeldung/Anruf.", U,
+     'Neuer Menüpunkt „Anfragen“: Anfrage (AF26-0001) mit Kunde, Ansprechpartner, Eingang, Abgabetermin; darunter n Artikel/Kalkulationen und genau ein Angebot mit n Positionen (Revisionen -R1). Schrittleiste zeigt den Stand. Angebotsliste mit Status, Verfolgungsampel und letzter Rückmeldung. Bestehende Kalkulationen wurden nach Angebot gruppiert übernommen.',
+     'Anfrage mit zwei Artikeln anlegen, beide entscheiden, Angebot erstellen → ein Angebot mit Pos. 1 und 2. Angebote-Liste: Spalten Verfolgung und letzte Rückmeldung.', "ANG"),
     ("REV01-P05", "Pipeline / Kalkulation", "wunsch", "hoch", 1, "Verloren nur mit Pflichtgrund (Vorauswahl + Freitext)",
      "Wenn etwas verloren geht und wir es in der Pipeline verschieben, muss immer zwingend der Grund rein. Vorauswahl: Werkzeug zu teuer, "
      "Preis zu teuer, Projekt eingestellt, Kunde hat Projekt nicht erhalten, Vorrichtung zu teuer, Sonstiges (Freitext).", U,
@@ -82,15 +90,29 @@ ITEMS = [
     ("REV01-P06", "Aufgaben", "wunsch", "hoch", 2, "Automatische Angebotsverfolgung mit Ampel",
      "Automatische Aufgabe „Angebotsverfolgung“: Rücksprache Kunde spätestens 5 Tage nach Angebot, mit Ampel. Bei Status „versendet“ startet "
      "der Timer mit Erinnerung. Ohne Reaktion rot, sichtbar für alle inkl. Gesellschafter. „Niemanden erreicht“ → Aufgabe kommt am nächsten "
-     "Tag wieder, außer „wieder melden am …“.", O, None, None, "AKT"),
+     "Tag wieder, außer „wieder melden am …“.", U,
+     'Status „versendet“ startet die Aufgabe „Angebotsverfolgung“ mit Frist 5 Arbeitstage (Parameter). Ampel grün/gelb/rot auf Dashboard (für alle sichtbar inkl. Gesellschafter), in Anfrage, Angebot, Angebotsliste und Aktivitäten. Rücksprache erfassen: erreicht · niemanden erreicht (Wiedervorlage nächster Arbeitstag, Zähler) · wieder melden am …',
+     'Angebot auf versendet → Hinweis mit Rücksprachetermin. Dashboard › Angebotsverfolgung → „Rücksprache“ → „Niemanden erreicht“ → Fälligkeit nächster Arbeitstag, gelb.', "AKT"),
     ("REV01-P07", "Aktivitäten", "wunsch", "mittel", 2, "Aktivität mit Angebot verknüpfen bzw. aus dem Angebot anlegen",
-     "Verlinkung zu einem Angebot oder aus dem Angebot heraus eine Aktivität erstellen.", O, None, None, "AKT"),
+     "Verlinkung zu einem Angebot oder aus dem Angebot heraus eine Aktivität erstellen.", U,
+     'Aktivitäten haben ein Feld „Angebot“; im Angebot Bereich „Aktivitäten zum Angebot“ mit „+ Aktivität“; Anfrage zeigt alle Aktivitäten.',
+     'Angebot öffnen → „+ Aktivität“ → erscheint im Angebot und in der Anfrage.', "AKT"),
     ("REV01-P08", "Angebotsdruck", "wunsch", "hoch", 2, "Positionsstruktur und Staffelpreise je Lieferjahr in einer Spalte",
      "Staffelpreise in einer Spalte: Jahr 1, Jahr 2 … inkl. Jahresmenge × Preis. Positionen: Pos 1 Artikel, 1.1 Werkzeug, 1.2 Sonstiges, "
-     "1.3 CO₂-Fußabdruck (wenn ausgewählt), Pos 2 nächster Artikel usw.", O, None, None, "ANG"),
+     "1.3 CO₂-Fußabdruck (wenn ausgewählt), Pos 2 nächster Artikel usw.", U,
+     'Angebotspositionen: 1 Artikel mit Serienpreis je Lieferjahr (Jahresmenge × Stückpreis = Betrag) · 1.1 Werkzeug · 1.x Vorserie · 1.x Sonstiges · letzte Unterposition CO₂-Fußabdruck (nur Information, ohne Preis) · 2 nächster Artikel. Positionsnummer im Angebot änderbar.',
+     'Angebot zu einem Artikel mit Werkzeug und CO₂ erstellen → Druckansicht prüfen.', "ANG"),
     ("REV01-P09", "Wahrscheinlichkeit", "wunsch", "mittel", 2, "Wahrscheinlichkeit = Auftrag kommt insgesamt, keine Umsatzgewichtung",
-     "Wahrscheinlichkeit bedeutet die Wahrscheinlichkeit, dass der gesamte Auftrag kommt; die gewichtete Minderung des Umsatzes ist nicht sinnvoll.",
-     O, None, None, "KAL"),
+     "Wahrscheinlichkeit bedeutet die Wahrscheinlichkeit, dass der gesamte Auftrag kommt; die gewichtete Minderung des Umsatzes ist nicht sinnvoll.", U,
+     'Wahrscheinlichkeit = Auftrag kommt insgesamt; gilt für alle Artikel der Anfrage. Keine gewichteten Summen mehr in Pipeline und Dashboard (stattdessen „davon ≥ 50 % Wahrscheinlichkeit“).',
+     'Pipeline und Dashboard: keine „gewichtet“-Angaben mehr.', "KAL"),
+
+    ("REV01-X03", "Änderungswünsche", "fehler", "hoch", 2, "Neue Änderungswünsche speichern, Art und Bereich frei eingeben",
+     "Wichtig ist, wenn ich neue Änderungen im Änderungsantrag eingebe, dass diese auch gespeichert werden können und ich auch einen "
+     "Freitext auswählen kann für die Art etc.", U,
+     "Nach dem Speichern erscheint eine Bestätigung mit Nummer (WUN-0001 …); blendet ein aktiver Filter den neuen Eintrag aus, wird das "
+     "angezeigt und lässt sich mit „Filter zurücksetzen“ aufheben. Art und Bereich: Vorschlagsliste mit freier Eingabe.",
+     "Änderungswünsche › Kachel „Umgesetzt“ anklicken (Filter) → „+ Änderungswunsch“ mit Art „Schulung“ (frei) speichern → Meldung „angelegt“, Hinweis auf Filter.", "DOK"),
 
     # ---------------------------------------------------------------- Kalkulation (Phase 3)
     ("REV01-C01", "Zukaufteile", "wunsch", "hoch", 3, "Zukaufteile: Stück je Bauteil, Freitext, Lieferant, Staffelmengen mit Jahresbedarf",
@@ -191,13 +213,21 @@ def seed_rev01(db) -> int:
     from .models import ChangeRequest  # noqa: PLC0415
     have = {c for (c,) in db.query(ChangeRequest.code).all()}
     n = 0
+    # Neu umgesetzte Punkte nachziehen – nur wenn der Eintrag noch unbearbeitet „offen“ ist (Prüfstand bleibt unangetastet)
+    for code, area, kind, prio, phase, title, desc, status, solution, test, req in ITEMS:
+        if code in have and status == U:
+            cr = db.query(ChangeRequest).filter(ChangeRequest.code == code).first()
+            if cr and cr.status == "offen" and not (cr.test_result or "").strip():
+                cr.status, cr.solution, cr.test_steps = U, solution, test
+                cr.version = "1.24" if phase == 2 else "1.23"
     for code, area, kind, prio, phase, title, desc, status, solution, test, req in ITEMS:
         if code in have:
             continue
         db.add(ChangeRequest(code=code, revision="REV01", area=area, kind=kind, priority=prio, phase=phase, title=title,
                              description=desc, status=status, solution=solution, test_steps=test,
                              req_ids=f"Lastenheft Kap. 13 · {code}",
-                             version="1.23" if status == U else None, requested_by="Sandro (REV01)"))
+                             version=("1.24" if phase == 2 else "1.23") if status == U else None,
+                             requested_by="Sandro (REV01)"))
         n += 1
     db.commit()
     return n

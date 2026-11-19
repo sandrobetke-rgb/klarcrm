@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import DecisionBox from '../components/DecisionBox'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth'
@@ -24,7 +25,7 @@ export const calcMetaFields = [
   { name: 'own_article_no', label: 'Eigene Artikelnummer' },
   { name: 'account_id', label: 'Kunde', type: 'customer' },
   { name: 'contact_id', label: 'Ansprechpartner Kunde', type: 'contact', dependsOn: 'account_id' },
-  { name: 'opportunity_id', label: 'Verkaufschance (Projekt)', type: 'opportunity', dependsOn: 'account_id' },
+  { name: 'opportunity_id', label: 'Anfrage / Projekt', type: 'opportunity', dependsOn: 'account_id', hint: 'Artikel einer anderen Anfrage zuordnen' },
   { name: 'owner_id', label: 'Verantwortlich', type: 'user' },
   { name: 'status', label: 'Status', type: 'select', required: true, options: CALC_STATUS },
   { name: 'probability', label: 'Wahrscheinlichkeit Auftrag %', type: 'number', min: 0, max: 100, hint: 'Wird beim Statuswechsel vorgeschlagen, frei änderbar' },
@@ -42,7 +43,7 @@ export const calcMetaFields = [
   { name: 'remark', label: 'Bemerkung', type: 'textarea', span: true, rows: 3 },
 ]
 
-const TABS = [['calc', 'Kalkulation'], ['analysis', 'Artikelanalyse'], ['lifecycle', 'Lebensweg'], ['docs', 'Dokumente'], ['procurement', 'Beschaffung'], ['calls', 'Anrufe'], ['meta', 'Anfrage & Status'], ['versions', 'Versionen'], ['post', 'Nachkalkulation'], ['audit', 'Protokoll']]
+const TABS = [['analysis', '1 · Artikelanalyse'], ['calc', '2 · Kalkulation'], ['lifecycle', 'Lebensweg'], ['docs', 'Dokumente'], ['procurement', 'Beschaffung'], ['calls', 'Anrufe'], ['meta', 'Anfrage & Status'], ['versions', 'Versionen'], ['post', 'Nachkalkulation'], ['audit', 'Protokoll']]
 
 export default function CalculationEditor() {
   const { id } = useParams()
@@ -50,7 +51,7 @@ export default function CalculationEditor() {
   const { canWrite } = useAuth()
   const [calc, setCalc] = useState(null)
   const [error, setError] = useState(null)
-  const [tab, setTab] = useState('calc')
+  const [tab, setTab] = useState(() => (new URLSearchParams(window.location.search).get('tab') === 'analyse' ? 'analysis' : 'calc'))
   const [master, setMaster] = useState({ machines: [], materials: [], parts: [], settings: {}, sites: [] })
 
   useEffect(() => {
@@ -89,7 +90,7 @@ export default function CalculationEditor() {
             {` · Version ${calc.current_version} · ${calc.probability} % Wahrscheinlichkeit`}
             {calc.close_reason && ` · ${reasonLabel(calc.close_reason)}${calc.close_note ? `: ${calc.close_note}` : ''}`}
             {calc.no_bid_reason && ` · Kein Angebot: ${noBidLabel(calc.no_bid_reason)}${calc.no_bid_note ? ` (${calc.no_bid_note})` : ''}`}
-            {calc.opportunity && <> · Chance: <Link to="/pipeline">{calc.opportunity.name}</Link></>}
+            {calc.opportunity && <> · Anfrage <Link to={`/anfragen/${calc.opportunity.id}`}>{calc.opportunity.number || ''} {calc.opportunity.name}</Link></>}
           </p>
           <div className="lastcall-head">
             <span className="muted small">Zuletzt angerufen:</span>
@@ -101,6 +102,19 @@ export default function CalculationEditor() {
         </div>
         {canWrite && <HeaderActions calc={calc} setCalc={setCalc} onDelete={remove} onCall={() => setTab('calls')} />}
       </header>
+      {/* REV01-P02: Entscheidung je Artikel vor Kalkulationsstart */}
+      {calc.opportunity_id && (!calc.decision ? (
+        <div className="warn-box decision-gate">
+          <strong>Erst entscheiden, dann kalkulieren:</strong> Wird dieser Artikel angeboten? Bis zur Entscheidung kann die Kalkulation
+          nicht gespeichert werden. Tipp: vorher die <button className="link-btn" onClick={() => setTab('analysis')}>Artikelanalyse</button> machen.
+          <div style={{ marginTop: 6 }}><DecisionBox calc={calc} canWrite={canWrite} onDone={async () => setCalc(await api.get(`/calculations/${calc.id}`))} /></div>
+        </div>
+      ) : (
+        <div className="decision-line no-print"><span className="muted small">Entscheidung:</span>
+          <DecisionBox calc={calc} canWrite={canWrite} onDone={async () => setCalc(await api.get(`/calculations/${calc.id}`))} />
+          {!calc.analysis_complete && <Badge tone="warning">Artikelanalyse unvollständig – Angebot nur nach Freigabe</Badge>}
+        </div>
+      ))}
       <ApprovalBar calc={calc} setCalc={setCalc} />
       <div className="tabs no-print">
         {TABS.map(([k, l]) => (
@@ -152,8 +166,9 @@ function NewCalc() {
   return (
     <div className="page page-narrow">
       <Link to="/kalkulationen" className="back">‹ Alle Kalkulationen</Link>
-      <h1>Neue Anfrage / Kalkulation</h1>
-      <p className="muted">Kalkulationsnummer wird automatisch vergeben. Danach öffnet sich das Kalkulationsschema.</p>
+      <h1>Neuer Artikel / Kalkulation</h1>
+      <p className="muted">Ohne gewählte Anfrage wird automatisch eine neue Anfrage angelegt. Weitere Artikel derselben Anfrage am besten
+        direkt in der Anfrage mit „+ Artikel / Kalkulation“ anlegen. Danach: Entscheidung, Artikelanalyse, Kalkulation.</p>
       {templates.length > 0 && (
         <div className="card">
           <div className="field"><label>Vorlage verwenden (optional)</label>
@@ -195,7 +210,8 @@ function HeaderActions({ calc, setCalc, onDelete, onCall }) {
       <button className="btn btn-ghost" onClick={onCall}>☎ Anruf dokumentieren</button>
       {!calc.opportunity_id && <button className="btn btn-ghost" onClick={async () => {
         try { setCalc(await api.post(`/calculations/${calc.id}/opportunity`)) } catch (e) { setErr(e) }
-      }}>→ Verkaufschance anlegen</button>}
+      }}>→ Anfrage anlegen</button>}
+      {calc.opportunity_id && <Link className="btn btn-ghost" to={`/anfragen/${calc.opportunity_id}`}>→ zur Anfrage</Link>}
       <button className="btn btn-ghost" onClick={async () => {
         const name = window.prompt('Artikelbezeichnung der Kopie:', `${calc.article_name} (Kopie)`)
         if (name) { const c = await api.post(`/calculations/${calc.id}/copy`, { article_name: name }); nav(`/kalkulationen/${c.id}`) }
@@ -208,7 +224,7 @@ function HeaderActions({ calc, setCalc, onDelete, onCall }) {
       <button className="btn btn-ghost" onClick={async () => {
         setErr(null)
         try { const r = await api.post(`/calculations/${calc.id}/quote?lang=${lang}`); nav(`/angebote/${r.quote_id}`) } catch (e) { setErr(e) }
-      }} title="Gibt es schon ein offenes Angebot zu dieser Kalkulation, wird es aktualisiert (Entwurf) bzw. als Revision neu erstellt (versendet) – kein zweites Angebot.">→ Angebot erstellen / aktualisieren</button>
+      }} title="Ein Angebot je Anfrage mit allen angebotenen Artikeln: Entwurf wird aktualisiert, ein versendetes Angebot bekommt eine Revision.">→ Angebot der Anfrage erstellen / aktualisieren</button>
       <select className="lang-select" value={lang} onChange={(e) => setLang(e.target.value)} title="Sprache des Angebots"><option value="de">DE</option><option value="en">EN</option></select>
       {isAdmin && <button className="btn btn-danger-ghost" onClick={onDelete}>Löschen</button>}
       <ErrorBox error={err} />

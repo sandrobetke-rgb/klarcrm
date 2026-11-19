@@ -22,6 +22,37 @@ def next_number(db: Session) -> str:
     return f"{prefix}{n:04d}"
 
 
+def quote_status_changed(db: Session, quote: Quote, old: str, user, lost_code=None, lost_reason=None):
+    """Status des Angebots steuert Anfrage und Angebotsverfolgung (REV01-P01/P06)."""
+    from ..calc_engine import DEFAULT_SETTINGS  # noqa: PLC0415
+    from ..inquiry import cascade_stage, refresh_inquiry, set_stage, start_followup  # noqa: PLC0415
+    from ..models import Activity, CalcSettings, Opportunity  # noqa: PLC0415
+    opp = db.get(Opportunity, quote.opportunity_id) if quote.opportunity_id else None
+    if quote.status == "versendet":
+        row = db.get(CalcSettings, 1)
+        days = int(({**DEFAULT_SETTINGS, **((row.data or {}) if row else {})}).get("followup_workdays") or 5)
+        start_followup(db, quote, user, days)
+    if quote.status in ("angenommen", "abgelehnt", "ersetzt"):
+        for t in db.query(Activity).filter(Activity.quote_id == quote.id, Activity.kind == "angebotsverfolgung",
+                                           Activity.done.is_(False)).all():
+            t.done = True
+    if opp:
+        db.flush()
+        old_stage = opp.stage
+        if quote.status == "angenommen":
+            set_stage(opp, "gewonnen")
+        elif quote.status == "abgelehnt":
+            from .calc import REASON_LABELS  # noqa: PLC0415
+            opp.lost_code = lost_code or "sonstiges"
+            label = REASON_LABELS.get(opp.lost_code, "Sonstiges")
+            opp.lost_reason = f"{label}: {lost_reason}" if lost_reason else label
+            set_stage(opp, "verloren")
+            opp.lost_code, opp.lost_reason = lost_code or "sonstiges", (f"{label}: {lost_reason}" if lost_reason else label)
+        cascade_stage(db, opp, old_stage)
+        db.flush()
+        refresh_inquiry(db, opp)
+
+
 def set_items(quote: Quote, items: list[s.QuoteItemIn]):
     quote.items.clear()
     for i, it in enumerate(items, start=1):
@@ -91,19 +122,25 @@ def create_quote(data: s.QuoteCreate, db: Session = Depends(get_db), user: User 
 
 
 @router.patch("/{quote_id}", response_model=s.QuoteOut)
-def update_quote(quote_id: int, data: s.QuoteUpdate, db: Session = Depends(get_db), _: User = Depends(can_write)):
+def update_quote(quote_id: int, data: s.QuoteUpdate, db: Session = Depends(get_db), user: User = Depends(can_write)):
     quote = db.get(Quote, quote_id)
     if not quote:
         raise HTTPException(404, "Angebot nicht gefunden")
-    values = data.model_dump(exclude_unset=True, exclude={"items"})
+    values = data.model_dump(exclude_unset=True, exclude={"items", "lost_code", "lost_reason"})
     if "account_id" in values:
         _no_supplier(db, values["account_id"])
+    old_status = quote.status
+    new_status = values.get("status", old_status)
+    if new_status == "abgelehnt" and old_status != "abgelehnt" and not (data.lost_code or data.lost_reason):
+        raise HTTPException(400, "Abgelehnt nur mit Verlustgrund – bitte Grund angeben")
     for k, v in values.items():
         if k == "tax_rate" and v is None:
             continue
         setattr(quote, k, v)
     if data.items is not None:
         set_items(quote, data.items)
+    if new_status != old_status:
+        quote_status_changed(db, quote, old_status, user, data.lost_code, data.lost_reason)
     db.commit()
     db.refresh(quote)
     return quote

@@ -81,7 +81,7 @@ def run():
             contacts.append(c)
         db.flush()
         for _ in range(random.randint(1, 3)):
-            stage = random.choices(list(STAGE_PROBABILITY), weights=[3, 3, 3, 2, 3, 1])[0]
+            stage = random.choices(list(STAGE_PROBABILITY), weights=[3, 0, 3, 3, 2, 3, 1, 0])[0]
             amount = random.choice([8, 12, 18, 25, 40, 65, 90, 120, 180]) * 1000
             closed = today - timedelta(days=random.randint(5, 300)) if stage in ("gewonnen", "verloren") else None
             o = Opportunity(name=f"{random.choice(DEALS)} – {name.split()[0]}", account_id=acc.id,
@@ -388,9 +388,10 @@ def seed_calc(db):
         calc.approval_by_id = approver.id if approver and approver.id != owner.id else None
         calc.approval_at = calc.approval_requested_at = datetime.now(timezone.utc)
         calc.approval_comment = "Strategischer Kunde, Marge akzeptiert"
+        calc.decision, calc.decision_note = "anbieten", "Beispiel"
         db.flush()
         create_opportunity(calc.id, db=db, user=owner)
-        create_quote(calc.id, version_no=None, db=db, user=owner)
+        create_quote(calc.id, db=db, user=owner)
     print("Kalkulations-Stammdaten und Beispielkalkulationen angelegt.")
 
 
@@ -511,5 +512,14 @@ def seed_procurement(db):
     db.commit()
 
 
+def seed_inquiries():
+    """Demo: Kalkulationen in Anfragen überführen (wie beim Update eines bestehenden Servers)."""
+    from .inquiry import migrate  # noqa: PLC0415
+    db = SessionLocal()
+    print("Anfragen:", migrate(db))
+    db.close()
+
+
 if __name__ == "__main__":
     run()
+    seed_inquiries()

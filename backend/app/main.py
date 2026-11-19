@@ -11,7 +11,7 @@ from .context import current_user_id
 from .database import Base, SessionLocal, engine, ensure_columns
 from .models import User
 from . import events  # noqa: F401  (Session-Ereignisse registrieren)
-from .routers import audit, calc, dashboard, docs, entities, imports, procurement, quotes, reports, users, workflow
+from .routers import audit, calc, dashboard, docs, entities, inquiries, imports, procurement, quotes, reports, users, workflow
 
 
 def init_db():
@@ -20,6 +20,7 @@ def init_db():
     with SessionLocal() as db:
         # Bestandsmaschinen ohne Art (vor v1.12) sind Spritzgießmaschinen
         db.execute(text("UPDATE machines SET kind = 'spritzguss' WHERE kind IS NULL"))
+        db.execute(text("ALTER TABLE contacts ALTER COLUMN first_name DROP NOT NULL"))   # Vorname optional (v1.24)
         db.commit()
         # REV01: Freigabegrenzen von 500.000 € auf 250.000 € (einmalig, nur wenn noch der alte Standard steht)
         from .models import CalcSettings  # noqa: PLC0415
@@ -32,6 +33,18 @@ def init_db():
             d["_rev01_thresholds"] = True
             cs.data = d
             db.commit()
+        # REV01 Phase 2: Kalkulationen einmalig in Anfragen überführen (gruppiert nach Angebot)
+        cs = db.get(CalcSettings, 1)
+        if cs is None:
+            cs = CalcSettings(id=1, data={})
+            db.add(cs)
+            db.flush()
+        if not (cs.data or {}).get("_rev01_phase2"):
+            from .inquiry import migrate  # noqa: PLC0415
+            stats = migrate(db)
+            cs.data = {**(cs.data or {}), "_rev01_phase2": True}
+            db.commit()
+            print(f"REV01 Phase 2 – Anfragen übernommen: {stats}")
         # Änderungsprotokoll REV01 übernehmen (nur fehlende Punkte, Status aus der Oberfläche bleibt)
         from .rev01 import seed_rev01  # noqa: PLC0415
         seed_rev01(db)
@@ -93,6 +106,9 @@ app.include_router(calc.router, prefix="/api/calc", tags=["Kalkulation"])
 app.include_router(calc.quote_bulk, prefix="/api/calculations-bulk", tags=["Kalkulation"])
 app.include_router(calc.calcs, prefix="/api/calculations", tags=["Kalkulation"])
 app.include_router(docs.changes, prefix="/api/changes", tags=["Änderungsprotokoll"])
+app.include_router(inquiries.router, prefix="/api/inquiries", tags=["Anfragen"])
+app.include_router(inquiries.decisions, prefix="/api/calculations", tags=["Anfragen"])
+app.include_router(inquiries.followups, prefix="/api/followups", tags=["Angebotsverfolgung"])
 app.include_router(docs.router, prefix="/api/docs", tags=["Dokumentation"])
 
 

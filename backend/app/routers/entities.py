@@ -6,7 +6,7 @@ from sqlalchemy import or_
 from .. import schemas as s
 from ..auth import admin_only
 from ..crud import make_crud_router
-from ..models import STAGE_PROBABILITY, Account, Activity, Contact, Opportunity
+from ..models import CLOSED_STAGES, STAGE_PROBABILITY, Account, Activity, Contact, Opportunity
 
 accounts = make_crud_router(
     model=Account,
@@ -40,14 +40,38 @@ def opportunity_before_save(values: dict, obj):
         values["probability"] = STAGE_PROBABILITY[values.get("stage") or "lead"]
     if "probability" in values and values["probability"] is None:
         values.pop("probability")
-    if stage == "verloren" and stage != old_stage and not (values.get("lost_reason") or (obj.lost_reason if obj else "") or "").strip():
-        # REV01-P05: Verschieben nach „Verloren“ nur mit Grund
-        raise HTTPException(400, "Verloren nur mit Verlustgrund – bitte Grund angeben")
-    if stage in ("gewonnen", "verloren") and stage != old_stage:
+    if stage in ("verloren", "nicht_angeboten") and stage != old_stage and not (values.get("lost_reason") or "").strip():
+        # REV01-P05: Verschieben nach „Verloren“ / „Nicht angeboten“ nur mit Grund
+        raise HTTPException(400, "Verloren / nicht angeboten nur mit Grund – bitte Grund angeben")
+    if stage in CLOSED_STAGES and stage != old_stage:
         values["closed_at"] = date.today()
-    elif stage and stage not in ("gewonnen", "verloren"):
+    elif stage and stage not in CLOSED_STAGES:
         values["closed_at"] = None
+        values.setdefault("lost_reason", None)
+        values.setdefault("lost_code", None)
+    if stage == "verhandlung":
+        values["final_round"] = True     # Endrunde merken (Auswertung gewonnen/verloren aus der Endrunde)
+    if obj is None:
+        values["kind"] = values.get("kind") or ("lead" if (values.get("stage") or "lead") == "lead" else "anfrage")
     return values
+
+
+def opportunity_after_create(db, obj):
+    from ..inquiry import next_inquiry_number  # noqa: PLC0415
+    if not obj.number:
+        obj.number = next_inquiry_number(db)
+        db.commit()
+
+
+def opportunity_after_update(db, obj, old, user):
+    """Karte von Hand verschoben → Artikel nachziehen (Gewonnen / Verloren / Nicht angeboten)."""
+    from ..inquiry import calcs_of, cascade_stage  # noqa: PLC0415
+    if "stage" in old and old["stage"] != obj.stage:
+        cascade_stage(db, obj, old["stage"])
+    if "probability" in old:
+        for c in calcs_of(db, obj.id):
+            if c.status not in ("verloren", "kein_angebot", "gewonnen", "zurueckgestellt"):
+                c.probability = obj.probability
 
 
 opportunities = make_crud_router(
@@ -55,10 +79,10 @@ opportunities = make_crud_router(
     create_schema=s.OpportunityCreate,
     update_schema=s.OpportunityUpdate,
     out_schema=s.OpportunityOut,
-    search_fields=["name", "source", "description"],
-    filter_fields=["stage", "account_id", "owner_id", "contact_id"],
+    search_fields=["name", "number", "source", "description"],
+    filter_fields=["stage", "account_id", "owner_id", "contact_id", "kind"],
     default_sort="-updated_at",
-    before_save=opportunity_before_save,
+    before_save=opportunity_before_save, after_create=opportunity_after_create, after_update=opportunity_after_update,
 )
 
 
@@ -86,7 +110,7 @@ activities = make_crud_router(
     update_schema=s.ActivityUpdate,
     out_schema=s.ActivityOut,
     search_fields=["subject", "description"],
-    filter_fields=["type", "done", "account_id", "contact_id", "opportunity_id", "owner_id"],
+    filter_fields=["type", "done", "account_id", "contact_id", "opportunity_id", "owner_id", "quote_id", "kind"],
     default_sort="due_at",
     extra_filters=activity_filters,
 )

@@ -4,7 +4,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 Role = Literal["admin", "vertrieb", "gesellschafter"]
-Stage = Literal["lead", "qualifiziert", "angebot", "verhandlung", "gewonnen", "verloren"]
+Stage = Literal["lead", "neue_anfrage", "qualifiziert", "angebot", "verhandlung", "gewonnen", "verloren", "nicht_angeboten"]
 ActivityType = Literal["anruf", "termin", "email", "aufgabe", "notiz"]
 QuoteStatus = Literal["entwurf", "versendet", "angenommen", "abgelehnt", "ersetzt"]
 AccountType = Literal["interessent", "kunde", "partner", "lieferant"]
@@ -36,6 +36,7 @@ class ContactRef(ORM):
 class OpportunityRef(ORM):
     id: int
     name: str
+    number: str | None = None
 
 
 # ---------- Auth / Benutzer ----------
@@ -114,7 +115,7 @@ class AccountOut(ORM, AccountBase):
 class ContactBase(BaseModel):
     account_id: int | None = None
     salutation: str | None = None
-    first_name: str = Field(min_length=1)
+    first_name: str | None = None          # optional (z. B. Funktionspostfach „Vertrieb“)
     last_name: str = Field(min_length=1)
     position: str | None = None
     email: str | None = None
@@ -152,7 +153,12 @@ class OpportunityBase(BaseModel):
     source: str | None = None
     description: str | None = None
     lost_reason: str | None = None
+    lost_code: str | None = None
     owner_id: int | None = None
+    kind: Literal["anfrage", "lead"] | None = None
+    inquiry_date: date | None = None
+    due_date: date | None = None
+    tech_talk: bool | None = None
 
 
 class OpportunityCreate(OpportunityBase):
@@ -169,6 +175,9 @@ class OpportunityOut(ORM, OpportunityBase):
     id: int
     probability: int
     closed_at: date | None = None
+    number: str | None = None
+    offered_at: date | None = None
+    final_round: bool | None = None
     account: AccountRef | None = None
     contact: ContactRef | None = None
     owner: UserRef | None = None
@@ -186,6 +195,7 @@ class ActivityBase(BaseModel):
     account_id: int | None = None
     contact_id: int | None = None
     opportunity_id: int | None = None
+    quote_id: int | None = None
     owner_id: int | None = None
 
 
@@ -205,7 +215,19 @@ class ActivityOut(ORM, ActivityBase):
     contact: ContactRef | None = None
     opportunity: OpportunityRef | None = None
     owner: UserRef | None = None
+    quote: "QuoteRef | None" = None
+    kind: str | None = None
+    attempts: int | None = None
+    result: str | None = None
+    light: str | None = None        # Ampel Angebotsverfolgung: gruen | gelb | rot
     created_at: datetime
+
+
+class QuoteRef(ORM):
+    id: int
+    number: str
+    title: str | None = None
+    status: str | None = None
 
 
 # ---------- Angebote ----------
@@ -215,6 +237,9 @@ class QuoteItemIn(BaseModel):
     unit: str = "Stk"
     unit_price: float = 0
     discount_pct: float = Field(default=0, ge=0, le=100)
+    pos_label: str | None = None       # „1“, „1.1“ … (REV01-P08)
+    kind: str | None = None            # artikel | werkzeug | sonstiges | vorserie | co2 | text
+    calculation_id: int | None = None
 
 
 class QuoteItemOut(ORM, QuoteItemIn):
@@ -246,6 +271,8 @@ class QuoteUpdate(QuoteBase):
     title: str | None = None
     status: QuoteStatus | None = None
     items: list[QuoteItemIn] | None = None
+    lost_code: str | None = None       # bei „abgelehnt“: Verlustgrund (Pflicht, REV01-P05)
+    lost_reason: str | None = None
 
 
 class QuoteOut(ORM, QuoteBase):
@@ -260,6 +287,10 @@ class QuoteOut(ORM, QuoteBase):
     calculation_ids: list[int] | None = None
     calculations: list[dict] = []
     language: str | None = "de"
+    sent_at: date | None = None
+    last_contact_at: datetime | None = None
+    last_contact_note: str | None = None
+    followup: dict | None = None
     account: AccountRef | None = None
     contact: ContactRef | None = None
     opportunity: OpportunityRef | None = None
@@ -460,6 +491,11 @@ class CalcOut(ORM, CalcMeta):
     approval_requested_by: UserRef | None = None
     approval_reasons: list[str] = []
     is_approved: bool = False
+    analysis_complete: bool = False
+    decision: str | None = None
+    decision_note: str | None = None
+    decision_at: datetime | None = None
+    opportunity: OpportunityRef | None = None
     account: AccountRef | None = None
     contact: ContactRef | None = None
     opportunity: OpportunityRef | None = None
@@ -526,7 +562,7 @@ class ChangeRequestBase(BaseModel):
     code: str | None = None
     revision: str | None = None
     area: str | None = None
-    kind: Literal["fehler", "wunsch", "doku"] = "wunsch"
+    kind: str = Field(default="wunsch", min_length=1, max_length=40)   # fehler | wunsch | doku oder Freitext
     title: str = Field(min_length=1)
     description: str | None = None
     priority: Literal["hoch", "mittel", "niedrig"] = "mittel"
@@ -544,7 +580,7 @@ class ChangeRequestBase(BaseModel):
 
 class ChangeRequestUpdate(ChangeRequestBase):
     title: str | None = None
-    kind: Literal["fehler", "wunsch", "doku"] | None = None
+    kind: str | None = Field(default=None, max_length=40)
     priority: Literal["hoch", "mittel", "niedrig"] | None = None
     status: Literal["offen", "in_arbeit", "umgesetzt", "geprueft", "nachbessern", "abgelehnt", "zurueckgestellt"] | None = None
 

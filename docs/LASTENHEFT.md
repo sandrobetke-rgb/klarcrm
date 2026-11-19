@@ -4,9 +4,9 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.23 |
-| **Stand** | 17.11.2026 |
-| **Status** | Testphase auf internem Server F&R; Testrückmeldung REV01 in Umsetzung (Kap. 13) |
+| **Dokumentversion** | 1.24 |
+| **Stand** | 19.11.2026 |
+| **Status** | Testphase auf internem Server F&R; REV01 Phase 1 und 2 umgesetzt, Phase 3–4 geplant (Kap. 13) |
 
 > Dieses Lastenheft wird bei **jeder** Änderung am System mitgezogen. Neue Anforderungen, geänderte Regeln und
 > umgesetzte Punkte werden in der Änderungshistorie (Kapitel 12) dokumentiert. Anforderungen tragen eine feste ID
@@ -60,9 +60,11 @@ von Standardwerten werden markiert; jede Änderung an einer Kalkulation erzeugt 
 - CRM-1: Firmen mit Typ (Interessent/Kunde/Partner/Lieferant), Adresse, Branche, Verantwortlichem, Notizen.
 - CRM-2: Firmen-Detailseite mit Kontakten, Verkaufschancen, **Kalkulationen**, Angeboten und Aktivitätsverlauf.
 - CRM-3: Kontakte mit Anrede, Position, Telefon, E-Mail, Zuordnung zur Firma.
-- CRM-4: Verkaufschancen mit Phasen Lead → Qualifiziert → Angebot → Verhandlung → Gewonnen/Verloren; Wahrscheinlichkeit
-  je Phase automatisch (überschreibbar); Abschlussdatum wird beim Gewinnen/Verlieren gesetzt.
-- CRM-5: Pipeline als Kanban mit Drag & Drop und als Liste; Summen und gewichtete Summen je Phase.
+- CRM-4: **Anfragen / Projekte** (ab v1.24, Kap. 13.2) mit Phasen Lead → Neue Anfrage → Qualifiziert → Angebot →
+  Verhandlung / technisches Gespräch → Gewonnen / Verloren (+ Nicht angeboten); Wahrscheinlichkeit = Auftrag kommt
+  insgesamt, je Phase vorbelegt (überschreibbar); Abschlussdatum wird beim Abschluss gesetzt.
+- CRM-5: Pipeline als Kanban mit Drag & Drop und als Liste; eine Karte je Anfrage; Summen je Phase **ohne**
+  Gewichtung (REV01-P09).
 - CRM-6: Aktivitäten mit Fälligkeit; Filter überfällig/heute/7 Tage; Abhaken in der Liste.
 - CRM-7: Angebote mit automatischer Nummer (A26-0001, Revisionen A26-0001-R1; bis v1.22: AN-JJJJ-NNNN), Positionen, Rabatt, MwSt., Duplizieren, Druckansicht (PDF).
 - CRM-8: Dashboard mit offener Pipeline, Quartals-Forecast, gewonnenem Umsatz, Gewinnquote, Umsatz je Monat,
@@ -332,7 +334,9 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
   zuerst die Serienteile (je Artikel eine Position mit Jahresmenge × Stückpreis, Kunden-Art.-Nr., Material,
   Kalkulationsnummer/Version, Preis je 1.000, Staffelpreise), danach alle Einmalkosten mit Artikelbezug.
   Positionen nach Kalkulationsnummer sortiert.
-- KAL-44: Regeln Sammelangebot: alle Artikel beim **selben Kunden** (sonst Hinweis, Schaltfläche gesperrt);
+- KAL-44: Regeln Sammelangebot: alle Artikel beim **selben Kunden** (sonst Hinweis, Schaltfläche gesperrt). Ab v1.24
+  werden die gewählten Artikel in die Anfrage des ersten Artikels übernommen (leere Anfragen ohne Angebot entfallen)
+  und es entsteht das Angebot dieser Anfrage (ein Angebot je Anfrage, Kap. 13.2);
   verlorene und „kein Angebot“-Kalkulationen sind ausgeschlossen. Ansprechpartner aus der ersten Kalkulation;
   Verkaufschance nur, wenn alle Artikel zur selben Chance gehören. Status aller Artikel → „Angeboten“, verknüpfte
   Verkaufschancen werden aktualisiert.
@@ -647,6 +651,7 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.21 | 15.11.2026 | **Standorte der Gruppe** (Kap. 6.11, STO-1 … 6): Standort-Stammdaten mit abweichenden Sätzen, Maschinen je Standort, Fertigungsstandort je Kalkulation mit Standortwechsel, Standortvergleich aller Standorte, Standard-Standort je Benutzer, Filter in Liste/Auslastung/Auswertungen. Neue Tabelle `sites`, neue Spalten `machines.site_id`, `calculations.site_id`, `users.site_id` (automatisch). Bestehende Kalkulationen ohne Standort gelten als Standard-Standort. |
 | 1.22 | 15.11.2026 | **Datenimport CSV/Excel** (Kap. 6.12, IMP-1 … 5) für Firmen, Kontakte, Maschinen, Materialien, Zukaufteile mit Vorlage, Spaltenzuordnung, Vorschau und Protokoll; Tests für das Einlesen ergänzt. **Validierungsprotokoll und Testplan** als Vorlage (NFA-11). Neue Abhängigkeit `openpyxl` (Excel). |
 | 1.23 | 17.11.2026 | **Testrückmeldung REV01, Phase 1** (Kap. 13): Speichern immer sichtbar, Standortwechsel übernimmt Standortsätze (Faktor Maschinenstundensatz), ein Angebot je Kalkulation mit Revisionen, keine Lieferanten im Angebot, freie Zahleneingabe, Maschinen-Löschschutz und Vier-Augen-Löschung, Planmaschinen, Schichtmodell, Verlustgrund Pflicht, Branchenliste, Rüstzeit in Minuten, Nummern A26-/K26-, Freigabe ab 250.000 €, Dashboard-Kacheln, Änderungswünsche & Prüfprotokoll, Dokumentation im Programm mit Word-Download. Phasen 2–4 geplant. |
+| 1.24 | 19.11.2026 | **REV01 Phase 2** (Kap. 13.2): Anfragen/Projekte mit n Artikeln und einem Angebot (AF26-0001), Entscheidung je Artikel vor der Kalkulation, Artikelanalyse vor Kalkulation mit Maschinenvorschlag und „technisches Gespräch“, unvollständige Analyse als Freigabegrund, neue Pipeline-Phasen mit Automatik und Endrunde, Positionsstruktur 1/1.1/1.2/1.3 mit Jahrespreisen, Angebotsverfolgung nach 5 Arbeitstagen mit Ampel, Aktivitäten am Angebot, keine Umsatzgewichtung, Menü nach Arbeitsablauf, Änderungswünsche mit Speicherbestätigung und freier Art; Übernahme der Altdaten. |
 
 ## 13. Testrückmeldung REV01 (Nov. 2026) – Anforderungen und Umsetzung
 
@@ -657,7 +662,7 @@ Umsetzung erfolgt in vier Phasen:
 | Phase | Inhalt | Stand |
 |---|---|---|
 | 1 | Fehler und Sofortmaßnahmen (B01–B05, M01–M03, P05, S01, K01–K02, U01, N01, F01, D01–D04, X01–X02) | umgesetzt in v1.23, Prüfung durch Anwender |
-| 2 | Ablauf Anfrage → Entscheidung → Kalkulation(en) → Angebotskopf mit n Artikeln → Pipeline automatisch, Angebotsverfolgung (P01–P04, P06–P09) | geplant |
+| 2 | Ablauf Anfrage → Entscheidung → Kalkulation(en) → Angebotskopf mit n Artikeln → Pipeline automatisch, Angebotsverfolgung (P01–P04, P06–P09, X03) | umgesetzt in v1.24, Prüfung durch Anwender |
 | 3 | Kalkulation erweitern: Mengen je Jahr, Material/Zukaufteile mit Staffeln, Losgrößenvorschlag, Werkzeugblatt, Anlagenblatt, Risikoanalyse, Kickoff, Duplizieren mit Fachzahl (C01–C10) | geplant |
 | 4 | Beschaffung mit Staffeln, Vertriebsziel, Vertriebsbericht, Durchlaufzeit (E01, D05, R01) | geplant |
 
@@ -703,19 +708,69 @@ Umsetzung erfolgt in vier Phasen:
 - REV01-X02: **Dokumentation** (Menü): Benutzerbeschreibung und Lastenheft im Programm mit Inhaltsverzeichnis und
   Suche; Download als Word (.docx), erzeugt aus der jeweils installierten Fassung.
 
-### 13.2 Phase 2 bis 4 – geplant (Anforderungen aus REV01)
-- REV01-P01 Pipeline: Phasen Neue Anfrage (automatisch, vor Freigabe zur Kalkulation) · Lead (manuell, Potenzial ohne
-  Anfrage) · Qualifiziert (zur Kalkulation freigegeben, automatisch) · Angebot (automatisch) · Verhandlung/technisches
-  Gespräch (Endrunde, Auswertung gewonnen/verloren aus der Endrunde) · Gewonnen · Verloren (Pflichtgrund).
-- REV01-P02 Entscheidung je Anfrage vor Kalkulationsstart: anbieten · nicht anbieten mit Begründung · anderer Standort ·
-  Sonstiges; bis dahin unter „Neue Anfrage“.
-- REV01-P03 Artikelanalyse vor der Kalkulation mit Vorschlag Maschinengröße und Option „technisches Gespräch
-  erforderlich“; unvollständige Analyse → Angebot nur nach Freigabe durch Vorgesetzten.
-- REV01-P04 Angebotskopf (Kunde, Ansprechpartner) mit n Kalkulationen; Angebotsliste mit Status und letzter Rückmeldung.
-- REV01-P06 Automatische Aufgabe „Angebotsverfolgung“ 5 Tage nach Versand mit Ampel, Wiedervorlage bei „niemanden
-  erreicht“ am nächsten Tag bzw. am gewählten Datum; rot für alle sichtbar inkl. Gesellschafter.
-- REV01-P07 Aktivitäten mit Angebot verknüpfen. REV01-P08 Angebotsdruck mit Positionen 1 / 1.1 Werkzeug / 1.2 Sonstiges /
-  1.3 CO₂ und Staffelpreisen je Lieferjahr (Jahresmenge × Preis). REV01-P09 Wahrscheinlichkeit ohne Umsatzgewichtung.
+### 13.2 Phase 2 – umgesetzt (v1.24): Anfrage → Angebot → Pipeline
+
+**Datenmodell.** Eine *Anfrage* (Projekt) ist eine Pipeline-Karte mit Nummer **AF26-0001**, Kunde, Ansprechpartner,
+Eingangsdatum, Abgabetermin, Verantwortlichem und Wahrscheinlichkeit. Darunter liegen **n Artikel** (je Artikel eine
+Kalkulation K26-…) und **genau ein Angebot** mit n Positionen (Änderungen nach Versand als Revision -R1, -R2 …; die
+Vorfassung erhält „ersetzt“). Art „Lead“ = Potenzial ohne Anfrage (manuell, ohne Artikel). Jede neue Kalkulation gehört
+zu einer Anfrage; ohne Angabe wird eine angelegt.
+
+- REV01-P01 **Pipeline-Phasen**: Lead (manuell) · Neue Anfrage (Artikel vorhanden, noch keine Entscheidung) ·
+  Qualifiziert (mind. ein Artikel zum Anbieten freigegeben – automatisch) · Angebot (Angebot versendet – automatisch) ·
+  Verhandlung / technisches Gespräch (manuell; setzt das Merkmal *Endrunde*) · Gewonnen · Verloren · Nicht angeboten.
+  Automatik nur vorwärts bzw. beim Abschluss: alle Artikel verloren → Verloren; alle nicht angeboten → Nicht angeboten;
+  ein Artikel gewonnen und alle übrigen abgeschlossen → Gewonnen. Manuelles Verschieben auf Gewonnen / Verloren /
+  Nicht angeboten zieht alle offenen Artikel nach. Dashboard: gewonnen / verloren aus der Endrunde (lfd. Jahr).
+  „+ Neue Anfrage“ mit frei eingebbarer Bezeichnung, Kunde, Eingang, Abgabetermin.
+- REV01-P02 **Entscheidung je Artikel vor Kalkulationsstart**: anbieten · nicht anbieten (Begründung Pflicht, Artikel
+  → „kein Angebot“) · anderer Standort (Standort Pflicht; Kalkulation wird als neue Version mit den Sätzen dieses
+  Standorts angelegt) · Sonstiges (Freitext Pflicht). Ohne Entscheidung lässt sich keine Kalkulationsversion speichern
+  (Server prüft). „Alle offenen anbieten“ entscheidet alle offenen Artikel einer Anfrage. Entscheidung, Person und
+  Zeitpunkt werden gespeichert und protokolliert.
+- REV01-P03 **Artikelanalyse vor der Kalkulation** (Reiter 1): Vorschlag Maschinengröße (nächste Schließkraftklasse
+  und kleinste vorhandene passende Maschine), Haken „technisches Gespräch erforderlich“ (markiert die Anfrage und legt
+  einmalig eine Aufgabe „Technisches Gespräch vereinbaren“ an). *Vollständig* = gespeichert, alle Prüfpunkte bewertet,
+  Machbarkeit eingetragen. Unvollständig → zusätzlicher Freigabegrund „Artikelanalyse unvollständig“: das Angebot
+  entsteht erst nach Freigabe durch eine freigabeberechtigte zweite Person (Vier-Augen-Prinzip, KAL-Freigabe).
+  Übernommene Altdaten sind von dieser Regel ausgenommen.
+- REV01-P04 **Angebot je Anfrage**: „Angebot erstellen“ in der Anfrage (oder aus einer Kalkulation) baut das Angebot
+  aus allen zum Anbieten freigegebenen, nicht abgeschlossenen Artikeln. Voraussetzungen: alle Artikel entschieden,
+  Kunde gesetzt, Freigaben erteilt. Entwurf → wird aktualisiert; versendet/angenommen/abgelehnt → Revision.
+  Menü **Anfragen** (Liste mit Phase, Artikelzahl, offenen Entscheidungen, Angebot, Verfolgungsampel, Abgabetermin,
+  Volumen) und Anfrage-Seite mit **Schrittleiste** (Anfrage · Entscheidung · Artikelanalyse · Kalkulation · Freigabe ·
+  Angebot · Versendet · Abschluss), Artikeltabelle, Angebot, Aktivitäten. Durchlaufzeit Anfrage → Angebot in
+  Arbeitstagen wird gespeichert (Grundlage für REV01-R01). Angebotsliste mit Status, Verfolgungsampel und letzter
+  Rückmeldung.
+- REV01-P06 **Angebotsverfolgung**: Status „versendet“ setzt das Versanddatum und legt die Aufgabe
+  „Angebotsverfolgung“ an, fällig nach **5 Arbeitstagen** (Parameter `followup_workdays`). Ampel: grün > 1 Arbeitstag
+  Luft · gelb heute/morgen fällig · rot überfällig. Sichtbar für alle Rollen inkl. Gesellschafter (Dashboard-Kachel und
+  -Tabelle, Anfrage, Angebot, Angebotsliste, Aktivitäten). Rücksprache erfassen: *erreicht* (Aufgabe erledigt, optional
+  neue Wiedervorlage) · *niemanden erreicht* (Fälligkeit nächster Arbeitstag oder gewähltes Datum, Zähler) · *wieder
+  melden am …* (Pflichtdatum). Jede Rücksprache wird als erledigte Aktivität mit Notiz gespeichert und als „letzte
+  Rückmeldung“ am Angebot angezeigt. Angenommen / abgelehnt / ersetzt schließt die Verfolgung. Bereits versendete
+  Angebote erhalten beim Update eine Verfolgung ab Angebotsdatum.
+- Angebot **abgelehnt** nur mit Verlustgrund (Dialog); die Anfrage wird verloren, alle Artikel ebenso. **Angenommen**
+  → Anfrage und offene Artikel gewonnen.
+- REV01-P07 Aktivitäten mit Feld **Angebot**; Bereich „Aktivitäten zum Angebot“ mit „+ Aktivität“; die Anfrage zeigt
+  alle Aktivitäten von Anfrage und Angeboten.
+- REV01-P08 **Positionsstruktur**: Pos. *n* Artikel (Jahresmenge × Stückpreis Jahr 1; im Text Serienpreis je
+  Lieferjahr als Liste „Jahr k: Menge × Preis = Betrag“), *n.1* Werkzeug, *n.x* Vorserie, *n.x* Sonstiges
+  (Einmalkosten ohne „Werkzeug“ im Namen), letzte Unterposition CO₂-Fußabdruck (nur wenn ausgewählt; Information
+  ohne Preis, zählt nicht zur Summe). Positionsnummern im Angebot änderbar; Unterpositionen im Druck eingerückt.
+  Lieferzeit FOT/PPAP/SOP folgt mit dem Werkzeugblatt (Phase 3, REV01-C06).
+- REV01-P09 **Wahrscheinlichkeit** = Wahrscheinlichkeit, dass der gesamte Auftrag kommt; sie gilt für alle offenen
+  Artikel der Anfrage (Auslastung „erwartet“). Keine gewichteten Umsätze mehr in Pipeline und Dashboard; stattdessen
+  „davon ≥ 50 % Wahrscheinlichkeit“ und Volumen der Anfragen mit Entscheidung im laufenden Quartal.
+- REV01-X03 Änderungswünsche: Bestätigung nach dem Speichern (mit Nummer), Hinweis, wenn ein Filter den neuen Eintrag
+  ausblendet; Art und Bereich mit Vorschlagsliste und freier Eingabe. Kontakte: Vorname optional.
+- **Menü** in Arbeitsreihenfolge mit Gruppen: Dashboard · *Vertrieb* (Anfragen, Pipeline, Kalkulationen, Angebote,
+  Aktivitäten) · *Kunden* (Firmen, Kontakte) · *Planung & Analyse* (Auslastung, Auswertungen, Beschaffung) · *System*.
+- **Übernahme beim Update** (einmalig): bestehende Kalkulationen werden je bestehendem Angebot zu einer Anfrage
+  zusammengefasst, alle übrigen je einzeln; bestehende Verkaufschancen erhalten AF-Nummern (ohne Artikel: Lead bzw.
+  Anfrage je Phase). Entscheidung wird aus dem bisherigen Stand abgeleitet („übernommen aus Altdaten“).
+
+### 13.3 Phase 3 und 4 – geplant (Anforderungen aus REV01)
 - REV01-C01 … C10 Kalkulation: Zukaufteile mit Stück je Bauteil und Staffeln; Mengen je Lieferjahr mit Stunden und
   Materialbedarf; Material als Freitext mit Staffelpreisen und Einkaufsvorschlag; Losgröße = Jahresmenge/12 (außer
   erstes Serienjahr); Serienpreis 5+ Lieferjahre; Werkzeugblatt (FOT, PPAP, SOP, Werkzeugangebote WZB 1–4);

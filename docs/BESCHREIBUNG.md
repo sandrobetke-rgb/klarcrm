@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Programm** | KlarCRM – Vertrieb, Kalkulation Spritzguss, Angebote |
-| **Version** | 1.23 (Stand 17.11.2026) |
+| **Version** | 1.24 (Stand 19.11.2026) |
 | **Für** | Vertrieb, Kalkulation, Einkauf, Geschäftsführung, Gesellschafter |
 
 > Diese Beschreibung erklärt, **wie man mit KlarCRM arbeitet**. Die genauen Regeln und Rechenwege stehen im
@@ -12,33 +12,63 @@
 
 ## 1. Der Arbeitsablauf auf einen Blick
 
-1. **Anfrage kommt rein** → unter *Kalkulation* „+ Neue Anfrage / Kalkulation“ (Kunde, Artikel, Zeichnung als Dokument).
-2. **Artikelanalyse / Machbarkeit** im Reiter *Artikelanalyse*: Schließkraft, Wandstärke, Machbarkeit.
-3. **Kalkulieren** im Reiter *Kalkulation*: Standort, Maschine, Material, Zyklus, Personal, Zukaufteile, Werkzeug.
-   Jede Speicherung ist eine neue **Version** (nachvollziehbar, nichts wird überschrieben).
-4. **Freigabe**, falls nötig (Großprojekt ab 250.000 € Umsatz oder Invest, oder Marge zu niedrig) – Vier-Augen-Prinzip.
-5. **Angebot erstellen / aktualisieren** → Angebot im Firmenlayout, als PDF drucken und versenden.
-6. **Nachfassen**: Anrufe mit Ergebnis dokumentieren, Wiedervorlagen als Aufgaben.
-7. **Gewonnen** oder **Verloren** (Verlustgrund ist Pflicht) bzw. **Kein Angebot** (mit Grund).
-8. **Nachkalkulation** nach Serienstart mit Ampel.
+Alles hängt an der **Anfrage** (Menü *Anfragen*): eine Anfrage je Kunde und Projekt, darunter beliebig viele Artikel
+(je Artikel eine Kalkulation) und **ein** Angebot. Die Schrittleiste oben in der Anfrage zeigt immer, was als Nächstes
+dran ist.
+
+1. **Anfrage anlegen** – *Anfragen* oder *Pipeline* → „+ Neue Anfrage“: Projektname frei, Kunde, Ansprechpartner,
+   Eingang, Abgabetermin. Potenziale ohne konkrete Anfrage als „+ Lead“.
+2. **Artikel erfassen** – in der Anfrage „+ Artikel / Kalkulation“ (optional mit den Werten eines anderen Artikels).
+3. **Artikelanalyse** (Reiter 1 der Kalkulation): Schließkraft, Kühlzeit, Vorschlag Maschinengröße, Prüfpunkte,
+   Machbarkeit. Haken „technisches Gespräch erforderlich“, wenn vorher mit dem Kunden gesprochen werden muss.
+4. **Entscheidung je Artikel**: anbieten · nicht anbieten (mit Begründung) · anderer Standort · Sonstiges.
+   Erst danach lässt sich kalkulieren. Die Anfrage springt in der Pipeline von „Neue Anfrage“ auf „Qualifiziert“.
+5. **Kalkulieren** (Reiter 2): Standort, Maschine, Material, Zyklus, Personal, Zukaufteile, Werkzeug.
+   Jede Speicherung ist eine neue **Version**.
+6. **Freigabe**, falls nötig (Vier-Augen-Prinzip): Großprojekt ab 250.000 € Umsatz oder Invest, Marge zu niedrig oder
+   **Artikelanalyse unvollständig**.
+7. **Angebot erstellen** – in der Anfrage: ein Angebot mit allen angebotenen Artikeln (Pos. 1 Artikel, 1.1 Werkzeug,
+   1.2 Sonstiges, 1.3 CO₂ …). Drucken / PDF, per E-Mail senden, Status **versendet** setzen.
+8. **Angebotsverfolgung** – startet automatisch: Rücksprache mit dem Kunden spätestens nach 5 Arbeitstagen,
+   Ampel grün/gelb/rot. „Rücksprache erfassen“: erreicht · niemanden erreicht (kommt am nächsten Arbeitstag wieder) ·
+   wieder melden am …
+9. **Verhandlung / technisches Gespräch** (Endrunde) per Pipeline, dann **Gewonnen** oder **Verloren** (Grund Pflicht).
+   Änderungen nach dem Versand erzeugen eine **Revision** des Angebots (A26-0001-R1).
+10. **Nachkalkulation** nach Serienstart mit Ampel.
 
 ## 2. Menü
 
 | Menüpunkt | Wofür |
 |---|---|
-| Dashboard | Kennzahlen: Pipeline, Anfragen in Bearbeitung, Angebote beim Kunden, Großprojekte, Auslastung, Aufgaben |
-| Pipeline | Verkaufschancen als Board (Drag & Drop) oder Liste |
-| Firmen, Kontakte | Kunden, Interessenten, Lieferanten und Ansprechpartner |
-| Aktivitäten | Aufgaben, Anrufe, Termine, Wiedervorlagen |
-| Kalkulation | Alle Anfragen und Kalkulationen mit Status, Preis, Umsatz, letztem Anruf |
-| Auslastung | Maschinenstunden der kommenden Jahre gegen die Kapazität |
+| Dashboard | Kennzahlen, Angebotsverfolgung mit Ampel (für alle sichtbar), Anfragen in Bearbeitung, Großprojekte, Auslastung |
+| **Vertrieb** · Anfragen | Alle Anfragen und Leads – Einstieg in die tägliche Arbeit |
+| Pipeline | Eine Karte je Anfrage nach Phase (Board oder Liste) |
+| Kalkulationen | Alle Artikel-Kalkulationen über alle Anfragen |
+| Angebote | Alle Angebote mit Status, Verfolgungsampel und letzter Rückmeldung |
+| Aktivitäten | Aufgaben, Anrufe, Termine, Wiedervorlagen – auch mit Angebot verknüpft |
+| **Kunden** · Firmen, Kontakte | Kunden, Interessenten, Lieferanten und Ansprechpartner |
+| **Planung & Analyse** · Auslastung | Maschinenstunden der kommenden Jahre gegen die Kapazität |
 | Auswertungen | Berichte nach Kunde, Maschinengröße, Verlustgründen, Vertrieb … |
-| Angebote | Alle Angebote mit Status |
 | Beschaffung | Anfragen an Werkzeugmacher und Lieferanten, Angebotsvergleich |
-| Stammdaten | Maschinen, Standorte, Materialien, Zukaufteile, Parameter, Vorlagen |
+| **System** · Stammdaten | Maschinen, Standorte, Materialien, Zukaufteile, Parameter, Vorlagen |
 | Änderungswünsche | Testrückmeldungen und Wünsche ans Programm mit Prüfprotokoll |
 | Dokumentation | Diese Beschreibung und das Lastenheft, Download als Word |
-| Protokoll | Systemprotokoll: wer hat wann welche Daten geändert (nur Admin/Freigabe/Gesellschafter) |
+| Protokoll | Systemprotokoll: wer hat wann welche Daten geändert (Admin/Freigabe/Gesellschafter) |
+
+## 2a. Pipeline-Phasen
+
+| Phase | Bedeutung | Wie kommt die Karte hierhin? |
+|---|---|---|
+| Lead | Potenzial ohne konkrete Anfrage | von Hand („+ Lead“) |
+| Neue Anfrage | Artikel da, noch nicht entschieden | automatisch |
+| Qualifiziert | mind. ein Artikel zum Anbieten freigegeben | automatisch nach Entscheidung |
+| Angebot | Angebot versendet | automatisch beim Status „versendet“ |
+| Verhandlung / techn. Gespräch | Endrunde | von Hand (wird für die Auswertung gemerkt) |
+| Gewonnen | Auftrag erhalten | von Hand oder Angebot „angenommen“ |
+| Verloren | mit Pflichtgrund | von Hand (Dialog) oder Angebot „abgelehnt“ |
+| Nicht angeboten | wir haben abgelehnt | Entscheidung „nicht anbieten“ für alle Artikel oder von Hand |
+
+Die **Wahrscheinlichkeit** gilt für den ganzen Auftrag. Summen werden nicht mehr damit gewichtet.
 
 ## 3. Kalkulation bedienen
 
@@ -63,9 +93,13 @@
 - *Standortvergleich* rechnet dieselbe Kalkulation für alle Standorte nebeneinander.
 
 ### 3.4 Angebot
-- „→ Angebot erstellen / aktualisieren“: Es gibt **ein** offenes Angebot je Kalkulation. Ein Entwurf wird mit der
-  aktuellen Version aktualisiert; ein bereits versendetes Angebot bekommt eine **Revision** (A26-0001-R1).
-- Mehrere Artikel desselben Kunden: in der Kalkulationsliste anhaken → „Sammelangebot“.
+- Es gibt **ein** Angebot je Anfrage mit allen angebotenen Artikeln. „Angebot erstellen / aktualisieren“ in der Anfrage
+  (oder in der Kalkulation) aktualisiert einen Entwurf; ein bereits versendetes Angebot bekommt eine **Revision**.
+- Positionen: 1 Artikel (mit Preisen je Lieferjahr: Jahresmenge × Stückpreis), 1.1 Werkzeug, 1.x Vorserie, 1.x Sonstiges,
+  zuletzt CO₂-Fußabdruck (nur Information), dann 2 nächster Artikel. Positionsnummern sind änderbar.
+- Status **versendet** startet die Angebotsverfolgung; **abgelehnt** fragt den Verlustgrund ab; **angenommen** setzt
+  die Anfrage auf gewonnen.
+- Mehrere Artikel desselben Kunden aus der Kalkulationsliste: anhaken → „Sammelangebot“ (führt sie in einer Anfrage zusammen).
 - Angebote gehen nur an Kunden, Interessenten oder Partner – nie an Lieferanten.
 
 ### 3.5 Verloren / Kein Angebot
@@ -92,13 +126,15 @@
 - Menü *Änderungswünsche*: alle Punkte aus Testrückmeldungen (z. B. REV01) mit Status.
 - Status „Umgesetzt – bitte prüfen“: Zeile öffnen, **Prüfanweisung** durchgehen, **Prüfergebnis** eintragen, Status
   **Geprüft ✓** oder **Nachbessern** setzen. So entsteht ein lückenloser Nachweis (IATF 16949 / ISO 14001).
-- Neue Wünsche mit „+ Änderungswunsch“ erfassen; sie bekommen automatisch eine Nummer WUN-0001 ….
+- Neue Wünsche mit „+ Änderungswunsch“ erfassen; sie bekommen automatisch eine Nummer WUN-0001 … und eine Bestätigung
+  erscheint. Art und Bereich können aus der Liste gewählt oder frei eingegeben werden.
 - Export als CSV für Excel.
 
 ## 7. Nummern
 | Vorgang | Format | Beispiel |
 |---|---|---|
-| Kalkulation | K + Jahr + laufende Nr. | K26-0001 |
+| Anfrage / Lead | AF + Jahr + laufende Nr. | AF26-0001 |
+| Kalkulation (Artikel) | K + Jahr + laufende Nr. | K26-0001 |
 | Angebot | A + Jahr + laufende Nr., Revision -R | A26-0001, A26-0001-R1 |
 | Beschaffung | B + Jahr + laufende Nr. | B26-0001 |
 | Änderungswunsch | REV01-… oder WUN- | REV01-B01, WUN-0001 |

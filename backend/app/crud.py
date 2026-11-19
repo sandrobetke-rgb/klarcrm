@@ -24,6 +24,7 @@ def make_crud_router(
     delete_dependency=None,
     before_delete: Callable | None = None,
     after_create: Callable | None = None,
+    after_update: Callable | None = None,
 ) -> APIRouter:
     router = APIRouter()
     allowed_sort = {c.name for c in model.__table__.columns}
@@ -92,15 +93,18 @@ def make_crud_router(
         return obj
 
     @router.patch("/{item_id}", response_model=out_schema)
-    def update_item(item_id: int, data: update_schema, db: Session = Depends(get_db), _: User = Depends(can_write)):
+    def update_item(item_id: int, data: update_schema, db: Session = Depends(get_db), user: User = Depends(can_write)):
         obj = db.get(model, item_id)
         if not obj:
             raise HTTPException(404, "Nicht gefunden")
         values = data.model_dump(exclude_unset=True)
         if before_save:
             values = before_save(values, obj)
+        old = {k: getattr(obj, k, None) for k in values}
         for k, v in values.items():
             setattr(obj, k, v)
+        if after_update:
+            after_update(db, obj, old, user)
         db.commit()
         db.refresh(obj)
         return obj

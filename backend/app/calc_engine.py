@@ -71,7 +71,9 @@ DEFAULT_SETTINGS = {
     "transport_pct": 2.0,           # Transport pauschal % auf HK (wenn Details unbekannt)
     "big_revenue_threshold": 250000.0,  # Großprojekt: Jahresumsatz ab … €
     "big_invest_threshold": 250000.0,   # Großprojekt: Invest (Einmalkosten Werkzeug etc.) ab … €
-    "machine_rate_pct": 100.0,  # Standortfaktor Maschinenstundensatz, wenn am Standort keine eigene Maschine hinterlegt ist
+    "machine_rate_pct": 100.0,
+    "followup_workdays": 5.0,         # Angebotsverfolgung: Rücksprache Kunde n Arbeitstage nach Versand (REV01-P06)
+    "lead_time_target_workdays": 10.0,  # Ziel-Durchlaufzeit Anfrage → Angebot (REV01-R01)  # Standortfaktor Maschinenstundensatz, wenn am Standort keine eigene Maschine hinterlegt ist
 }
 
 DEFAULT_INPUTS = {

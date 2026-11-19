@@ -119,6 +119,8 @@ export default function ArticleAnalysis({ calc, setCalc }) {
 
           <div className="card">
             <h3>Passende Maschinen</h3>
+            {res?.suggested_size_t > 0 && <p className="small" style={{ marginTop: 0 }}>Vorschlag Maschinengröße: <strong>{num(res.suggested_size_t)} t</strong>
+              {res.suggested_machine && <> · kleinste vorhandene: {res.suggested_machine.name}</>}</p>}
             {res?.suitable_machines?.length ? (
               <table className="table table-compact">
                 <thead><tr><th>Maschine</th><th className="num">Schließkraft</th><th className="num">€/h</th></tr></thead>
@@ -141,6 +143,10 @@ export default function ArticleAnalysis({ calc, setCalc }) {
                   onClick={() => { setSaved(false); setFeas(f.value) }}>{f.label}</button>
               ))}
             </div>
+            <label className="radio-row" style={{ marginTop: 10 }}>
+              <input type="checkbox" disabled={!canWrite} checked={!!a.tech_talk} onChange={(e) => { setSaved(false); set('tech_talk', e.target.checked) }} />
+              <span><strong>Technisches Gespräch mit dem Kunden erforderlich</strong><br /><small className="muted">legt eine Aufgabe an und markiert die Anfrage</small></span></label>
+            {res && res.open_checks > 0 && <div className="warn-box small">Analyse unvollständig: {res.open_checks} Prüfpunkte offen – das Angebot braucht dann eine Freigabe durch den Vorgesetzten.</div>}
             <div className="field" style={{ marginTop: 10 }}><label>Anmerkung / erforderliche Anpassungen</label>
               <textarea rows={3} disabled={!canWrite} value={feasNote} onChange={(e) => { setSaved(false); setFeasNote(e.target.value) }} /></div>
             <ErrorBox error={error} />

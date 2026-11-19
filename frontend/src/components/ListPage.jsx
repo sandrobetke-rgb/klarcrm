@@ -28,10 +28,17 @@ export default function ListPage({
   const params = { ...baseParams, ...filterVals, q, sort, limit, offset }
   const { data, error, loading, reload } = useFetch(path + qs(params))
 
+  const [notice, setNotice] = useState(null)
+  const [saved, setSaved] = useState(0)
   async function save(values) {
-    if (editing.id) await api.patch(`${path}/${editing.id}`, values)
-    else await api.post(path, values)
+    const isNew = !editing.id
+    const r = isNew ? await api.post(path, values) : await api.patch(`${path}/${editing.id}`, values)
     setEditing(null)
+    setSaved((n) => n + 1)
+    // Rückmeldung nach dem Speichern – auch wenn ein aktiver Filter den Datensatz ausblendet
+    const name = r?.code || r?.number || r?.name || r?.title || ''
+    setNotice({ text: `${entityLabel} ${name} ${isNew ? 'angelegt' : 'gespeichert'}`.replace(/\s+/g, ' '),
+      hidden: isNew && Object.values(filterVals).some(Boolean) })
     reload()
   }
   async function remove() {
@@ -45,6 +52,9 @@ export default function ListPage({
 
   return (
     <div className="page">
+      {notice && <div className="notice-ok no-print">✓ {notice.text}
+        {notice.hidden && <> – der aktive Filter blendet ihn evtl. aus. <button className="btn btn-ghost btn-sm" onClick={() => { setFilterVals({}); window.history.replaceState(null, '', window.location.pathname); setNotice(null) }}>Filter zurücksetzen</button></>}
+        <button className="btn-x" onClick={() => setNotice(null)} aria-label="schließen">×</button></div>}
       <header className="page-head">
         <div>
           <h1>{title}</h1>
@@ -57,7 +67,7 @@ export default function ListPage({
           )}
         </div>
       </header>
-      {top}
+      {typeof top === 'function' ? top(saved) : top}
       <div className="filters">
         <SearchInput value={q} onChange={(v) => { setQ(v); setOffset(0) }} />
         {filters.map((f) => (

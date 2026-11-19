@@ -351,32 +351,16 @@ def apply_results(calc: Calculation, res: dict, inputs: dict | None = None):
 
 
 def sync_opportunity(db: Session, calc: Calculation):
-    """Umsatz der Kalkulation(en) in die verknüpfte Verkaufschance übernehmen."""
-    if not calc.opportunity_id or not calc.sync_opportunity:
+    """Anfrage (Pipeline-Karte) aus ihren Artikeln aktualisieren – Summen, Phase, Wahrscheinlichkeit (REV01 Phase 2)."""
+    from ..inquiry import ensure_tech_talk_task, refresh_inquiry  # noqa: PLC0415
+    if not calc.opportunity_id:
         return
     opp = db.get(Opportunity, calc.opportunity_id)
     if not opp:
         return
-    linked = db.scalars(select(Calculation).where(Calculation.opportunity_id == opp.id,
-                                                  Calculation.sync_opportunity.is_(True))).unique().all()
-    total = sum(c.annual_revenue + c.one_time_revenue for c in linked)
-    opp.amount = round(total, 2)
-    if len(linked) == 1:
-        opp.probability = calc.probability
-        new_stage = STATUS_TO_STAGE.get(calc.status, opp.stage)
-        if new_stage != opp.stage:
-            opp.stage = new_stage
-            opp.closed_at = date.today() if new_stage in ("gewonnen", "verloren") else None
-        if calc.status == "verloren":
-            opp.lost_reason = REASON_LABELS.get(calc.close_reason) + (f": {calc.close_note}" if calc.close_note else "") \
-                if calc.close_reason else None
-        elif calc.status == "kein_angebot":
-            opp.lost_reason = "Kein Angebot: " + (NO_BID_LABELS.get(calc.no_bid_reason) or "ohne Grund") + \
-                (f" ({calc.no_bid_note})" if calc.no_bid_note else "")
-        else:
-            opp.lost_reason = None
-    elif total:
-        opp.probability = round(sum((c.annual_revenue + c.one_time_revenue) * c.probability for c in linked) / total)
+    db.flush()
+    refresh_inquiry(db, opp)
+    ensure_tech_talk_task(db, opp, calc.owner)
 
 
 def is_big(c: Calculation, st: dict) -> list[str]:
@@ -508,6 +492,17 @@ def create_calc(data: s.CalcCreate, db: Session = Depends(get_db), user: User = 
     meta.setdefault("probability", STATUS_PROBABILITY[meta["status"]])
     meta.setdefault("owner_id", user.id)
     meta.setdefault("inquiry_date", date.today())
+    if not meta.get("opportunity_id"):
+        # Jeder Artikel gehört zu einer Anfrage (REV01-P04) – ohne Angabe wird eine neue Anfrage angelegt
+        from ..inquiry import next_inquiry_number  # noqa: PLC0415
+        opp = Opportunity(name=meta.get("article_name") or "Neue Anfrage", account_id=meta.get("account_id"),
+                          contact_id=meta.get("contact_id"), owner_id=meta["owner_id"], stage="neue_anfrage",
+                          probability=STAGE_PROBABILITY["neue_anfrage"], kind="anfrage", source="Anfrage",
+                          inquiry_date=meta["inquiry_date"], due_date=meta.get("due_date"), close_date=meta.get("due_date"),
+                          number=next_inquiry_number(db))
+        db.add(opp)
+        db.flush()
+        meta["opportunity_id"] = opp.id
     calc = Calculation(number=next_calc_number(db), **meta)
     inputs = normalize({**default_inputs(db, (data.inputs or {}).get("site_id") or default_site_id(db, user)),
                         **(data.inputs or {})})
@@ -572,6 +567,8 @@ def add_version(calc_id: int, data: s.CalcVersionIn, db: Session = Depends(get_d
     calc = db.get(Calculation, calc_id)
     if not calc:
         raise HTTPException(404, "Kalkulation nicht gefunden")
+    from ..inquiry import require_decision  # noqa: PLC0415
+    require_decision(db, calc)
     inputs = normalize(data.inputs)
     res = compute(inputs)
     no = (calc.versions[-1].version_no if calc.versions else 0) + 1
@@ -596,11 +593,14 @@ def create_opportunity(calc_id: int, db: Session = Depends(get_db), user: User =
         raise HTTPException(404, "Kalkulation nicht gefunden")
     if not calc.account_id:
         raise HTTPException(400, "Bitte zuerst eine Firma zuordnen")
-    stage = STATUS_TO_STAGE.get(calc.status, "lead")
+    if calc.opportunity_id:
+        raise HTTPException(409, "Kalkulation gehört bereits zu einer Anfrage")
+    from ..inquiry import next_inquiry_number  # noqa: PLC0415
     opp = Opportunity(name=f"{calc.article_name} ({calc.number})", account_id=calc.account_id,
-                      contact_id=calc.contact_id, stage=stage, probability=calc.probability,
+                      contact_id=calc.contact_id, stage="neue_anfrage", probability=STAGE_PROBABILITY["neue_anfrage"],
                       amount=calc.annual_revenue + calc.one_time_revenue, owner_id=calc.owner_id or user.id,
-                      close_date=calc.due_date, source="Kalkulation")
+                      close_date=calc.due_date, source="Kalkulation", kind="anfrage", inquiry_date=calc.inquiry_date,
+                      due_date=calc.due_date, number=next_inquiry_number(db))
     db.add(opp)
     db.flush()
     calc.opportunity_id = opp.id
@@ -626,7 +626,9 @@ L = {
            "mono": "Monomaterial", "co2": "CO₂-Fußabdruck (Cradle-to-Gate)", "of_which": "davon Scope 1+2",
            "once": "einmalig", "bulk": "Sammelangebot", "articles": "Artikel",
            "years": "Serienpreis je 1.000 Stk nach Lieferjahr", "year": "Jahr", "pre": "Vorserienpreis",
-           "pre_note": "gilt für Vorserienmengen bis", "pre_lot": "je Los"},
+           "pre_note": "gilt für Vorserienmengen bis", "pre_lot": "je Los",
+           "years_col": "Serienpreis je Lieferjahr (Jahresmenge × Stückpreis)", "tool": "Werkzeug", "other": "Sonstiges",
+           "co2_pos": "CO₂-Fußabdruck", "co2_info": "Information, nicht preisrelevant"},
     "en": {"your_no": "Your part no.", "material": "Material", "calc": "Costing", "per1000": "Price per 1,000 pcs",
            "lot": "Lot size", "pcs": "pcs", "clause": "Price adjustment clause: material basis", "as_of": "as of", "index": "index",
            "adjust": "adjustment if changed by more than ±", "amort": "Incl. tool amortisation", "per1000s": "per 1,000 pcs",
@@ -636,7 +638,9 @@ L = {
            "mono": "mono-material", "co2": "Carbon footprint (cradle-to-gate)", "of_which": "thereof scope 1+2",
            "once": "one-off", "bulk": "Combined quotation", "articles": "items",
            "years": "Series price per 1,000 pcs by delivery year", "year": "Year", "pre": "Pre-series price",
-           "pre_note": "valid for pre-series quantities up to", "pre_lot": "per lot"},
+           "pre_note": "valid for pre-series quantities up to", "pre_lot": "per lot",
+           "years_col": "Series price per delivery year (annual quantity × unit price)", "tool": "Tooling", "other": "Other",
+           "co2_pos": "Carbon footprint", "co2_info": "information only, not priced"},
 }
 
 
@@ -671,7 +675,7 @@ def build_quote(db: Session, pairs: list, user: User, lang: str = "de", target: 
                       valid_until=date.today() + timedelta(days=30), tax_rate=19,
                       intro_text=app_st[f"intro_{lang}"], terms=app_st[f"terms_{lang}"], language=lang,
                       calculation_ids=[c.id for c in calcs])
-    items, one_time = [], []
+    items, one_time, pos = [], [], 0
     for calc, ver in pairs:
         r, inp = ver.results, ver.inputs
         art = calc.article_name + (f"\n{t['your_no']}: {calc.customer_article_no}" if calc.customer_article_no else "")
@@ -681,7 +685,10 @@ def build_quote(db: Session, pairs: list, user: User, lang: str = "de", target: 
         p1000 = (r.get("price_year1") or r["unit_price"]) * 1000 if r.get("price_years") else r["price_per_1000"]
         art += f"\n{t['per1000']}: {nf(p1000)} € · {t['lot']} {nf(float(inp.get('lot_size') or 0), 0)} {t['pcs']}"
         if r.get("price_years"):
-            art += f"\n{t['years']}: " + " · ".join(f"{t['year']} {y['year']}: {nf(y['price'] * 1000)} €" for y in r["price_years"])
+            vol = float(r.get("annual_volume") or 0)
+            art += f"\n{t['years_col']}:" + "".join(
+                f"\n  {t['year']} {y['year']}: {nf(vol, 0)} {t['pcs']} × {nf(y['price'], 4)} € = {nf(vol * y['price'])} €"
+                for y in r["price_years"])
         if float(inp.get("material_price_kg") or 0) > 0:
             st_ = get_settings(db)
             mat = db.get(Material, inp.get("material_id")) if inp.get("material_id") else None
@@ -717,20 +724,31 @@ def build_quote(db: Session, pairs: list, user: User, lang: str = "de", target: 
                 bits.append(t["mono"])
             if bits:
                 art += f"\n{t['lifecycle']}: " + " · ".join(bits)
-        co2 = r.get("co2") or {}
-        if co2.get("active") and inp.get("co2_on_quote", True):
-            art += (f"\n{t['co2']}: {nf(co2['cradle_to_gate'] * 1000, 1)} g CO₂e/{t['pcs']} · "
-                    f"{nf(co2['cradle_to_gate'] * 1000, 2)} kg {t['per1000s']} · {t['of_which']} {nf(co2['scope12'] * 1000, 1)} g/{t['pcs']}")
-        items.append(dict(description=art, quantity=r["annual_volume"], unit="Stk",
+        # Positionsstruktur (REV01-P08): n Artikel · n.1 Werkzeug · n.2 Sonstiges · n.3 CO₂ (falls gewählt)
+        pos += 1
+        subs = []
+        items.append(dict(pos_label=str(pos), kind="artikel", calculation_id=calc.id, description=art,
+                          quantity=r["annual_volume"], unit="Stk",
                           unit_price=r.get("price_year1") if r.get("price_years") else r["unit_price"]))
+        ots = [o for o in r["one_time"] if o["price"]]
+        for o in [o for o in ots if "werkzeug" in (o["label"] or "").lower() or "tool" in (o["label"] or "").lower()]:
+            subs.append(dict(kind="werkzeug", description=f"{t['tool']}: {o['label']} ({t['once']})", quantity=1, unit="psch",
+                             unit_price=o["price"]))
         pre = r.get("preseries")
         if pre:
-            items.append(dict(description=f"{t['pre']} – {calc.article_name}\n{t['pre_note']} {nf(pre['qty'], 0)} {t['pcs']}"
-                                          f" ({t['lot']} {nf(pre['lot_size'], 0)} {t['pcs']}) · {nf(pre['price_per_1000'])} € {t['per1000s']}",
-                              quantity=pre["qty"], unit="Stk", unit_price=pre["unit_price"]))
-        for o in [o for o in r["one_time"] if o["price"]]:
-            label = o["label"] if single else f"{o['label']} – {calc.article_name}"
-            one_time.append(dict(description=f"{label} ({t['once']})", quantity=1, unit="psch", unit_price=o["price"]))
+            subs.append(dict(kind="vorserie", description=f"{t['pre']}\n{t['pre_note']} {nf(pre['qty'], 0)} {t['pcs']}"
+                                                         f" ({t['lot']} {nf(pre['lot_size'], 0)} {t['pcs']}) · {nf(pre['price_per_1000'])} € {t['per1000s']}",
+                             quantity=pre["qty"], unit="Stk", unit_price=pre["unit_price"]))
+        for o in [o for o in ots if not ("werkzeug" in (o["label"] or "").lower() or "tool" in (o["label"] or "").lower())]:
+            subs.append(dict(kind="sonstiges", description=f"{t['other']}: {o['label']} ({t['once']})", quantity=1, unit="psch",
+                             unit_price=o["price"]))
+        co2 = r.get("co2") or {}
+        if co2.get("active") and inp.get("co2_on_quote", True):
+            subs.append(dict(kind="co2", quantity=0, unit="", unit_price=0, description=(
+                f"{t['co2_pos']} ({t['co2_info']}): {nf(co2['cradle_to_gate'] * 1000, 1)} g CO₂e/{t['pcs']} · "
+                f"{nf(co2['cradle_to_gate'] * 1000, 2)} kg {t['per1000s']} · {t['of_which']} {nf(co2['scope12'] * 1000, 1)} g/{t['pcs']}")))
+        for k, sub in enumerate(subs, start=1):
+            items.append(dict(pos_label=f"{pos}.{k}", calculation_id=calc.id, **sub))
     if target is not None:
         quote.items.clear()
         db.flush()
@@ -746,12 +764,6 @@ def build_quote(db: Session, pairs: list, user: User, lang: str = "de", target: 
     return quote
 
 
-def open_quotes_for(db: Session, calc_id: int) -> list[Quote]:
-    """Offene Angebote (Entwurf oder versendet), in denen die Kalkulation steckt – neueste zuerst."""
-    rows = db.scalars(select(Quote).where(Quote.status.in_(("entwurf", "versendet"))).order_by(Quote.id.desc())).unique().all()
-    return [q for q in rows if calc_id in (q.calculation_ids or [])]
-
-
 def revision_number(db: Session, number: str) -> str:
     base = number.split("-R")[0]
     nums = db.scalars(select(Quote.number).where(Quote.number.like(f"{base}-R%"))).all()
@@ -763,37 +775,46 @@ def _pairs(calcs: list) -> list:
     return [(c, next(v for v in c.versions if v.version_no == c.current_version)) for c in calcs]
 
 
+def inquiry_quote(db: Session, opp: Opportunity, user: User, lang: str = "de") -> tuple[Quote, str]:
+    """Ein Angebot je Anfrage mit n Positionen (REV01-P04). Entwurf → aktualisieren, versendet → Revision -R1."""
+    from ..inquiry import RELEASED, calcs_of, quote_of  # noqa: PLC0415
+    calcs = calcs_of(db, opp.id)
+    open_ = [c for c in calcs if c.decision is None and c.status not in ("verloren", "kein_angebot")]
+    if open_:
+        raise HTTPException(409, "Noch nicht entschieden (anbieten / nicht anbieten): " + ", ".join(f"{c.number} {c.article_name}" for c in open_))
+    offer = [c for c in calcs if c.decision in RELEASED and c.status not in ("verloren", "kein_angebot", "zurueckgestellt")]
+    if not offer:
+        raise HTTPException(409, "Kein Artikel zum Anbieten freigegeben")
+    if not opp.account_id:
+        raise HTTPException(400, "Bitte der Anfrage zuerst einen Kunden zuordnen")
+    q = quote_of(db, opp.id)
+    pairs = _pairs(offer)
+    if q and q.status == "entwurf":
+        quote, action = build_quote(db, pairs, user, q.language or lang, target=q), "aktualisiert"
+    elif q and q.status in ("versendet", "abgelehnt", "angenommen"):
+        quote = build_quote(db, pairs, user, q.language or lang, number=revision_number(db, q.number))
+        quote.contact_id, quote.intro_text, quote.terms = q.contact_id, q.intro_text, q.terms
+        q.status = "ersetzt"
+        action = "revision"
+    else:
+        quote, action = build_quote(db, pairs, user, lang), "neu"
+    quote.opportunity_id = opp.id
+    quote.account_id, quote.contact_id = opp.account_id, quote.contact_id or opp.contact_id
+    quote.title = opp.name if len(offer) > 1 else quote.title
+    db.flush()
+    sync_opportunity(db, offer[0])
+    return quote, action
+
+
 @calcs.post("/{calc_id}/quote")
-def create_quote(calc_id: int, version_no: int | None = None, lang: str = "de", mode: str = "auto",
-                 db: Session = Depends(get_db), user: User = Depends(can_write)):
-    """Angebot zur Kalkulation (REV01-B03): Es gibt je Kalkulation höchstens ein offenes Angebot.
-    - offener Entwurf vorhanden → wird mit der aktuellen Version aktualisiert (gleiche Nummer)
-    - bereits versendet → Revision (A26-0001-R1), das alte Angebot wird „ersetzt“
-    - mode=new erzwingt ein zusätzliches, eigenständiges Angebot"""
+def create_quote(calc_id: int, lang: str = "de", db: Session = Depends(get_db), user: User = Depends(can_write)):
+    """Angebot zur Kalkulation = Angebot ihrer Anfrage mit allen freigegebenen Artikeln."""
     calc = db.get(Calculation, calc_id)
     if not calc:
         raise HTTPException(404, "Kalkulation nicht gefunden")
-    ver = next((v for v in calc.versions if v.version_no == (version_no or calc.current_version)), None)
-    if not ver:
-        raise HTTPException(404, "Version nicht gefunden")
-    existing = open_quotes_for(db, calc_id) if mode != "new" else []
-    action = "neu"
-    if existing:
-        q = existing[0]
-        others = [db.get(Calculation, i) for i in (q.calculation_ids or []) if i != calc_id]
-        others = [c for c in others if c and c.status not in ("verloren", "kein_angebot")]
-        pairs = [(c, v) for c, v in _pairs(others)] + [(calc, ver)]
-        pairs.sort(key=lambda p: (q.calculation_ids or []).index(p[0].id) if p[0].id in (q.calculation_ids or []) else 999)
-        if q.status == "entwurf":
-            quote = build_quote(db, pairs, user, q.language or lang, target=q)
-            action = "aktualisiert"
-        else:
-            quote = build_quote(db, pairs, user, q.language or lang, number=revision_number(db, q.number))
-            quote.contact_id, quote.opportunity_id, quote.intro_text, quote.terms = q.contact_id, q.opportunity_id, q.intro_text, q.terms
-            q.status = "ersetzt"
-            action = "revision"
-    else:
-        quote = build_quote(db, [(calc, ver)], user, lang)
+    if not calc.opportunity_id:
+        raise HTTPException(409, "Kalkulation gehört zu keiner Anfrage")
+    quote, action = inquiry_quote(db, db.get(Opportunity, calc.opportunity_id), user, lang)
     db.commit()
     return {"quote_id": quote.id, "number": quote.number, "action": action}
 
@@ -818,9 +839,24 @@ def create_bulk_quote(data: dict, db: Session = Depends(get_db), user: User = De
     if closed:
         raise HTTPException(400, f"Verlorene bzw. nicht angebotene Kalkulationen ausnehmen: {', '.join(closed)}")
     calcs.sort(key=lambda c: c.number)
-    quote = build_quote(db, _pairs(calcs), user, (data or {}).get("lang", "de"))
+    # Ein Angebot je Anfrage: ausgewählte Artikel in die Anfrage des ersten Artikels übernehmen
+    from ..inquiry import calcs_of  # noqa: PLC0415
+    target = calcs[0].opportunity_id
+    moved = []
+    for c in calcs[1:]:
+        if c.opportunity_id != target:
+            old = c.opportunity_id
+            c.opportunity_id = target
+            moved.append(c.number)
+            db.flush()
+            if old and not calcs_of(db, old):   # leere Anfrage aufräumen
+                o = db.get(Opportunity, old)
+                if o and not db.scalars(select(Quote).where(Quote.opportunity_id == old)).first():
+                    db.delete(o)
+    db.flush()
+    quote, action = inquiry_quote(db, db.get(Opportunity, target), user, (data or {}).get("lang", "de"))
     db.commit()
-    return {"quote_id": quote.id, "number": quote.number, "count": len(calcs)}
+    return {"quote_id": quote.id, "number": quote.number, "count": len(calcs), "action": action, "moved": moved}
 
 
 @calcs.get("/{calc_id}/quotes")
@@ -945,6 +981,8 @@ def save_analysis(calc_id: int, data: dict, db: Session = Depends(get_db), _: Us
         calc.feasibility = data["feasibility"]
     if "feasibility_note" in data:
         calc.feasibility_note = data["feasibility_note"]
+    db.flush()
+    sync_opportunity(db, calc)   # „technisches Gespräch erforderlich“ → Anfrage + Aufgabe
     db.commit()
     db.refresh(calc)
     return calc

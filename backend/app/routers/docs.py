@@ -16,8 +16,15 @@ from ..database import get_db
 from ..models import ChangeRequest, User
 
 
+KIND_KEYS = {"fehler": "fehler", "wunsch": "wunsch", "doku": "doku", "dokumentation": "doku"}
+
+
 def _cr_before_save(values: dict, obj):
-    """Neue Wünsche bekommen automatisch eine Nummer (WUN-0001), Prüfdatum beim Setzen auf „geprüft“."""
+    """Neue Wünsche bekommen automatisch eine Nummer (WUN-0001), Prüfdatum beim Setzen auf „geprüft“.
+    Art: Fehler/Wunsch/Dokumentation werden als Schlüssel gespeichert, alles andere als Freitext."""
+    if values.get("kind"):
+        k = values["kind"].strip()
+        values["kind"] = KIND_KEYS.get(k.lower(), k)
     if obj is None and not values.get("code"):
         values["code"] = None  # Nummer WUN-0001 … nach dem Anlegen (number_new_requests)
     if values.get("status") == "geprueft" and not values.get("tested_at") and not (obj and obj.tested_at):

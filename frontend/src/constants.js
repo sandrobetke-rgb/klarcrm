@@ -1,11 +1,24 @@
+// Pipeline-Phasen (REV01-P01). board: als Spalte im Board; „Nicht angeboten“ nur in Liste/Filter
 export const STAGES = [
-  { key: 'lead', label: 'Lead' },
-  { key: 'qualifiziert', label: 'Qualifiziert' },
-  { key: 'angebot', label: 'Angebot' },
-  { key: 'verhandlung', label: 'Verhandlung' },
-  { key: 'gewonnen', label: 'Gewonnen' },
-  { key: 'verloren', label: 'Verloren' },
+  { key: 'lead', label: 'Lead', hint: 'Potenzial ohne Anfrage (manuell)', board: true },
+  { key: 'neue_anfrage', label: 'Neue Anfrage', hint: 'vor der Entscheidung / Freigabe zur Kalkulation', board: true },
+  { key: 'qualifiziert', label: 'Qualifiziert', hint: 'zur Kalkulation freigegeben', board: true },
+  { key: 'angebot', label: 'Angebot', hint: 'Angebot versendet', board: true },
+  { key: 'verhandlung', label: 'Verhandlung / techn. Gespräch', hint: 'Endrunde', board: true },
+  { key: 'gewonnen', label: 'Gewonnen', board: true },
+  { key: 'verloren', label: 'Verloren', hint: 'mit Pflichtgrund', board: true },
+  { key: 'nicht_angeboten', label: 'Nicht angeboten', hint: 'Anfrage abgelehnt' },
 ]
+export const CLOSED_STAGES = ['gewonnen', 'verloren', 'nicht_angeboten']
+// Entscheidung je Artikel vor der Kalkulation (REV01-P02)
+export const DECISIONS = [
+  { value: 'anbieten', label: 'Artikel wird angeboten', short: 'anbieten', tone: 'good' },
+  { value: 'nicht_anbieten', label: 'Nicht angeboten (mit Begründung)', short: 'nicht anbieten', tone: 'critical' },
+  { value: 'anderer_standort', label: 'Angeboten von anderem Standort', short: 'anderer Standort', tone: 'info' },
+  { value: 'sonstiges', label: 'Sonstiges (Freitext)', short: 'Sonstiges', tone: 'warning' },
+]
+export const decisionLabel = (v) => DECISIONS.find((d) => d.value === v)?.label || 'Entscheidung offen'
+export const LIGHT = { gruen: { tone: 'good', label: 'im Plan' }, gelb: { tone: 'warning', label: 'fällig' }, rot: { tone: 'critical', label: 'überfällig' } }
 export const stageLabel = (k) => STAGES.find((s) => s.key === k)?.label || k
 
 export const ACCOUNT_TYPES = [
@@ -50,7 +63,7 @@ export const eurShort = (v) => {
 export const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('de-DE') : '–')
 export const fmtDateTime = (d) =>
   d ? new Date(d).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '–'
-export const contactName = (c) => (c ? `${c.first_name} ${c.last_name}` : '')
+export const contactName = (c) => (c ? [c.first_name, c.last_name].filter(Boolean).join(' ') : '')
 
 // ---------- Kalkulation ----------
 export const CALC_STATUS = [

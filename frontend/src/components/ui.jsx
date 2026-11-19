@@ -60,7 +60,8 @@ const REF = {
   // Kunden/Interessenten ohne Lieferanten – für Angebote, Kalkulationen, Verkaufschancen (REV01-B04)
   customer: { path: '/accounts', params: { sort: 'name', limit: 500 }, label: (r) => r.name, rowFilter: (r) => r.type !== 'lieferant' },
   contact: { path: '/contacts', params: { sort: 'last_name', limit: 500 }, label: (r) => `${contactName(r)}${r.account ? ' · ' + r.account.name : ''}`, dep: 'account_id' },
-  opportunity: { path: '/opportunities', params: { sort: 'name', limit: 500 }, label: (r) => r.name, dep: 'account_id' },
+  opportunity: { path: '/opportunities', params: { sort: 'name', limit: 500 }, label: (r) => `${r.number ? r.number + ' · ' : ''}${r.name}`, dep: 'account_id' },
+  quote: { path: '/quotes', params: { sort: '-quote_date', limit: 500 }, label: (r) => `${r.number} · ${r.title}`, dep: 'account_id' },
 }
 
 export function RefSelect({ kind, value, onChange, filter, required, id }) {
@@ -135,7 +136,7 @@ export function EntityForm({ fields, initial, onSubmit, onCancel, onDelete, subm
           const id = `f-${f.name}`
           const v = values[f.name]
           let input
-          if (['account', 'customer', 'contact', 'user', 'opportunity'].includes(f.type)) {
+          if (['account', 'customer', 'contact', 'user', 'opportunity', 'quote'].includes(f.type)) {
             input = <RefSelect id={id} kind={f.type} value={v} required={f.required}
               filter={f.dependsOn ? values[f.dependsOn] : undefined} onChange={(x) => set(f.name, x)} />
           } else if (f.type === 'select') {

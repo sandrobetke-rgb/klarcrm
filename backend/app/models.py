@@ -23,10 +23,14 @@ def now():
 
 
 ROLES = ("admin", "vertrieb", "gesellschafter")
-STAGES = ("lead", "qualifiziert", "angebot", "verhandlung", "gewonnen", "verloren")
+# Pipeline-Phasen (REV01-P01): Lead = Potenzial ohne Anfrage (manuell), Neue Anfrage = Anfrage vor der Entscheidung,
+# Qualifiziert = zur Kalkulation freigegeben, Angebot = versendet, Verhandlung = Endrunde / technisches Gespräch,
+# nicht_angeboten = Anfrage abgelehnt (zählt nicht als verloren)
+STAGES = ("lead", "neue_anfrage", "qualifiziert", "angebot", "verhandlung", "gewonnen", "verloren", "nicht_angeboten")
+CLOSED_STAGES = ("gewonnen", "verloren", "nicht_angeboten")
 STAGE_PROBABILITY = {
-    "lead": 10, "qualifiziert": 25, "angebot": 50,
-    "verhandlung": 75, "gewonnen": 100, "verloren": 0,
+    "lead": 10, "neue_anfrage": 15, "qualifiziert": 25, "angebot": 50,
+    "verhandlung": 75, "gewonnen": 100, "verloren": 0, "nicht_angeboten": 0,
 }
 ACTIVITY_TYPES = ("anruf", "termin", "email", "aufgabe", "notiz")
 QUOTE_STATUS = ("entwurf", "versendet", "angenommen", "abgelehnt", "ersetzt")
@@ -78,7 +82,7 @@ class Contact(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     account_id: Mapped[int | None] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
     salutation: Mapped[str | None] = mapped_column(String(20))
-    first_name: Mapped[str] = mapped_column(String(100))
+    first_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     last_name: Mapped[str] = mapped_column(String(100), index=True)
     position: Mapped[str | None] = mapped_column(String(120))
     email: Mapped[str | None] = mapped_column(String(200))
@@ -106,7 +110,16 @@ class Opportunity(TimestampMixin, Base):
     source: Mapped[str | None] = mapped_column(String(100))
     description: Mapped[str | None] = mapped_column(Text)
     lost_reason: Mapped[str | None] = mapped_column(String(255))
+    lost_code: Mapped[str | None] = mapped_column(String(40))          # Verlustgrund als Schlüssel (für Auswertung)
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    # Anfrage / Projekt (REV01 Phase 2): eine Pipeline-Karte je Kundenanfrage mit n Artikeln (Kalkulationen)
+    number: Mapped[str | None] = mapped_column(String(30), unique=True, index=True)   # AF26-0001
+    kind: Mapped[str | None] = mapped_column(String(20), default="anfrage")         # anfrage | lead
+    inquiry_date: Mapped[date | None] = mapped_column(Date)                         # Eingang der Anfrage
+    due_date: Mapped[date | None] = mapped_column(Date)                             # Angebotsabgabe bis
+    offered_at: Mapped[date | None] = mapped_column(Date)                           # erstes Angebot versendet
+    final_round: Mapped[bool | None] = mapped_column(Boolean, default=False)       # war in der Endrunde (Verhandlung)
+    tech_talk: Mapped[bool | None] = mapped_column(Boolean, default=False)         # technisches Gespräch erforderlich
 
     account = relationship("Account", lazy="joined")
     contact = relationship("Contact", lazy="joined")
@@ -125,11 +138,16 @@ class Activity(TimestampMixin, Base):
     contact_id: Mapped[int | None] = mapped_column(ForeignKey("contacts.id", ondelete="SET NULL"))
     opportunity_id: Mapped[int | None] = mapped_column(ForeignKey("opportunities.id", ondelete="CASCADE"))
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    quote_id: Mapped[int | None] = mapped_column(ForeignKey("quotes.id", ondelete="SET NULL"), index=True)  # REV01-P07
+    kind: Mapped[str | None] = mapped_column(String(30))        # angebotsverfolgung | technisches_gespraech | None
+    attempts: Mapped[int | None] = mapped_column(Integer, default=0)   # „niemanden erreicht“-Zähler
+    result: Mapped[str | None] = mapped_column(String(30))      # erreicht | nicht_erreicht | wieder_melden
 
     account = relationship("Account", lazy="joined")
     contact = relationship("Contact", lazy="joined")
     opportunity = relationship("Opportunity", lazy="joined")
     owner = relationship("User", lazy="joined")
+    quote = relationship("Quote", lazy="joined", foreign_keys=[quote_id])
 
 
 class Quote(TimestampMixin, Base):
@@ -150,6 +168,10 @@ class Quote(TimestampMixin, Base):
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     calculation_ids: Mapped[list | None] = mapped_column(JSON)  # Herkunft: Kalkulationen (Sammelangebot)
     language: Mapped[str | None] = mapped_column(String(5), default="de")  # de | en
+    sent_at: Mapped[date | None] = mapped_column(Date)                    # versendet am (Start Angebotsverfolgung)
+    last_contact_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # letzte Rückmeldung / Anruf
+    last_contact_note: Mapped[str | None] = mapped_column(Text)
+    tool_lead_time: Mapped[str | None] = mapped_column(String(80))       # Werkzeug: Lieferzeit FOT (Phase 3 je Artikel)
 
     account = relationship("Account", lazy="joined")
     contact = relationship("Contact", lazy="joined")
@@ -190,6 +212,9 @@ class QuoteItem(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     quote_id: Mapped[int] = mapped_column(ForeignKey("quotes.id", ondelete="CASCADE"), index=True)
     position: Mapped[int] = mapped_column(Integer, default=1)
+    pos_label: Mapped[str | None] = mapped_column(String(10))   # „1“, „1.1“ … (REV01-P08)
+    kind: Mapped[str | None] = mapped_column(String(20))        # artikel | werkzeug | sonstiges | vorserie | co2 | text
+    calculation_id: Mapped[int | None] = mapped_column(Integer)
     description: Mapped[str] = mapped_column(Text)
     quantity: Mapped[float] = mapped_column(Float, default=1)
     unit: Mapped[str] = mapped_column(String(20), default="Stk")
@@ -305,6 +330,11 @@ class Calculation(TimestampMixin, Base):
     sync_opportunity: Mapped[bool] = mapped_column(Boolean, default=True)
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     # Machbarkeit / kein Angebot / Artikelanalyse
+    # Entscheidung je Artikel vor Kalkulationsstart (REV01-P02)
+    decision: Mapped[str | None] = mapped_column(String(30))   # anbieten | nicht_anbieten | anderer_standort | sonstiges
+    decision_note: Mapped[str | None] = mapped_column(Text)
+    decision_by_id: Mapped[int | None] = mapped_column(Integer)
+    decision_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     feasibility: Mapped[str | None] = mapped_column(String(40))
     feasibility_note: Mapped[str | None] = mapped_column(Text)
     no_bid_reason: Mapped[str | None] = mapped_column(String(40))
@@ -482,7 +512,18 @@ def _approval_reasons(self):
         r.append("Invest ≥ Großprojekt-Schwelle")
     if self.current_version and (self.margin_pct or 0) < st["approval_min_margin_pct"]:
         r.append(f"Marge unter {st['approval_min_margin_pct']:g} %".replace(".", ","))
+    if not self.analysis_complete and self.decision_note != "übernommen aus Altdaten":
+        r.append("Artikelanalyse unvollständig")   # REV01-P03: Angebot nur nach Freigabe durch Vorgesetzten
     return r
+
+
+def _analysis_complete(self) -> bool:
+    """Artikelanalyse vollständig: gespeichert, alle Prüfpunkte bewertet, Machbarkeit eingetragen."""
+    res = self.analysis_results or {}
+    return bool(self.analysis and res and res.get("open_checks", 1) == 0 and self.feasibility)
+
+
+Calculation.analysis_complete = property(_analysis_complete)
 
 
 def _is_approved(self):
@@ -490,6 +531,31 @@ def _is_approved(self):
 
 
 Calculation.approval_reasons = property(_approval_reasons)
+
+
+def _activity_light(self):
+    if self.kind != "angebotsverfolgung":
+        return None
+    from .inquiry import followup_light  # noqa: PLC0415
+    return followup_light(self.due_at, self.done)
+
+
+def _quote_followup(self):
+    """Offene Angebotsverfolgung des Angebots: Fälligkeit, Ampel, Versuche."""
+    from sqlalchemy.orm import object_session
+    sess = object_session(self)
+    if not sess or not self.id:
+        return None
+    t = sess.query(Activity).filter(Activity.quote_id == self.id, Activity.kind == "angebotsverfolgung",
+                                    Activity.done.is_(False)).order_by(Activity.due_at).first()
+    if not t:
+        return None
+    return {"id": t.id, "due_at": t.due_at.isoformat() if t.due_at else None, "light": t.light, "attempts": t.attempts or 0,
+            "owner": t.owner.name if t.owner else None}
+
+
+Activity.light = property(_activity_light)
+Quote.followup = property(_quote_followup)
 Calculation.is_approved = property(_is_approved)
 
 
@@ -622,7 +688,7 @@ class ChangeRequest(TimestampMixin, Base):
     code: Mapped[str | None] = mapped_column(String(30), unique=True, index=True)   # REV01-B01, WUN-0001
     revision: Mapped[str | None] = mapped_column(String(20), index=True)    # REV01
     area: Mapped[str | None] = mapped_column(String(60))                    # Bereich, z. B. Kalkulation
-    kind: Mapped[str] = mapped_column(String(20), default="wunsch")          # fehler | wunsch | doku
+    kind: Mapped[str] = mapped_column(String(40), default="wunsch")          # fehler | wunsch | doku | Freitext
     title: Mapped[str] = mapped_column(String(200))
     description: Mapped[str | None] = mapped_column(Text)                   # Wortlaut der Anforderung
     priority: Mapped[str] = mapped_column(String(10), default="mittel")      # hoch | mittel | niedrig

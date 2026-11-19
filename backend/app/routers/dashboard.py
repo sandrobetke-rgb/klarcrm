@@ -7,10 +7,10 @@ from sqlalchemy.orm import Session
 from .. import schemas as s
 from ..auth import can_read
 from ..database import get_db
-from ..models import STAGES, Account, Activity, Opportunity, Quote, User
+from ..models import CLOSED_STAGES, STAGES, Account, Activity, Opportunity, Quote, User
 
 router = APIRouter()
-OPEN_STAGES = [st for st in STAGES if st not in ("gewonnen", "verloren")]
+OPEN_STAGES = [st for st in STAGES if st not in CLOSED_STAGES]
 
 
 def f(v) -> float:
@@ -36,7 +36,9 @@ def dashboard(owner_id: int | None = None, db: Session = Depends(get_db), _: Use
         row = db.execute(
             select(func.count(), func.sum(sub.c.amount), func.sum(sub.c.amount * sub.c.probability / 100.0))
         ).one()
-        return {"count": row[0], "amount": f(row[1]), "weighted": f(row[2])}
+        # REV01-P09: keine Umsatzgewichtung – stattdessen Volumen mit hoher Wahrscheinlichkeit (≥ 50 %)
+        likely = db.scalar(select(func.sum(sub.c.amount)).where(sub.c.probability >= 50))
+        return {"count": row[0], "amount": f(row[1]), "weighted": f(row[2]), "likely": f(likely)}
 
     open_ = agg(Opportunity.stage.in_(OPEN_STAGES))
     won_ytd = agg(Opportunity.stage == "gewonnen", Opportunity.closed_at >= year_start)
@@ -108,6 +110,14 @@ def dashboard(owner_id: int | None = None, db: Session = Depends(get_db), _: Use
         qstmt = qstmt.where(Quote.owner_id == owner_id)
     open_quotes = db.scalars(qstmt).unique().all()
 
+    # Endrunde (Verhandlung / technisches Gespräch): gewonnen/verloren aus der Endrunde (REV01-P01)
+    final = {k: db.scalar(select(func.count()).select_from(Opportunity).where(
+        Opportunity.final_round.is_(True), Opportunity.stage == k, Opportunity.closed_at >= year_start)) or 0
+        for k in ("gewonnen", "verloren")}
+    # Angebotsverfolgung mit Ampel – für alle sichtbar
+    from ..inquiry import followup_light  # noqa: PLC0415
+    fus = db.scalars(select(Activity).where(Activity.kind == "angebotsverfolgung", Activity.done.is_(False))).unique().all()
+    followups = {k: sum(1 for a in fus if followup_light(a.due_at) == k) for k in ("rot", "gelb", "gruen")}
     customers = db.scalar(select(func.count()).select_from(Account).where(Account.type == "kunde"))
     new_accounts_30d = db.scalar(
         select(func.count()).select_from(Account).where(Account.created_at >= nowt - timedelta(days=30))
@@ -128,6 +138,8 @@ def dashboard(owner_id: int | None = None, db: Session = Depends(get_db), _: Use
             "activities_today": due_today,
             "customers": customers,
             "new_accounts_30d": new_accounts_30d,
+            "final_round": final,
+            "followups": followups,
         },
         "by_stage": by_stage,
         "monthly_won": monthly,
