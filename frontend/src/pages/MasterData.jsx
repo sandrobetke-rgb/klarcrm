@@ -40,6 +40,7 @@ const machineFields = [
 ]
 const materialFields = [
   { name: 'name', label: 'Bezeichnung', required: true, span: true },
+  { name: 'number', label: 'Material-Nr. F&R', hint: 'z. B. RM05930 – für Preisliste und Import' },
   { name: 'family', label: 'Werkstoffgruppe', hint: 'z. B. PA6, PP, ABS' },
   { name: 'supplier', label: 'Lieferant' },
   { name: 'price_per_kg', label: 'Preis €/kg', type: 'number', step: 'any', required: true },

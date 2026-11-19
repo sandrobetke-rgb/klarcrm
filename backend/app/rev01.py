@@ -114,6 +114,18 @@ ITEMS = [
      "angezeigt und lässt sich mit „Filter zurücksetzen“ aufheben. Art und Bereich: Vorschlagsliste mit freier Eingabe.",
      "Änderungswünsche › Kachel „Umgesetzt“ anklicken (Filter) → „+ Änderungswunsch“ mit Art „Schulung“ (frei) speichern → Meldung „angelegt“, Hinweis auf Filter.", "DOK"),
 
+    ("PRL-01", "Preisliste", "wunsch", "hoch", 2, "Lebende VK-Preisliste mit Materialpreisänderung, Kennzeichnung und monatlichem Import",
+     "Preisliste ins CRM einbauen: alle VK-Artikel inkl. Material erfassen, lebendes Dokument, Import, Filter nach Kunden. Neue "
+     "Materialpreise eingeben → betroffene Artikel sehen und kennzeichnen, ob weitergegeben. Einmal im Monat Import der Preise mit "
+     "Prüfung, wo sich Preise verändert haben, Historie und Markierung: an Kunden weitergegeben / trotz Erhöhung nicht weitergegeben, "
+     "weil vertraglich gebunden / Sonstiges (Freitext).", U,
+     "Menü Preisliste: Artikel je Kunde (Material 1–n mit Gewicht und Preisbasis, Zukaufteile, Planmenge, Preisbindung/Vertrag), Filter "
+     "Kunde/Material/Preisbindung/offene Differenz, Export Excel. Materialpreise: „Neuer Preis“ mit Sofort-Vorschau der betroffenen "
+     "Artikel (Δ je PE, neuer Preis, Jahreseffekt) → Vorgang PA26-…; je Artikel kennzeichnen (einzeln oder mehrere). Import Preisliste "
+     "(F&R-Vorlage erkannt) und Import Materialpreise mit Vorschau; Historie je Artikel und Material.",
+     "Preisliste › Materialpreise › PP „Neuer Preis“ 1,95 → Liste prüfen → Übernehmen → im Vorgang zwei Artikel „vertraglich gebunden“, "
+     "einen „weitergegeben“ → Artikel zeigt neuen Preis und Historie. Import der Vorlage mit drei Zeilen.", "Kap. 14"),
+
     # ---------------------------------------------------------------- Kalkulation (Phase 3)
     ("REV01-C01", "Zukaufteile", "wunsch", "hoch", 3, "Zukaufteile: Stück je Bauteil, Freitext, Lieferant, Staffelmengen mit Jahresbedarf",
      "Stück je Bauteil (z. B. 4 Buchsen); Freitext-Name, Lieferant, bis zu n Staffelmengen mit Berechnung der benötigten Mengen pro Jahr.", O, None, None, "KAL"),
@@ -223,7 +235,7 @@ def seed_rev01(db) -> int:
     for code, area, kind, prio, phase, title, desc, status, solution, test, req in ITEMS:
         if code in have:
             continue
-        db.add(ChangeRequest(code=code, revision="REV01", area=area, kind=kind, priority=prio, phase=phase, title=title,
+        db.add(ChangeRequest(code=code, revision="REV01" if code.startswith("REV01") else "Wunsch", area=area, kind=kind, priority=prio, phase=phase, title=title,
                              description=desc, status=status, solution=solution, test_steps=test,
                              req_ids=f"Lastenheft Kap. 13 · {code}",
                              version=("1.24" if phase == 2 else "1.23") if status == U else None,

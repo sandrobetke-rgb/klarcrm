@@ -70,6 +70,7 @@ ENTITIES = {
         "label": "Materialien", "match": ["name"], "admin": True,
         "fields": [
             ("name", "Bezeichnung", "text", True, ["material", "werkstoff", "bezeichnung", "name"]),
+            ("number", "Material-Nr.", "text", False, ["materialnummer", "material-nr", "mat nr", "rm number"]),
             ("family", "Werkstoffgruppe", "text", False, ["familie", "gruppe", "werkstoffgruppe", "typ"]),
             ("supplier", "Lieferant", "text", False, ["lieferant", "hersteller"]),
             ("price_per_kg", "Preis €/kg", "number", True, ["preis", "€/kg", "preis/kg", "kilopreis"]),
@@ -79,7 +80,7 @@ ENTITIES = {
             ("notes", "Notizen", "text", False, ["notiz", "bemerkung"]),
             ("active", "Aktiv", "bool", False, ["aktiv"]),
         ],
-        "example": ["PA6 GF30 schwarz", "PA6", "Rahmenvertrag", "3,40", "1,36", "6,5", "01.01.2027", "", "ja"],
+        "example": ["PA6 GF30 schwarz", "RM05930", "PA6", "Rahmenvertrag", "3,40", "1,36", "6,5", "01.01.2027", "", "ja"],
     },
     "purchased-parts": {
         "label": "Zukaufteile", "match": ["part_no", "name"], "admin": True,

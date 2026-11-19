@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Programm** | KlarCRM – Vertrieb, Kalkulation Spritzguss, Angebote |
-| **Version** | 1.24 (Stand 19.11.2026) |
+| **Version** | 1.25 (Stand 20.11.2026) |
 | **Für** | Vertrieb, Kalkulation, Einkauf, Geschäftsführung, Gesellschafter |
 
 > Diese Beschreibung erklärt, **wie man mit KlarCRM arbeitet**. Die genauen Regeln und Rechenwege stehen im
@@ -46,6 +46,7 @@ dran ist.
 | Kalkulationen | Alle Artikel-Kalkulationen über alle Anfragen |
 | Angebote | Alle Angebote mit Status, Verfolgungsampel und letzter Rückmeldung |
 | Aktivitäten | Aufgaben, Anrufe, Termine, Wiedervorlagen – auch mit Angebot verknüpft |
+| Preisliste | Lebende VK-Preisliste je Kunde, Materialpreisänderungen mit Kennzeichnung, Import |
 | **Kunden** · Firmen, Kontakte | Kunden, Interessenten, Lieferanten und Ansprechpartner |
 | **Planung & Analyse** · Auslastung | Maschinenstunden der kommenden Jahre gegen die Kapazität |
 | Auswertungen | Berichte nach Kunde, Maschinengröße, Verlustgründen, Vertrieb … |
@@ -107,6 +108,21 @@ Die **Wahrscheinlichkeit** gilt für den ganzen Auftrag. Summen werden nicht meh
   Vorrichtung zu teuer, Investition zu teuer, Lieferzeit/Kapazität, technisch nicht machbar oder Sonstiges (Freitext).
 - In der Pipeline öffnet das Ziehen auf „Verloren“ automatisch diesen Dialog.
 
+## 3a. Preisliste
+
+- **Artikel**: alle Verkaufsartikel je Kunde mit Preis je Preiseinheit, Material(ien) mit Gewicht und **Preisbasis**
+  (der Materialpreis, der im Preis steckt), Zukaufteilen, Planmenge, Preisbindung und Vertrag. Filter nach Kunde,
+  Material, Preisbindung; Export nach Excel. Aus der Firmenseite mit „Preisliste“ direkt gefiltert.
+- **Neuer Materialpreis** (Reiter *Materialpreise* → „Neuer Preis“): Preis eingeben – sofort erscheinen alle betroffenen
+  Artikel mit Erhöhung je 100 Stk, neuem Preis und Jahreseffekt. „Übernehmen“ legt einen Vorgang an.
+- **Kennzeichnen** im Vorgang: an Kunden weitergegeben (neuer oder vereinbarter Preis wird übernommen) · nicht
+  weitergegeben, weil vertraglich gebunden · Sonstiges (Freitext). Mehrere Artikel auf einmal über Häkchen.
+- Nicht weitergegebene Erhöhungen bleiben am Artikel als **offene Materialdifferenz** sichtbar.
+- **Monatlich**: *Import Materialpreise* (Material-Nr., Preis €/kg) und/oder *Import Preisliste* (VK-Preise aus dem ERP
+  oder die Excel-Vorlage „Annual Price Inquiry List“). Erst Vorschau, dann Übernehmen; geänderte Preise landen mit
+  Historie in einem Vorgang zur Kennzeichnung.
+- Rechnung: Δ je 100 Stk = (neu − Basis €/kg) × Gewicht g / 1000 × 100 × 1,08 (MGK 8 %).
+
 ## 4. Stammdaten
 
 - **Maschinen & Anlagen**: Stundensatz, Instandhaltung, Produktivität, Personalanteile, Standort, Schichtmodell
@@ -137,6 +153,7 @@ Die **Wahrscheinlichkeit** gilt für den ganzen Auftrag. Summen werden nicht meh
 | Kalkulation (Artikel) | K + Jahr + laufende Nr. | K26-0001 |
 | Angebot | A + Jahr + laufende Nr., Revision -R | A26-0001, A26-0001-R1 |
 | Beschaffung | B + Jahr + laufende Nr. | B26-0001 |
+| Preisänderung (Preisliste) | PA + Jahr + laufende Nr. | PA26-0001 |
 | Änderungswunsch | REV01-… oder WUN- | REV01-B01, WUN-0001 |
 
 Ältere Nummern (KA-2026-…, AN-2026-…) bleiben unverändert erhalten.

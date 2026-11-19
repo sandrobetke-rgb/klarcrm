@@ -4,8 +4,8 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.24 |
-| **Stand** | 19.11.2026 |
+| **Dokumentversion** | 1.25 |
+| **Stand** | 20.11.2026 |
 | **Status** | Testphase auf internem Server F&R; REV01 Phase 1 und 2 umgesetzt, Phase 3–4 geplant (Kap. 13) |
 
 > Dieses Lastenheft wird bei **jeder** Änderung am System mitgezogen. Neue Anforderungen, geänderte Regeln und
@@ -652,6 +652,7 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.22 | 15.11.2026 | **Datenimport CSV/Excel** (Kap. 6.12, IMP-1 … 5) für Firmen, Kontakte, Maschinen, Materialien, Zukaufteile mit Vorlage, Spaltenzuordnung, Vorschau und Protokoll; Tests für das Einlesen ergänzt. **Validierungsprotokoll und Testplan** als Vorlage (NFA-11). Neue Abhängigkeit `openpyxl` (Excel). |
 | 1.23 | 17.11.2026 | **Testrückmeldung REV01, Phase 1** (Kap. 13): Speichern immer sichtbar, Standortwechsel übernimmt Standortsätze (Faktor Maschinenstundensatz), ein Angebot je Kalkulation mit Revisionen, keine Lieferanten im Angebot, freie Zahleneingabe, Maschinen-Löschschutz und Vier-Augen-Löschung, Planmaschinen, Schichtmodell, Verlustgrund Pflicht, Branchenliste, Rüstzeit in Minuten, Nummern A26-/K26-, Freigabe ab 250.000 €, Dashboard-Kacheln, Änderungswünsche & Prüfprotokoll, Dokumentation im Programm mit Word-Download. Phasen 2–4 geplant. |
 | 1.24 | 19.11.2026 | **REV01 Phase 2** (Kap. 13.2): Anfragen/Projekte mit n Artikeln und einem Angebot (AF26-0001), Entscheidung je Artikel vor der Kalkulation, Artikelanalyse vor Kalkulation mit Maschinenvorschlag und „technisches Gespräch“, unvollständige Analyse als Freigabegrund, neue Pipeline-Phasen mit Automatik und Endrunde, Positionsstruktur 1/1.1/1.2/1.3 mit Jahrespreisen, Angebotsverfolgung nach 5 Arbeitstagen mit Ampel, Aktivitäten am Angebot, keine Umsatzgewichtung, Menü nach Arbeitsablauf, Änderungswünsche mit Speicherbestätigung und freier Art; Übernahme der Altdaten. |
+| 1.25 | 20.11.2026 | **Preisliste** (Kap. 14): lebende VK-Preisliste je Kunde mit Materialien/Zukaufteilen und Preisbasis, Materialpreisänderung mit Vorschau der betroffenen Artikel, Vorgänge mit Kennzeichnung (weitergegeben / vertraglich gebunden / Sonstiges), Import Preisliste (F&R-Vorlage) und Materialpreise, Historie, Export; Materialnummer in den Stammdaten. |
 
 ## 13. Testrückmeldung REV01 (Nov. 2026) – Anforderungen und Umsetzung
 
@@ -779,3 +780,74 @@ zu einer Anfrage; ohne Angabe wird eine angelegt.
 - REV01-E01 Beschaffung für Material, Zubehör, Verpackung (Staffeln), Vorrichtungen, Montageanlagen, Prüfmittel,
   Kameras, Laser, Sonstiges mit Bezug zur Kalkulationsnummer. REV01-D05 Vertriebsziel mit Ampel. REV01-R01
   Vertriebsbericht je Zeitraum, Durchlaufzeit Anfrage → Angebot (Ziel 10 Arbeitstage, Parameter), Anzahl kalkulierter Artikel.
+
+## 14. Preisliste (lebende VK-Preisliste)
+
+Quelle: Wunsch vom 19.11.2026 (Änderungswunsch PRL-01) und F&R-Vorlage „Annual Price Inquiry List Year 2027“.
+Ziel: alle Verkaufsartikel mit Material erfassen, aktuell halten und Material- bzw. Preisänderungen nachvollziehbar
+bewerten und kennzeichnen.
+
+### 14.1 Artikel
+- PRL-1: **Preislistenartikel** je Kunde: Artikel-Nr. F&R, Artikel-Nr. Kunde, Bezeichnung, Fertigungsort, Preis je
+  **Preiseinheit** (Standard 100 Stk), Währung, gültig ab, Planmenge p. a., Menge und Umsatz Vorjahr, MOQ, Schuss- und
+  Teilgewicht, MGK % auf Materialdifferenz (Standard 8 %), NK-Zuschlag %, Ratio je PE, **Preisbindung** (ja/nein, bis),
+  Vertrag (Freitext, z. B. Festpreis, Preisgleitklausel), Bemerkung, aktiv. Optional Bezug zur Kalkulation.
+- PRL-2: **Materialien** 1–n je Artikel (z. B. Grundmaterial und Masterbatch) mit Einsatzgewicht g/Teil und
+  **Preisbasis €/kg** = Materialpreis, der im aktuellen VK-Preis steckt. **Zukaufteile** 1–n mit Stück je Teil, Basis-
+  und aktuellem Stückpreis, Lieferant.
+- PRL-3: Liste mit Filtern Kunde, Material, Preisbindung, Suche und „nur mit offener Materialdifferenz“; Summen Umsatz
+  p. a. (Planmenge × Preis) und **nicht weitergegebene Materialdifferenz** p. a. Aufruf aus der Firmenseite
+  („Preisliste“). Export nach Excel mit aktuellen Filtern.
+- PRL-4: **Preishistorie** je Artikel: jede Preisänderung mit altem und neuem Preis, gültig ab, Quelle (Erstanlage,
+  Import, Preisänderung, manuell), Notiz, Person, Zeitpunkt. Manuelle Preisänderung im Artikel fragt einen Grund ab.
+  Artikel mit Historie können nur Administratoren löschen (sonst deaktivieren).
+
+### 14.2 Rechenregel
+- PRL-10: Δ Material je PE = (neuer − Basis-Materialpreis €/kg) × Einsatzgewicht g / 1000 × Preiseinheit × (1 + MGK %).
+- PRL-11: Δ Zukaufteil je PE = (neuer − Basis-Stückpreis) × Stück je Teil × Preiseinheit.
+- PRL-12: Jahreseffekt = Δ je PE × Planmenge / Preiseinheit. Neuer Preis (Vorschlag) = bisheriger Preis + Δ.
+- PRL-13: Offene Materialdifferenz je Artikel = Σ Materialien (aktueller Materialpreis − Basis) nach PRL-10.
+- Abweichung zur Excel-Vorlage (bewusst korrigiert): MGK gilt für alle Zeilen (in der Vorlage nur Zeile 8);
+  Material 2 und Zukaufteile fließen in den neuen Preis ein (in der Vorlage fehlten sie in Spalte J).
+- Handrechnung (Test): PP 2,95 → 3,10 €/kg, 12,5 g, PE 100, MGK 8 % → Δ = 0,15 × 1,25 × 1,08 = 0,2025 € je 100 Stk;
+  bei 120.000 Stk/Jahr Jahreseffekt 243 €.
+
+### 14.3 Materialpreisänderung (manuell)
+- PRL-20: Unter *Materialpreise* je Material „Neuer Preis“ (€/kg, gültig ab, Notiz). Noch vor dem Speichern zeigt die
+  Vorschau alle **betroffenen Artikel** (aktive Artikel mit diesem Material und abweichender Basis) mit Basis, Gewicht,
+  bisherigem Preis, Δ je PE, neuem Preis, Δ %, Jahreseffekt und Preisbindung; Summe und Anzahl mit Preisbindung.
+- PRL-21: „Übernehmen“ speichert den Materialpreis (Stammdaten und Materialpreis-Historie) und legt einen
+  **Preisänderungsvorgang** PA26-0001 mit allen betroffenen Artikeln an.
+- PRL-22: Preisänderungen in den Stammdaten (Material bearbeiten) werden ebenfalls in der Materialpreis-Historie
+  festgehalten (Quelle „Stammdaten“), ohne Vorgang.
+
+### 14.4 Kennzeichnung
+- PRL-30: Je betroffenem Artikel: **offen** · **an Kunden weitergegeben** · **nicht weitergegeben – vertraglich gebunden** ·
+  **Sonstiges** (Freitext Pflicht). Einzeln oder für mehrere Artikel zugleich (Auswahl „alle offenen“, „offene mit
+  Preisbindung“). Person und Zeitpunkt werden gespeichert.
+- PRL-31: „weitergegeben“ übernimmt den neuen Preis – oder den tatsächlich vereinbarten (teilweise Weitergabe) – mit
+  Datum in Preisliste und Historie; die Materialbasis des Artikels wird auf den neuen Materialpreis gesetzt. Eine
+  weitergegebene Kennzeichnung kann nicht zurückgenommen werden (Korrektur über den Artikelpreis).
+- PRL-32: Nicht weitergegebene Erhöhungen ändern den Preis nicht; die Basis bleibt, die Differenz erscheint als
+  offene Materialdifferenz (PRL-13) und wirkt bei der nächsten Änderung weiter.
+- PRL-33: Vorgangsübersicht mit Anzahl Artikel, offenen Kennzeichnungen, Jahreseffekt gesamt und je Kennzeichnung.
+
+### 14.5 Import
+- PRL-40: **Import Preisliste** (Excel/CSV): Vorschau mit Status je Zeile (neu, Preis geändert, unverändert, Fehler),
+  danach Übernahme. Abgleich über Artikel-Nr. F&R (je Kunde), sonst Artikel-Nr. Kunde + Kunde. Kunde aus Spalte
+  „Kunde“ oder im Dialog gewählt. Unbekannte Materialien werden in den Stammdaten angelegt (Materialnummer, Name,
+  Preis = Basis); bekannte Materialien ohne Nummer erhalten die Nummer aus der Liste.
+- PRL-41: Die **F&R-Vorlage „Annual Price Inquiry List“** wird an den Spaltentiteln erkannt (Kopfzeile bis Zeile 15)
+  und fest zugeordnet: B Ort, C Kunden-Nr., D Artikel-Nr., E Bezeichnung, F Planmenge (sonst Y), G PE, H Preis, I Währung,
+  M MOQ, N Kommentar, O Schussgewicht (= Gewicht Material 1), P Teilgewicht, Q/R/S Material 1 (Nummer, Name, Basis),
+  W/X Umsatz/Menge Vorjahr, AF/AG/AH Material 2, AJ NK-Zuschlag (Faktor → %), AL Ratio, AM/AO Zukaufteile, AV Vertrag.
+  Leere Vorlagenzeilen (nur Formeln) werden übersprungen.
+- PRL-42: **Monatlicher Import** VK-Preise: geänderte Preise werden mit Historie übernommen (ERP ist führend) und in
+  einem Vorgang „Import VK-Preise MM/JJJJ“ zur Kennzeichnung gesammelt.
+- PRL-43: **Import Materialpreise** (Excel/CSV: Material-Nr., Bezeichnung, Preis €/kg, gültig ab, Lieferant): Vorschau
+  mit geänderten Preisen, Anzahl betroffener Artikel und Jahreseffekt je Material; Übernahme legt einen Vorgang „Import
+  Materialpreise“ an (wie PRL-21); unbekannte Materialien optional anlegen.
+- PRL-44: CSV-Vorlagen für beide Importe zum Herunterladen.
+
+### 14.6 Rechte
+- PRL-50: Lesen alle Rollen inkl. Gesellschafter; Anlegen, Ändern, Importieren und Kennzeichnen Vertrieb und Admin.
