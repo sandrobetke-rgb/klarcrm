@@ -672,7 +672,7 @@ Umsetzung erfolgt in vier Phasen:
 | Release | Stand | Inhalt | Status |
 |---|---|---|---|
 | v1.23 | 17.11.2026 | REV01 Phase 1 | ausgeliefert |
-| **v1.24** | 19.11.2026 | REV01 Phase 2 (Anfrage → Angebot → Pipeline) | **aktuelle Auslieferung** – Git-Tag `v1.24` |
+| **v1.24** | 19.11.2026 | REV01 Phase 2 (Anfrage → Angebot → Pipeline) | **aktuelle Auslieferung** – Git-Zweig `release-v1.24` |
 | nächstes großes Update | offen | REV01 Phase 3 (Kalkulationsblätter) **+ Preisliste (Kap. 14, PRL-01) + jährliche Preisrunde (PRL-02)** | in Arbeit – auf Wunsch vom 19.11.2026 gemeinsam ausliefern |
 
 Die Preisliste (v1.25) ist programmiert und getestet, wird aber **nicht einzeln** eingespielt, sondern mit dem
