@@ -6,7 +6,7 @@
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
 | **Dokumentversion** | 1.25 |
 | **Stand** | 20.11.2026 |
-| **Status** | Testphase auf internem Server F&R; REV01 Phase 1 und 2 umgesetzt, Phase 3–4 geplant (Kap. 13) |
+| **Status** | Testphase auf internem Server F&R; ausgeliefert v1.24; Preisliste (Kap. 14) vorgemerkt für das nächste große Update (Kap. 13.0) |
 
 > Dieses Lastenheft wird bei **jeder** Änderung am System mitgezogen. Neue Anforderungen, geänderte Regeln und
 > umgesetzte Punkte werden in der Änderungshistorie (Kapitel 12) dokumentiert. Anforderungen tragen eine feste ID
@@ -652,7 +652,7 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.22 | 15.11.2026 | **Datenimport CSV/Excel** (Kap. 6.12, IMP-1 … 5) für Firmen, Kontakte, Maschinen, Materialien, Zukaufteile mit Vorlage, Spaltenzuordnung, Vorschau und Protokoll; Tests für das Einlesen ergänzt. **Validierungsprotokoll und Testplan** als Vorlage (NFA-11). Neue Abhängigkeit `openpyxl` (Excel). |
 | 1.23 | 17.11.2026 | **Testrückmeldung REV01, Phase 1** (Kap. 13): Speichern immer sichtbar, Standortwechsel übernimmt Standortsätze (Faktor Maschinenstundensatz), ein Angebot je Kalkulation mit Revisionen, keine Lieferanten im Angebot, freie Zahleneingabe, Maschinen-Löschschutz und Vier-Augen-Löschung, Planmaschinen, Schichtmodell, Verlustgrund Pflicht, Branchenliste, Rüstzeit in Minuten, Nummern A26-/K26-, Freigabe ab 250.000 €, Dashboard-Kacheln, Änderungswünsche & Prüfprotokoll, Dokumentation im Programm mit Word-Download. Phasen 2–4 geplant. |
 | 1.24 | 19.11.2026 | **REV01 Phase 2** (Kap. 13.2): Anfragen/Projekte mit n Artikeln und einem Angebot (AF26-0001), Entscheidung je Artikel vor der Kalkulation, Artikelanalyse vor Kalkulation mit Maschinenvorschlag und „technisches Gespräch“, unvollständige Analyse als Freigabegrund, neue Pipeline-Phasen mit Automatik und Endrunde, Positionsstruktur 1/1.1/1.2/1.3 mit Jahrespreisen, Angebotsverfolgung nach 5 Arbeitstagen mit Ampel, Aktivitäten am Angebot, keine Umsatzgewichtung, Menü nach Arbeitsablauf, Änderungswünsche mit Speicherbestätigung und freier Art; Übernahme der Altdaten. |
-| 1.25 | 20.11.2026 | **Preisliste** (Kap. 14): lebende VK-Preisliste je Kunde mit Materialien/Zukaufteilen und Preisbasis, Materialpreisänderung mit Vorschau der betroffenen Artikel, Vorgänge mit Kennzeichnung (weitergegeben / vertraglich gebunden / Sonstiges), Import Preisliste (F&R-Vorlage) und Materialpreise, Historie, Export; Materialnummer in den Stammdaten. |
+| 1.25 | 20.11.2026 | **Preisliste** (Kap. 14, Auslieferung mit dem nächsten großen Update, Kap. 13.0): lebende VK-Preisliste je Kunde mit Materialien/Zukaufteilen und Preisbasis, Materialpreisänderung mit Vorschau der betroffenen Artikel, Vorgänge mit Kennzeichnung (weitergegeben / vertraglich gebunden / Sonstiges), Import Preisliste (F&R-Vorlage) und Materialpreise, Historie, Export; Materialnummer in den Stammdaten. |
 
 ## 13. Testrückmeldung REV01 (Nov. 2026) – Anforderungen und Umsetzung
 
@@ -666,6 +666,17 @@ Umsetzung erfolgt in vier Phasen:
 | 2 | Ablauf Anfrage → Entscheidung → Kalkulation(en) → Angebotskopf mit n Artikeln → Pipeline automatisch, Angebotsverfolgung (P01–P04, P06–P09, X03) | umgesetzt in v1.24, Prüfung durch Anwender |
 | 3 | Kalkulation erweitern: Mengen je Jahr, Material/Zukaufteile mit Staffeln, Losgrößenvorschlag, Werkzeugblatt, Anlagenblatt, Risikoanalyse, Kickoff, Duplizieren mit Fachzahl (C01–C10) | geplant |
 | 4 | Beschaffung mit Staffeln, Vertriebsziel, Vertriebsbericht, Durchlaufzeit (E01, D05, R01) | geplant |
+
+### 13.0 Auslieferung (Releases)
+
+| Release | Stand | Inhalt | Status |
+|---|---|---|---|
+| v1.23 | 17.11.2026 | REV01 Phase 1 | ausgeliefert |
+| **v1.24** | 19.11.2026 | REV01 Phase 2 (Anfrage → Angebot → Pipeline) | **aktuelle Auslieferung** – Git-Tag `v1.24` |
+| nächstes großes Update | offen | REV01 Phase 3 (Kalkulationsblätter) **+ Preisliste (Kap. 14, PRL-01) + jährliche Preisrunde (PRL-02)** | in Arbeit – auf Wunsch vom 19.11.2026 gemeinsam ausliefern |
+
+Die Preisliste (v1.25) ist programmiert und getestet, wird aber **nicht einzeln** eingespielt, sondern mit dem
+nächsten großen Update. Für den Server gilt bis dahin der Stand `v1.24`.
 
 ### 13.1 Phase 1 – umgesetzt (v1.23)
 - REV01-B01: **Speichern der Kalkulation** immer sichtbar: Speicherleiste bleibt beim Scrollen oben, gelb bei

@@ -114,7 +114,7 @@ ITEMS = [
      "angezeigt und lässt sich mit „Filter zurücksetzen“ aufheben. Art und Bereich: Vorschlagsliste mit freier Eingabe.",
      "Änderungswünsche › Kachel „Umgesetzt“ anklicken (Filter) → „+ Änderungswunsch“ mit Art „Schulung“ (frei) speichern → Meldung „angelegt“, Hinweis auf Filter.", "DOK"),
 
-    ("PRL-01", "Preisliste", "wunsch", "hoch", 2, "Lebende VK-Preisliste mit Materialpreisänderung, Kennzeichnung und monatlichem Import",
+    ("PRL-01", "Preisliste", "wunsch", "hoch", 3, "Lebende VK-Preisliste mit Materialpreisänderung, Kennzeichnung und monatlichem Import",
      "Preisliste ins CRM einbauen: alle VK-Artikel inkl. Material erfassen, lebendes Dokument, Import, Filter nach Kunden. Neue "
      "Materialpreise eingeben → betroffene Artikel sehen und kennzeichnen, ob weitergegeben. Einmal im Monat Import der Preise mit "
      "Prüfung, wo sich Preise verändert haben, Historie und Markierung: an Kunden weitergegeben / trotz Erhöhung nicht weitergegeben, "
@@ -125,6 +125,9 @@ ITEMS = [
      "(F&R-Vorlage erkannt) und Import Materialpreise mit Vorschau; Historie je Artikel und Material.",
      "Preisliste › Materialpreise › PP „Neuer Preis“ 1,95 → Liste prüfen → Übernehmen → im Vorgang zwei Artikel „vertraglich gebunden“, "
      "einen „weitergegeben“ → Artikel zeigt neuen Preis und Historie. Import der Vorlage mit drei Zeilen.", "Kap. 14"),
+    ("PRL-02", "Preisliste", "wunsch", "mittel", 3, "Jährliche Preisrunde je Kunde („Annual Price Inquiry List“) aus der Preisliste erzeugen",
+     "Aus den gespeicherten Artikeln je Kunde die Jahrespreisliste füllen (Materialdifferenz, NK-Zuschlag, Ratio, Zukaufteile, "
+     "Jahreseffekte) und als Excel zum Versand ausgeben; vorgemerkt für das nächste große Update.", O, None, None, "Kap. 14"),
 
     # ---------------------------------------------------------------- Kalkulation (Phase 3)
     ("REV01-C01", "Zukaufteile", "wunsch", "hoch", 3, "Zukaufteile: Stück je Bauteil, Freitext, Lieferant, Staffelmengen mit Jahresbedarf",
