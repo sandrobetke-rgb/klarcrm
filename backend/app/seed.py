@@ -512,6 +512,44 @@ def seed_procurement(db):
     db.commit()
 
 
+def seed_pricelist():
+    """Demo-Preisliste: einige VK-Artikel je Kunde mit Materialbasis (Platzhalterwerte)."""
+    from datetime import date as _d  # noqa: PLC0415
+    from .models import Account, Material, PriceArticle, PriceArticleHistory, PriceArticleMaterial, PriceArticlePart  # noqa: PLC0415
+    db = SessionLocal()
+    if db.query(PriceArticle).count():
+        db.close()
+        return
+    mats = db.query(Material).order_by(Material.id).all()
+    for i, m in enumerate(mats):
+        m.number = m.number or f"RM{5930 + i:05d}"
+    accs = [a for a in db.query(Account).filter(Account.type == "kunde").order_by(Account.id).all()][:3]
+    demo = [  # Kunde-Index, Artikel-Nr., Kunden-Nr., Bezeichnung, Preis/100, Planmenge, Schussgewicht, Material-Index, Basis, Vertrag
+        (0, "100-2001", "SN-778-01", "Gehäuse Sensor 2K Oberteil", 66.00, 80000, 14.2, 0, None, False, "Preisgleitklausel Material"),
+        (0, "100-2002", "SN-778-02", "Gehäuse Sensor 2K Unterteil", 52.40, 80000, 11.6, 0, None, False, "Preisgleitklausel Material"),
+        (0, "100-2005", "SN-901-11", "Abdeckkappe", 8.90, 250000, 3.1, 1, None, True, "Festpreis bis 31.12.2027"),
+        (1, "200-1001", "EK-55-1200", "Steckergehäuse 12-polig", 31.75, 150000, 7.8, 0, None, False, ""),
+        (1, "200-1002", "EK-55-1210", "Verriegelung", 6.20, 300000, 1.9, 1, None, True, "Rahmenvertrag 2027, Preisbindung"),
+        (2, "300-0501", "HW-4471", "Griffschale", 24.10, 60000, 22.5, 2 if len(mats) > 2 else 0, None, False, ""),
+    ]
+    for ai, no, cno, desc, price, qty, shot, mi, basis, bound, note in demo:
+        if ai >= len(accs) or not mats:
+            continue
+        m = mats[mi % len(mats)]
+        a = PriceArticle(account_id=accs[ai].id, article_no=no, customer_part_no=cno, description=desc, location="DE",
+                         price_unit=100, currency="EUR", price=price, price_valid_from=_d(_d.today().year, 1, 1), forecast_qty=qty,
+                         shot_weight_g=shot, part_weight_g=round(shot * 0.92, 1), mgk_pct=8, contract_bound=bound,
+                         contract_until=_d(_d.today().year + 1, 12, 31) if bound else None, contract_note=note or None)
+        a.materials = [PriceArticleMaterial(position=1, material_id=m.id, weight_g=shot, price_basis=basis or m.price_per_kg)]
+        if no == "100-2001":
+            a.parts = [PriceArticlePart(position=1, name="Gewindebuchse M4", qty_per_part=4, price_basis=0.021, current_price=0.021)]
+        db.add(a)
+        db.flush()
+        db.add(PriceArticleHistory(article_id=a.id, price=price, valid_from=a.price_valid_from, source="erstanlage", note="Beispiel"))
+    db.commit()
+    db.close()
+
+
 def seed_inquiries():
     """Demo: Kalkulationen in Anfragen überführen (wie beim Update eines bestehenden Servers)."""
     from .inquiry import migrate  # noqa: PLC0415
@@ -523,3 +561,4 @@ def seed_inquiries():
 if __name__ == "__main__":
     run()
     seed_inquiries()
+    seed_pricelist()

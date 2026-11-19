@@ -359,6 +359,7 @@ class MachineOut(ORM, MachineBase):
 
 class MaterialBase(BaseModel):
     name: str = Field(min_length=1)
+    number: str | None = None     # F&R-Materialnummer
     family: str | None = None
     supplier: str | None = None
     price_per_kg: float = 0

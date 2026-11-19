@@ -14,6 +14,16 @@ const HELP = [
     'Freigabe (Vier-Augen-Prinzip) bei Großprojekt, Marge unter Grenze oder unvollständiger Artikelanalyse. Danach „Angebot der Anfrage erstellen“.',
     'Weitere Reiter: Lebensweg, Dokumente, Anrufe, Versionen (Vergleich), Nachkalkulation, Protokoll.',
   ]],
+  ['/preisliste/aenderungen/', 'Preisänderung', 'Alle Artikel, die von einer Material- oder VK-Preisänderung betroffen sind – je Artikel kennzeichnen.', [
+    'Häkchen setzen → Kennzeichnung für mehrere Artikel auf einmal: an Kunden weitergegeben · nicht weitergegeben, vertraglich gebunden · Sonstiges (Freitext Pflicht).',
+    '„weitergegeben“ übernimmt den neuen Preis (oder den tatsächlich vereinbarten, z. B. bei teilweiser Weitergabe) mit Datum in die Preisliste und die Historie; die Materialbasis steigt mit.',
+    'Nicht weitergegebene Erhöhungen bleiben als „offene Materialdifferenz“ am Artikel sichtbar.',
+  ]],
+  ['/preisliste', 'Preisliste', 'Lebende VK-Preisliste: alle Verkaufsartikel je Kunde mit Material, Preisbasis, Planmenge und Vertrag.', [
+    'Artikel: Filter nach Kunde, Material, Preisbindung, offener Materialdifferenz. Zeile anklicken → bearbeiten, Preis- und Änderungshistorie. Import aus Excel/CSV (F&R-Vorlage „Annual Price Inquiry List“ wird erkannt), Export nach Excel.',
+    'Materialpreise: „Neuer Preis“ eingeben → sofort Liste der betroffenen Artikel mit Δ je Preiseinheit und Jahreseffekt; „Übernehmen“ legt einen Vorgang an. Monatlich: „Import Materialpreise“ mit Vorschau.',
+    'Preisänderungen: alle Vorgänge mit Stand der Kennzeichnung. Formel: Δ = (neu − Basis €/kg) × Gewicht/1000 × Preiseinheit × (1 + MGK %).',
+  ]],
   ['/anfragen/', 'Anfrage / Projekt', 'Ein Vorgang je Kundenanfrage: Artikel, Entscheidung, Artikelanalyse, Kalkulation, Freigabe, Angebot, Verfolgung – die Schrittleiste zeigt, was als Nächstes dran ist.', [
     '„+ Artikel / Kalkulation“ legt je Artikel eine Kalkulation unter dieser Anfrage an (optional mit Werten eines anderen Artikels).',
     'Je Artikel zuerst entscheiden: anbieten · nicht anbieten (mit Grund) · anderer Standort · Sonstiges. Erst dann lässt sich kalkulieren.',

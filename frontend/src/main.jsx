@@ -28,6 +28,7 @@ import { ROLES } from './constants'
 import Footer from './components/Footer'
 import Changes from './pages/Changes'
 import Inquiries, { InquiryDetail } from './pages/Inquiries'
+import PriceList, { PriceChangeDetail } from './pages/PriceList'
 import Docs from './pages/Docs'
 
 function Layout() {
@@ -42,6 +43,7 @@ function Layout() {
     ['/kalkulationen', 'Kalkulationen', '∑'],
     ['/angebote', 'Angebote', '€'],
     ['/aktivitaeten', 'Aktivitäten', '✓'],
+    ['/preisliste', 'Preisliste', '₤'],
     ['#', 'Kunden'],
     ['/firmen', 'Firmen', '▣'],
     ['/kontakte', 'Kontakte', '☺'],
@@ -98,6 +100,8 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/pipeline" element={<Pipeline />} />
             <Route path="/anfragen" element={<Inquiries />} />
+            <Route path="/preisliste" element={<PriceList />} />
+            <Route path="/preisliste/aenderungen/:id" element={<PriceChangeDetail />} />
             <Route path="/anfragen/:id" element={<InquiryDetail />} />
             <Route path="/firmen" element={<Accounts />} />
             <Route path="/firmen/:id" element={<AccountDetail />} />

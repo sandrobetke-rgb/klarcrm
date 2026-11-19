@@ -287,6 +287,7 @@ class Material(TimestampMixin, Base):
     __tablename__ = "materials"
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120))          # z. B. PA6 GF30 schwarz
+    number: Mapped[str | None] = mapped_column(String(40), index=True)  # F&R-Materialnummer (Preisliste „F&R Mat Number“)
     family: Mapped[str | None] = mapped_column(String(40))  # PA6, PP, ABS ...
     supplier: Mapped[str | None] = mapped_column(String(120))
     price_per_kg: Mapped[float] = mapped_column(Float, default=0)
@@ -702,3 +703,131 @@ class ChangeRequest(TimestampMixin, Base):
     tested_by: Mapped[str | None] = mapped_column(String(120))
     tested_at: Mapped[date | None] = mapped_column(Date)
     requested_by: Mapped[str | None] = mapped_column(String(120))
+
+
+
+# ====================================================================== Preisliste (lebende VK-Preisliste)
+class PriceArticle(TimestampMixin, Base):
+    """Verkaufsartikel je Kunde mit aktuellem Preis je Preiseinheit, Materialien und Zukaufteilen."""
+    __tablename__ = "price_articles"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    account_id: Mapped[int | None] = mapped_column(ForeignKey("accounts.id", ondelete="SET NULL"), index=True)
+    article_no: Mapped[str | None] = mapped_column(String(60), index=True)        # F&R-Artikelnummer
+    customer_part_no: Mapped[str | None] = mapped_column(String(80), index=True)  # Part Number of Contract Product
+    description: Mapped[str | None] = mapped_column(String(255))
+    location: Mapped[str | None] = mapped_column(String(80))                      # Fertigungsort / Land
+    site_id: Mapped[int | None] = mapped_column(Integer)
+    price_unit: Mapped[int] = mapped_column(Integer, default=100)                 # Preis je n Stück
+    currency: Mapped[str] = mapped_column(String(3), default="EUR")
+    price: Mapped[float] = mapped_column(Float, default=0)                        # aktueller Preis je Preiseinheit
+    price_valid_from: Mapped[date | None] = mapped_column(Date)
+    forecast_qty: Mapped[float | None] = mapped_column(Float)                     # Planmenge (Stk/Jahr)
+    qty_last_year: Mapped[float | None] = mapped_column(Float)
+    revenue_last_year: Mapped[float | None] = mapped_column(Float)
+    moq: Mapped[float | None] = mapped_column(Float)
+    shot_weight_g: Mapped[float | None] = mapped_column(Float)                    # Schussgewicht je Teil (inkl. Anguss)
+    part_weight_g: Mapped[float | None] = mapped_column(Float)                    # Teilgewicht netto
+    mgk_pct: Mapped[float | None] = mapped_column(Float, default=8)               # MGK auf Materialdifferenz
+    surcharge_pct: Mapped[float | None] = mapped_column(Float, default=0)         # Nachkalkulations-Zuschlag (NK) %
+    ratio_per_unit: Mapped[float | None] = mapped_column(Float, default=0)        # Rationalisierung je Preiseinheit (negativ = Nachlass)
+    contract_bound: Mapped[bool | None] = mapped_column(Boolean, default=False)   # Preisbindung laut Vertrag
+    contract_until: Mapped[date | None] = mapped_column(Date)
+    contract_note: Mapped[str | None] = mapped_column(String(255))                # „Vertrag“ (z. B. Preisgleitklausel, Festpreis bis …)
+    calculation_id: Mapped[int | None] = mapped_column(Integer)                   # Herkunft Kalkulation
+    comment: Mapped[str | None] = mapped_column(Text)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    account = relationship("Account", lazy="joined")
+    materials = relationship("PriceArticleMaterial", cascade="all, delete-orphan", lazy="selectin",
+                             order_by="PriceArticleMaterial.position")
+    parts = relationship("PriceArticlePart", cascade="all, delete-orphan", lazy="selectin", order_by="PriceArticlePart.position")
+
+
+class PriceArticleMaterial(Base):
+    """Material im Artikel. price_basis = Materialpreis (€/kg), der im aktuellen Artikelpreis steckt."""
+    __tablename__ = "price_article_materials"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    article_id: Mapped[int] = mapped_column(ForeignKey("price_articles.id", ondelete="CASCADE"), index=True)
+    position: Mapped[int] = mapped_column(Integer, default=1)
+    material_id: Mapped[int | None] = mapped_column(ForeignKey("materials.id", ondelete="SET NULL"), index=True)
+    name: Mapped[str | None] = mapped_column(String(160))           # Freitext, falls nicht in den Stammdaten
+    weight_g: Mapped[float | None] = mapped_column(Float)           # Einsatzgewicht je Teil (g), bei Material 1 meist Schussgewicht
+    price_basis: Mapped[float | None] = mapped_column(Float)        # €/kg im aktuellen Preis
+    material = relationship("Material", lazy="joined")
+
+
+class PriceArticlePart(Base):
+    """Zukaufteil im Artikel; price_basis = Stückpreis, der im aktuellen Artikelpreis steckt."""
+    __tablename__ = "price_article_parts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    article_id: Mapped[int] = mapped_column(ForeignKey("price_articles.id", ondelete="CASCADE"), index=True)
+    position: Mapped[int] = mapped_column(Integer, default=1)
+    name: Mapped[str] = mapped_column(String(160))
+    qty_per_part: Mapped[float] = mapped_column(Float, default=1)
+    price_basis: Mapped[float | None] = mapped_column(Float)        # €/Stk im aktuellen Preis
+    current_price: Mapped[float | None] = mapped_column(Float)      # aktueller Einkaufspreis €/Stk
+    supplier: Mapped[str | None] = mapped_column(String(120))
+
+
+class PriceArticleHistory(Base):
+    """Preishistorie je Artikel (jede Preisänderung, Import, Erstanlage)."""
+    __tablename__ = "price_article_history"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    article_id: Mapped[int] = mapped_column(ForeignKey("price_articles.id", ondelete="CASCADE"), index=True)
+    price: Mapped[float] = mapped_column(Float)
+    old_price: Mapped[float | None] = mapped_column(Float)
+    price_unit: Mapped[int] = mapped_column(Integer, default=100)
+    valid_from: Mapped[date | None] = mapped_column(Date)
+    source: Mapped[str] = mapped_column(String(20))                 # erstanlage | import | preisaenderung | manuell
+    note: Mapped[str | None] = mapped_column(Text)
+    change_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    created_by_id: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class MaterialPriceHistory(Base):
+    """Preishistorie je Material (€/kg)."""
+    __tablename__ = "material_price_history"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    material_id: Mapped[int] = mapped_column(ForeignKey("materials.id", ondelete="CASCADE"), index=True)
+    price_per_kg: Mapped[float] = mapped_column(Float)
+    old_price: Mapped[float | None] = mapped_column(Float)
+    valid_from: Mapped[date | None] = mapped_column(Date)
+    source: Mapped[str] = mapped_column(String(20))                 # manuell | import | stammdaten | preisliste
+    note: Mapped[str | None] = mapped_column(Text)
+    change_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    created_by_id: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class PriceChange(TimestampMixin, Base):
+    """Preisänderungsvorgang: neuer Materialpreis (manuell/Import) oder Import VK-Preise – mit betroffenen Artikeln."""
+    __tablename__ = "price_changes"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[str] = mapped_column(String(20), unique=True)   # PA26-0001
+    kind: Mapped[str] = mapped_column(String(20))                   # material | material_import | vk_import | manuell
+    title: Mapped[str] = mapped_column(String(200))
+    valid_from: Mapped[date | None] = mapped_column(Date)
+    note: Mapped[str | None] = mapped_column(Text)
+    details: Mapped[list | None] = mapped_column(JSON)             # z. B. geänderte Materialien [{id, name, old, new}]
+    created_by_id: Mapped[int | None] = mapped_column(Integer)
+    impacts = relationship("PriceImpact", cascade="all, delete-orphan", lazy="selectin", order_by="PriceImpact.id")
+
+
+class PriceImpact(Base):
+    """Betroffener Artikel in einem Preisänderungsvorgang mit Kennzeichnung, ob an den Kunden weitergegeben."""
+    __tablename__ = "price_impacts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    change_id: Mapped[int] = mapped_column(ForeignKey("price_changes.id", ondelete="CASCADE"), index=True)
+    article_id: Mapped[int] = mapped_column(ForeignKey("price_articles.id", ondelete="CASCADE"), index=True)
+    old_price: Mapped[float | None] = mapped_column(Float)          # Preis je PE vor der Änderung
+    delta: Mapped[float] = mapped_column(Float, default=0)          # Δ je Preiseinheit (berechnet bzw. aus Import)
+    new_price: Mapped[float | None] = mapped_column(Float)          # Vorschlag bzw. importierter Preis
+    annual_effect: Mapped[float | None] = mapped_column(Float)      # Δ × Planmenge
+    detail: Mapped[list | None] = mapped_column(JSON)               # Aufschlüsselung je Material / Zukaufteil
+    status: Mapped[str] = mapped_column(String(30), default="offen")  # offen | weitergegeben | vertraglich_gebunden | sonstiges
+    note: Mapped[str | None] = mapped_column(Text)
+    passed_price: Mapped[float | None] = mapped_column(Float)       # tatsächlich an Kunden weitergegebener Preis je PE
+    effective_date: Mapped[date | None] = mapped_column(Date)
+    decided_by_id: Mapped[int | None] = mapped_column(Integer)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    article = relationship("PriceArticle", lazy="joined")

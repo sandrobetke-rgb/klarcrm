@@ -94,9 +94,19 @@ purchased_parts = make_crud_router(
     out_schema=s.PurchasedPartOut, search_fields=["name", "part_no", "supplier", "supplier_part_no"],
     filter_fields=["active", "supplier"], default_sort="name",
 )
+def _material_after_update(db: Session, m: Material, old: dict, user: User):
+    """Preisänderung in den Stammdaten → Materialpreis-Historie (Preisliste; ohne Vorgang – dafür „Neuer Materialpreis“)."""
+    from ..models import MaterialPriceHistory  # noqa: PLC0415
+    if "price_per_kg" in old and abs((old["price_per_kg"] or 0) - (m.price_per_kg or 0)) > 1e-9:
+        db.add(MaterialPriceHistory(material_id=m.id, price_per_kg=m.price_per_kg, old_price=old["price_per_kg"],
+                                    valid_from=m.price_valid_from or date.today(), source="stammdaten",
+                                    note="in den Stammdaten geändert", created_by_id=user.id))
+
+
 materials = make_crud_router(
     model=Material, create_schema=s.MaterialBase, update_schema=s.MaterialUpdate, out_schema=s.MaterialOut,
-    search_fields=["name", "family", "supplier"], filter_fields=["active", "family"], default_sort="name",
+    search_fields=["name", "number", "family", "supplier"], filter_fields=["active", "family"], default_sort="name",
+    after_update=_material_after_update,
 )
 
 router = APIRouter()      # /api/calc  (Parameter, Vorschau)

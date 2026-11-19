@@ -63,6 +63,7 @@ export default function AccountDetail() {
         </div>
         {canWrite && <div className="toolbar">
           <button className="btn btn-ghost" onClick={() => open('activity', { type: 'notiz', done: true, due_at: new Date().toISOString() })}>✎ Notiz</button>
+          <a className="btn btn-ghost" href={`/preisliste?tab=articles&account_id=${a.id}`}>Preisliste</a>
           <button className="btn btn-ghost" onClick={() => setModal({ kind: 'account', values: a })}>Bearbeiten</button>
           <button className="btn btn-primary" onClick={() => nav(`/angebote/neu?account_id=${a.id}`)}>+ Angebot</button>
         </div>}

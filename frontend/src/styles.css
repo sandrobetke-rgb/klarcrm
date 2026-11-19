@@ -646,3 +646,5 @@ tr.clickable { cursor: pointer; } tr.clickable:hover td { background: #f8fafc; }
 .lights { display: inline-flex; gap: 10px; font-size: 0.8em; }
 .l-rot { color: #dc2626; } .l-gelb { color: #d97706; } .l-gruen { color: #059669; }
 .pq-table td:nth-child(2), .pq-table th:nth-child(2) { width: 56%; }
+.bulk-bar select, .bulk-bar input:not([type=checkbox]) { width: auto; min-width: 180px; flex: 0 1 auto; color: #111827; background: #fff; }
+.bulk-bar input:not([type=checkbox]) { min-width: 240px; }
