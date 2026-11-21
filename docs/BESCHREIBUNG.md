@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Programm** | KlarCRM – Vertrieb, Kalkulation Spritzguss, Angebote |
-| **Version** | 1.26 (Stand 21.11.2026) |
+| **Version** | 1.27 (Stand 21.11.2026) |
 | **Für** | Vertrieb, Kalkulation, Einkauf, Geschäftsführung, Gesellschafter |
 
 > Diese Beschreibung erklärt, **wie man mit KlarCRM arbeitet**. Die genauen Regeln und Rechenwege stehen im
@@ -133,6 +133,15 @@ Die **Wahrscheinlichkeit** gilt für den ganzen Auftrag. Summen werden nicht meh
 - Kommentar schreiben → **Stand speichern** (Zahlen werden eingefroren) → **Freigeben** → **Drucken / PDF** und selbst versenden.
 - **Vertriebsziele** (Administrator): je Jahr Ziel gesamt und je Vertriebler, optional Werkzeug/Einmal.
 - Die Startseite zeigt die Zielerreichung als Kachel.
+
+## 3c. Auftrag erhalten – auch nur für einen Teil der Artikel
+
+- Im versendeten Angebot **„Auftrag erhalten …“** (oder Status auf „angenommen“ setzen und speichern).
+- Beauftragte Artikel anhaken, z. B. 2 von 10. Für den Rest einmal die Vorgabe wählen: **verloren** (mit Grund),
+  **andere Variante beauftragt** (zählt nicht als Verlust) oder **noch offen** (bleibt in der Pipeline). Einzelne
+  Artikel lassen sich abweichend setzen.
+- Das Angebot wird „angenommen“ (alle beauftragt) oder **„teilweise beauftragt“**. Nur die beauftragten Artikel zählen
+  als Neuumsatz und in der Auslastung. Offene Artikel später über „Auftrag ergänzen …“ entscheiden.
 
 ## 4. Stammdaten
 

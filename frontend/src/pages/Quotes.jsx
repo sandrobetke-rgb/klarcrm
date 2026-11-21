@@ -7,7 +7,7 @@ import { eur, fmtDate, QUOTE_STATUS } from '../constants'
 import { LightBadge } from '../components/Followup'
 import { Link } from 'react-router-dom'
 
-export const quoteTone = { entwurf: 'neutral', versendet: 'info', angenommen: 'good', abgelehnt: 'critical', ersetzt: 'neutral' }
+export const quoteTone = { entwurf: 'neutral', versendet: 'info', angenommen: 'good', teilweise: 'good', abgelehnt: 'critical', ersetzt: 'neutral' }
 
 export default function Quotes() {
   const nav = useNavigate()

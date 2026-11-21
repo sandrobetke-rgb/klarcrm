@@ -120,7 +120,7 @@ def refresh_inquiry(db: Session, opp: Opportunity):
         else:
             target = max(target, "neue_anfrage", key=lambda s: STAGE_ORDER.get(s, 0)) if target == "lead" else target
         q = quote_of(db, opp.id)
-        if q and q.status in ("versendet", "angenommen", "abgelehnt"):
+        if q and q.status in ("versendet", "angenommen", "teilweise", "abgelehnt"):
             target = max(target, "angebot", key=lambda s: STAGE_ORDER.get(s, 0))
         if target != opp.stage:
             set_stage(opp, target)

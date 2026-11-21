@@ -134,6 +134,7 @@ REASON_LABELS = {  # Verlustgründe (REV01-P05)
     "projekt_eingestellt": "Projekt eingestellt", "projekt_kunde_nicht_gewonnen": "Kunde hat Projekt nicht erhalten",
     "vorrichtung_zu_teuer": "Vorrichtung zu teuer", "investition_zu_teuer": "Investition zu teuer",
     "lieferzeit": "Lieferzeit / Kapazität", "technik": "Technisch nicht machbar", "sonstiges": "Sonstiges",
+    "andere_variante": "Andere Variante beauftragt",   # kein Verlust – zählt nicht in Verlustliste/Gewinnquote
 }
 
 
@@ -437,7 +438,7 @@ def calc_stats(owner_id: int | None = None, db: Session = Depends(get_db), _: Us
     rows = db.scalars(stmt).unique().all()
     open_ = [c for c in rows if c.status not in CLOSED]
     won = [c for c in rows if c.status == "gewonnen"]
-    lost = [c for c in rows if c.status == "verloren"]
+    lost = [c for c in rows if c.status == "verloren" and c.close_reason != "andere_variante"]
     rev = lambda c: c.annual_revenue  # noqa: E731
     reasons = {}
     for c in lost:
@@ -803,7 +804,7 @@ def inquiry_quote(db: Session, opp: Opportunity, user: User, lang: str = "de") -
     pairs = _pairs(offer)
     if q and q.status == "entwurf":
         quote, action = build_quote(db, pairs, user, q.language or lang, target=q), "aktualisiert"
-    elif q and q.status in ("versendet", "abgelehnt", "angenommen"):
+    elif q and q.status in ("versendet", "abgelehnt", "angenommen", "teilweise"):
         quote = build_quote(db, pairs, user, q.language or lang, number=revision_number(db, q.number))
         quote.contact_id, quote.intro_text, quote.terms = q.contact_id, q.intro_text, q.terms
         q.status = "ersetzt"

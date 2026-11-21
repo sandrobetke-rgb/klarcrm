@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 Role = Literal["admin", "vertrieb", "gesellschafter"]
 Stage = Literal["lead", "neue_anfrage", "qualifiziert", "angebot", "verhandlung", "gewonnen", "verloren", "nicht_angeboten"]
 ActivityType = Literal["anruf", "termin", "email", "aufgabe", "notiz"]
-QuoteStatus = Literal["entwurf", "versendet", "angenommen", "abgelehnt", "ersetzt"]
+QuoteStatus = Literal["entwurf", "versendet", "angenommen", "teilweise", "abgelehnt", "ersetzt"]
 AccountType = Literal["interessent", "kunde", "partner", "lieferant"]
 
 

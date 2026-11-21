@@ -714,3 +714,12 @@ tr.clickable { cursor: pointer; } tr.clickable:hover td { background: #f8fafc; }
   .report details summary { display: none; }
   .report * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* Auftrag erhalten (Teilbeauftragung) */
+.award-bar { display: flex; gap: 10px; align-items: center; margin: 8px 0; }
+.award-cell { display: flex; gap: 6px; flex-wrap: wrap; }
+.award-cell select, .award-cell input { max-width: 220px; }
+.award-rest { margin: 10px 0; padding: 10px 12px; }
+.award-sum { margin: 8px 0 0; }
+tr.row-won td { background: #eef7f0; }
+.txt-good { color: #2c7a3f; } .txt-crit { color: #b03030; }

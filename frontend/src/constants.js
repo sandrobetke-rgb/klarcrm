@@ -41,6 +41,7 @@ export const QUOTE_STATUS = [
   { value: 'entwurf', label: 'Entwurf' },
   { value: 'versendet', label: 'Versendet' },
   { value: 'angenommen', label: 'Angenommen' },
+  { value: 'teilweise', label: 'Teilweise beauftragt' },
   { value: 'abgelehnt', label: 'Abgelehnt' },
   { value: 'ersetzt', label: 'Ersetzt (Revision)' },
 ]
@@ -93,7 +94,7 @@ export const CLOSE_REASONS = [
 // Branchen (REV01-S01): Vorauswahl, eigene Eingabe möglich
 export const INDUSTRIES = ['Automotive', 'Energie & Batterie', 'Wasser & Sanitär', 'Heizung, Lüftung & Klima',
   'Automatisierung & Elektrotechnik', 'Rüstung', 'Drohnentechnik', 'Smart Home', 'Sonstiges']
-export const reasonLabel = (v) => CLOSE_REASONS.find((r) => r.value === v)?.label || v || ''
+export const reasonLabel = (v) => (v === 'andere_variante' ? 'Andere Variante beauftragt' : CLOSE_REASONS.find((r) => r.value === v)?.label || v || '')
 
 const n4 = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
 const n2 = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })

@@ -33,7 +33,7 @@ STAGE_PROBABILITY = {
     "verhandlung": 75, "gewonnen": 100, "verloren": 0, "nicht_angeboten": 0,
 }
 ACTIVITY_TYPES = ("anruf", "termin", "email", "aufgabe", "notiz")
-QUOTE_STATUS = ("entwurf", "versendet", "angenommen", "abgelehnt", "ersetzt")
+QUOTE_STATUS = ("entwurf", "versendet", "angenommen", "teilweise", "abgelehnt", "ersetzt")
 
 
 class TimestampMixin:

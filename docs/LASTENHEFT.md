@@ -4,7 +4,7 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.26 |
+| **Dokumentversion** | 1.27 |
 | **Stand** | 21.11.2026 |
 | **Status** | Testphase auf internem Server F&R; ausgeliefert v1.24; Preisliste (Kap. 14) und Monatsbericht (Kap. 15) vorgemerkt für das nächste große Update (Kap. 13.0) |
 
@@ -654,6 +654,7 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.24 | 19.11.2026 | **REV01 Phase 2** (Kap. 13.2): Anfragen/Projekte mit n Artikeln und einem Angebot (AF26-0001), Entscheidung je Artikel vor der Kalkulation, Artikelanalyse vor Kalkulation mit Maschinenvorschlag und „technisches Gespräch“, unvollständige Analyse als Freigabegrund, neue Pipeline-Phasen mit Automatik und Endrunde, Positionsstruktur 1/1.1/1.2/1.3 mit Jahrespreisen, Angebotsverfolgung nach 5 Arbeitstagen mit Ampel, Aktivitäten am Angebot, keine Umsatzgewichtung, Menü nach Arbeitsablauf, Änderungswünsche mit Speicherbestätigung und freier Art; Übernahme der Altdaten. |
 | 1.25 | 20.11.2026 | **Preisliste** (Kap. 14, Auslieferung mit dem nächsten großen Update, Kap. 13.0): lebende VK-Preisliste je Kunde mit Materialien/Zukaufteilen und Preisbasis, Materialpreisänderung mit Vorschau der betroffenen Artikel, Vorgänge mit Kennzeichnung (weitergegeben / vertraglich gebunden / Sonstiges), Import Preisliste (F&R-Vorlage) und Materialpreise, Historie, Export; Materialnummer in den Stammdaten. |
 | 1.26 | 21.11.2026 | **Monatsbericht Vertrieb** (Kap. 15, Auslieferung mit dem nächsten großen Update): Bericht je Monat für die Gesellschafter als PDF – Neuumsatz (stärkstes Lieferjahr) seit Jahresbeginn gegen das Jahresziel mit Ampel, je Vertriebler, gewonnen/verloren/nicht angeboten, offene Pipeline, Handlungsbedarf, Auslastung Folgejahr je Maschine, Preisliste, Kommentar der GF; Stand speichern und freigeben; Vertriebsziele je Jahr; Kachel Vertriebsziel auf der Startseite. Kein Vorjahresvergleich. Neues Feld „Neuumsatz“ und „abgeschlossen am“ an der Kalkulation. |
+| 1.27 | 21.11.2026 | **Teilbeauftragung und Varianten** (Kap. 15.4): „Auftrag erhalten“ am Angebot mit Ergebnis je Artikel – beauftragt / verloren mit Grund / andere Variante beauftragt (kein Verlust) / noch offen; Vorgabe für alle nicht beauftragten Artikel; neuer Angebotsstatus „teilweise beauftragt“; nur beauftragte Artikel zählen als Neuumsatz und in der Auslastung; Varianten nicht in Verlustliste und Gewinnquote. |
 
 ## 13. Testrückmeldung REV01 (Nov. 2026) – Anforderungen und Umsetzung
 
@@ -674,7 +675,7 @@ Umsetzung erfolgt in vier Phasen:
 |---|---|---|---|
 | v1.23 | 17.11.2026 | REV01 Phase 1 | ausgeliefert |
 | **v1.24** | 19.11.2026 | REV01 Phase 2 (Anfrage → Angebot → Pipeline) | **aktuelle Auslieferung** – Git-Zweig `release-v1.24` |
-| nächstes großes Update | offen | REV01 Phase 3 (Kalkulationsblätter) **+ Preisliste (Kap. 14, PRL-01) + jährliche Preisrunde (PRL-02) + Monatsbericht mit Vertriebsziel (Kap. 15, MB-01, REV01-D05, REV01-R01)** | in Arbeit – auf Wunsch vom 19.11.2026 gemeinsam ausliefern |
+| nächstes großes Update | offen | REV01 Phase 3 (Kalkulationsblätter) **+ Preisliste (Kap. 14, PRL-01) + jährliche Preisrunde (PRL-02) + Monatsbericht mit Vertriebsziel (Kap. 15, MB-01, REV01-D05, REV01-R01) + Teilbeauftragung (Kap. 15.4, MB-02)** | in Arbeit – auf Wunsch vom 19.11.2026 gemeinsam ausliefern |
 
 Die Preisliste (v1.25) und der Monatsbericht (v1.26) sind programmiert und getestet, werden aber **nicht einzeln** eingespielt, sondern mit dem
 nächsten großen Update. Für den Server gilt bis dahin der Stand `v1.24`.
@@ -913,3 +914,22 @@ selbst (kein automatischer Versand). Gesellschafter können das CRM lesend öffn
 - Schnittstellen: `GET /api/monthly-reports/live?year&month`, `GET/POST /api/monthly-reports`, `PATCH/DELETE /api/monthly-reports/{id}`,
   `GET/POST/DELETE /api/sales-targets`. Tabellen `sales_targets`, `monthly_reports`; neue Spalten `calculations.peak_revenue`,
   `calculations.closed_at` (werden beim Start ergänzt und befüllt).
+
+### 15.4 Teilbeauftragung und Varianten (Auftrag erhalten)
+Ausgangslage: Ein Angebot enthält n Artikel oder Varianten (z. B. 10), beauftragt werden nur einige (z. B. 2).
+- MB-30: Am versendeten Angebot „Auftrag erhalten …“ (ebenso beim Wechsel des Status auf „angenommen“): Liste aller
+  Artikel des Angebots (aus den Positionen, sonst aus der Anfrage) mit Neuumsatz und Werkzeug/Einmal; beauftragte anhaken.
+- MB-31: Für alle nicht beauftragten Artikel gilt eine Vorgabe (einmal wählen): **verloren** mit Verlustgrund
+  (Pflicht, bei „Sonstiges“ Freitext), **andere Variante beauftragt** oder **noch offen**; je Artikel abweichend wählbar.
+- MB-32: Mindestens ein Artikel muss beauftragt sein, sonst Angebot „abgelehnt“ (mit Verlustgrund). Alle beauftragt →
+  Angebot „angenommen“, sonst neuer Status **„teilweise beauftragt“**. Die Angebotsverfolgung endet.
+- MB-33: „Andere Variante beauftragt“ wird als Artikelstatus „verloren“ mit Grund `andere_variante` gespeichert, zählt
+  aber **nicht als Verlust**: nicht in Verlustliste, Verlustgründen und Gewinnquote (Monatsbericht, Auswertungen,
+  Kalkulationsübersicht); im Monatsbericht als „andere Variante beauftragt (kein Verlust)“ ausgewiesen.
+- MB-34: Neuumsatz, Auslastung und Monatsbericht zählen nur die beauftragten Artikel. Die Anfrage wird „gewonnen“,
+  sobald alle Artikel entschieden sind und mindestens einer beauftragt ist; solange Artikel „noch offen“ sind, bleibt
+  die Anfrage mit dem Restvolumen in der Pipeline. Offene Artikel später über „Auftrag ergänzen …“ entscheiden.
+- MB-35: Nachweis: Notiz an Anfrage und Angebot „Auftrag erhalten zu A26-…: x von n Artikeln“ mit Aufstellung und
+  optionaler Notiz (z. B. Bestellnummer); Statuswechsel der Artikel im Protokoll.
+- Schnittstellen: `GET /api/quotes/{id}/award` (Artikel mit aktuellem Ergebnis), `POST /api/quotes/{id}/award`
+  {lines: [{calculation_id, outcome: gewonnen|verloren|andere_variante|offen, reason, note}], note}.

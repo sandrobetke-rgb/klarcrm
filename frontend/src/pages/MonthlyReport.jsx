@@ -156,10 +156,11 @@ function Report({ d, saved, comment, setComment, editable, onSaveComment }) {
       {/* 4 Verloren */}
       <section className="report-sec">
         <h2>4 · Verloren und nicht angeboten</h2>
-        {d.lost.length || d.nobid.length ? <>
+        {d.lost.length || d.nobid.length || d.variants?.length ? <>
           {d.reasons.length > 0 && <p>Verlustgründe: {d.reasons.map((r) => `${r.reason} (${r.count}× · ${keur(r.annual)})`).join(' · ')}</p>}
           <table className="rtable"><thead><tr><th>Artikel</th><th>Kunde</th><th>Grund</th><th>Endrunde</th><th className="num">Neuumsatz</th></tr></thead>
             <tbody>{d.lost.map((l) => <tr key={l.id}><td><strong>{l.number}</strong> {l.name}</td><td>{l.account}</td><td>{l.reason}</td><td>{l.final_round ? 'ja' : ''}</td><td className="num">{eur(l.annual)}</td></tr>)}
+              {(d.variants || []).map((l) => <tr key={`v${l.id}`} className="muted"><td><strong>{l.number}</strong> {l.name}</td><td>{l.account}</td><td>{l.reason} (kein Verlust)</td><td /><td className="num">{eur(l.annual)}</td></tr>)}
               {d.nobid.map((l) => <tr key={`n${l.id}`} className="muted"><td><strong>{l.number}</strong> {l.name}</td><td>{l.account}</td><td>nicht angeboten: {l.reason}</td><td /><td className="num">{eur(l.annual)}</td></tr>)}</tbody></table>
         </> : <p className="muted">Im Monat nichts verloren.</p>}
       </section>

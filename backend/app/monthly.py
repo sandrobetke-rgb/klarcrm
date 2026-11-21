@@ -122,12 +122,15 @@ def compute(db: Session, year: int, month: int) -> dict:
     # ---------------- Verloren / nicht angeboten im Monat
     lost_calcs = db.scalars(select(Calculation).where(Calculation.status.in_(("verloren", "kein_angebot")),
                                                       Calculation.closed_at >= m_start, Calculation.closed_at <= m_end)).unique().all()
-    lost, nobid, reasons = [], [], {}
+    lost, nobid, variants, reasons = [], [], [], {}
     for c in lost_calcs:
         row = {"id": c.id, "number": c.number, "name": c.article_name, "account": c.account.name if c.account else None,
                "annual": c.peak_revenue if c.peak_revenue is not None else (c.annual_revenue or 0), "one_time": c.one_time_revenue or 0,
                "owner": c.owner.name if c.owner else None, "final_round": bool(c.opportunity and c.opportunity.final_round), "inquiry_id": c.opportunity_id}
-        if c.status == "verloren":
+        if c.status == "verloren" and c.close_reason == "andere_variante":   # kein Verlust (MB-33)
+            row["reason"] = "andere Variante beauftragt" + (f": {c.close_note}" if c.close_note else "")
+            variants.append(row)
+        elif c.status == "verloren":
             row["reason"] = REASON_LABELS.get(c.close_reason, c.close_reason or "ohne Grund") + (f": {c.close_note}" if c.close_note else "")
             lbl = REASON_LABELS.get(c.close_reason, "ohne Grund")
             x = reasons.setdefault(lbl, {"reason": lbl, "count": 0, "annual": 0.0})
@@ -139,6 +142,7 @@ def compute(db: Session, year: int, month: int) -> dict:
             nobid.append(row)
     closed_ytd = db.scalars(select(Calculation).where(Calculation.status.in_(("gewonnen", "verloren")), Calculation.closed_at >= y_start,
                                                       Calculation.closed_at <= m_end)).unique().all()
+    closed_ytd = [c for c in closed_ytd if c.close_reason != "andere_variante" or c.status != "verloren"]
     won_n = sum(1 for c in closed_ytd if c.status == "gewonnen")
     final = [c for c in closed_ytd if c.opportunity and c.opportunity.final_round]
 
@@ -242,7 +246,7 @@ def compute(db: Session, year: int, month: int) -> dict:
         },
         "target": target_block(total_t, won_ytd), "by_owner": by_owner, "series": series,
         "won": won_out(won_month), "won_ytd_list": sorted(won_out(won_ytd), key=lambda r: r["date"] or ""),
-        "lost": sorted(lost, key=lambda r: -r["annual"]), "nobid": nobid,
+        "lost": sorted(lost, key=lambda r: -r["annual"]), "nobid": nobid, "variants": variants,
         "reasons": sorted([{**v, "annual": round(v["annual"], 2)} for v in reasons.values()], key=lambda r: -r["annual"]),
         "pipeline": pipeline, "top_open": [opp_row(o) for o in top_open], "due_next": [opp_row(o) for o in due_next],
         "actions": {"followups_red": red, "undecided": undecided, "overdue_due": overdue_due, "approvals": approvals,

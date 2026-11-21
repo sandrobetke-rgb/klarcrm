@@ -221,6 +221,12 @@ ITEMS = [
      "gewonnenen Projekten je Maschine. Kein Vorjahresvergleich. Versand macht die GF selbst.", U,
      "Menü Monatsbericht: Live-Stand oder gespeicherter Stand je Monat, Freigabe, Kommentar der GF, Drucken/PDF; Vertriebsziele je Jahr.",
      "November 2026 → Kommentar → Stand speichern → Freigeben → Drucken / PDF.", "Kap. 15"),
+    ("MB-02", "Angebote", "wunsch", "hoch", 3, "Teilbeauftragung: von n angebotenen Artikeln/Varianten werden nur einige Auftrag",
+     "Angebot mit 10 Artikeln oder Varianten, 2 werden Auftrag: diese auswählen, beim Rest „verloren“ wählen können. "
+     "Nicht beauftragte Variante zählt nicht als Verlust.", U,
+     "„Auftrag erhalten …“ am Angebot: beauftragte anhaken, Vorgabe für den Rest (verloren mit Grund / andere Variante / noch offen), "
+     "Status „teilweise beauftragt“; nur beauftragte Artikel im Neuumsatz; Varianten nicht in Verlustquote.",
+     "Angebot mit 5 Artikeln → 2 anhaken, 1 andere Variante, 1 verloren (Preis), 1 offen → Monatsbericht prüfen.", "Kap. 15.4"),
 
     # ---------------------------------------------------------------- Dokumentation
     ("REV01-X01", "Dokumentation", "doku", "hoch", 1, "Änderungsprotokoll zum Eintragen und Abarbeiten der Wünsche",

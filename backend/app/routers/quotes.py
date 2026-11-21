@@ -32,7 +32,7 @@ def quote_status_changed(db: Session, quote: Quote, old: str, user, lost_code=No
         row = db.get(CalcSettings, 1)
         days = int(({**DEFAULT_SETTINGS, **((row.data or {}) if row else {})}).get("followup_workdays") or 5)
         start_followup(db, quote, user, days)
-    if quote.status in ("angenommen", "abgelehnt", "ersetzt"):
+    if quote.status in ("angenommen", "teilweise", "abgelehnt", "ersetzt"):
         for t in db.query(Activity).filter(Activity.quote_id == quote.id, Activity.kind == "angebotsverfolgung",
                                            Activity.done.is_(False)).all():
             t.done = True
@@ -141,6 +141,100 @@ def update_quote(quote_id: int, data: s.QuoteUpdate, db: Session = Depends(get_d
         set_items(quote, data.items)
     if new_status != old_status:
         quote_status_changed(db, quote, old_status, user, data.lost_code, data.lost_reason)
+    db.commit()
+    db.refresh(quote)
+    return quote
+
+
+# ---------------- Auftrag erhalten: Ergebnis je Artikel (Teilbeauftragung, Varianten) – MB-30 … MB-35
+OUTCOMES = ("gewonnen", "verloren", "andere_variante", "offen")
+
+
+def _award_calcs(db: Session, quote: Quote):
+    from ..inquiry import calcs_of  # noqa: PLC0415
+    from ..models import Calculation  # noqa: PLC0415
+    ids = []
+    for it in quote.items:
+        if it.calculation_id and it.calculation_id not in ids:
+            ids.append(it.calculation_id)
+    calcs = [c for c in (db.get(Calculation, i) for i in ids) if c]
+    if not calcs and quote.opportunity_id:
+        calcs = [c for c in calcs_of(db, quote.opportunity_id) if c.status != "kein_angebot"]
+    return calcs
+
+
+def _outcome(c) -> str:
+    if c.status == "gewonnen":
+        return "gewonnen"
+    if c.status == "verloren":
+        return "andere_variante" if c.close_reason == "andere_variante" else "verloren"
+    return "offen"
+
+
+@router.get("/{quote_id}/award")
+def award_preview(quote_id: int, db: Session = Depends(get_db), _: User = Depends(can_read)):
+    quote = db.get(Quote, quote_id)
+    if not quote:
+        raise HTTPException(404, "Angebot nicht gefunden")
+    return [{"calculation_id": c.id, "number": c.number, "name": c.article_name, "status": c.status, "outcome": _outcome(c),
+             "reason": c.close_reason if c.status == "verloren" else None, "note": c.close_note if c.status == "verloren" else None,
+             "peak_revenue": float(c.peak_revenue if c.peak_revenue is not None else (c.annual_revenue or 0)),
+             "one_time_revenue": float(c.one_time_revenue or 0)} for c in _award_calcs(db, quote)]
+
+
+@router.post("/{quote_id}/award", response_model=s.QuoteOut)
+def award(quote_id: int, data: dict, db: Session = Depends(get_db), user: User = Depends(can_write)):
+    """Auftrag erhalten: je Artikel gewonnen / verloren (mit Grund) / andere Variante beauftragt / noch offen.
+    Angebot → „angenommen“ (alle gewonnen) oder „teilweise“ (mindestens einer gewonnen)."""
+    from ..inquiry import refresh_inquiry  # noqa: PLC0415
+    from ..models import Activity, Opportunity  # noqa: PLC0415
+    from .calc import REASON_LABELS  # noqa: PLC0415
+    quote = db.get(Quote, quote_id)
+    if not quote:
+        raise HTTPException(404, "Angebot nicht gefunden")
+    if quote.status in ("entwurf", "ersetzt"):
+        raise HTTPException(400, "Auftrag nur für versendete Angebote erfassen")
+    calcs = {c.id: c for c in _award_calcs(db, quote)}
+    lines = data.get("lines") or []
+    if calcs and {ln.get("calculation_id") for ln in lines} != set(calcs):
+        raise HTTPException(400, "Bitte für jeden Artikel des Angebots ein Ergebnis wählen")
+    if calcs and not any(ln.get("outcome") == "gewonnen" for ln in lines):
+        raise HTTPException(400, "Mindestens ein Artikel muss beauftragt sein – sonst Angebot als „abgelehnt“ speichern")
+    summary = {"gewonnen": [], "verloren": [], "andere_variante": [], "offen": []}
+    for ln in lines:
+        c, out = calcs[ln["calculation_id"]], ln.get("outcome")
+        if out not in OUTCOMES:
+            raise HTTPException(400, f"Unbekanntes Ergebnis „{out}“")
+        if out == "gewonnen":
+            c.status, c.probability = "gewonnen", 100
+        elif out == "verloren":
+            code = ln.get("reason") or "sonstiges"
+            if code == "sonstiges" and not (ln.get("note") or "").strip():
+                raise HTTPException(400, f"{c.number}: Verlustgrund „Sonstiges“ braucht einen Freitext")
+            c.status, c.probability, c.close_reason, c.close_note = "verloren", 0, code, (ln.get("note") or None)
+        elif out == "andere_variante":
+            c.status, c.probability, c.close_reason, c.close_note = "verloren", 0, "andere_variante", (ln.get("note") or None)
+        elif c.status in ("gewonnen", "verloren"):        # wieder geöffnet
+            c.status, c.close_reason, c.close_note = "verhandlung", None, None
+        summary[out].append(c.number)
+    old = quote.status
+    quote.status = "angenommen" if not summary["verloren"] + summary["andere_variante"] + summary["offen"] else "teilweise"
+    db.flush()
+    opp = db.get(Opportunity, quote.opportunity_id) if quote.opportunity_id else None
+    if quote.status == "angenommen" or not calcs:
+        quote.status = "angenommen"
+        quote_status_changed(db, quote, old, user)
+    else:
+        for t in db.query(Activity).filter(Activity.quote_id == quote.id, Activity.kind == "angebotsverfolgung",
+                                           Activity.done.is_(False)).all():
+            t.done = True
+        if opp:
+            refresh_inquiry(db, opp)
+    text = "; ".join(f"{lbl}: {', '.join(v)}" for lbl, v in (("beauftragt", summary["gewonnen"]), ("verloren", summary["verloren"]),
+                     (REASON_LABELS["andere_variante"].lower(), summary["andere_variante"]), ("noch offen", summary["offen"])) if v)
+    db.add(Activity(type="notiz", subject=f"Auftrag erhalten zu {quote.number}: {len(summary['gewonnen'])} von {len(lines) or 1} Artikeln",
+                    description=(text + (f"\n{data['note']}" if data.get("note") else "")) or None, done=True,
+                    account_id=quote.account_id, opportunity_id=quote.opportunity_id, quote_id=quote.id, owner_id=user.id))
     db.commit()
     db.refresh(quote)
     return quote

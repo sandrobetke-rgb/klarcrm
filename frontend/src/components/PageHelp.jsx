@@ -66,6 +66,7 @@ const HELP = [
     'Positionen, Texte und Konditionen prüfen; Sprache Deutsch/Englisch wählen.',
     '„Drucken / PDF“ erzeugt das Angebot im Firmenlayout; „E-Mail“ öffnet einen Entwurf an den Ansprechpartner.',
     'Status pflegen (versendet, angenommen, abgelehnt) – das wirkt auf Pipeline und Auswertungen.',
+    '„Auftrag erhalten …“: beauftragte Artikel anhaken, Rest verloren (mit Grund) / andere Variante beauftragt (kein Verlust) / noch offen – Angebot wird „angenommen“ oder „teilweise beauftragt“.',
   ]],
   ['/angebote', 'Angebote', 'Alle Angebote mit Status, Verfolgungsampel und letzter Rückmeldung.', ['Angebote entstehen aus der Anfrage („Angebot erstellen“) – ein Angebot je Anfrage, Änderungen nach Versand als Revision -R1.', 'Status „versendet“ startet die Angebotsverfolgung (Rücksprache nach 5 Arbeitstagen); „abgelehnt“ nur mit Verlustgrund.']],
   ['/firmen/', 'Firma', 'Alles zu einem Kunden auf einen Blick.', ['Kontakte, Verkaufschancen, Aktivitäten, Kalkulationen, Angebote und Dokumente des Kunden.']],

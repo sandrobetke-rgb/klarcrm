@@ -7,6 +7,7 @@ import { Badge, confirmDelete, EntityForm, ErrorBox, Modal, RefSelect, useFetch 
 import { activityType, contactName, eur, fmtDate, fmtDateTime, QUOTE_STATUS } from '../constants'
 import { activityFields } from '../forms'
 import LostReasonDialog from '../components/LostReasonDialog'
+import AwardDialog from '../components/AwardDialog'
 import FollowupDialog, { LightBadge } from '../components/Followup'
 import { quoteTone } from './Quotes'
 import { BigBadge } from '../components/BigProject'
@@ -107,6 +108,7 @@ export default function QuoteEditor() {
   const [q, setQ] = useState(null)
   const [orig, setOrig] = useState(undefined)     // gespeicherter Status (für Abgelehnt-Dialog / Verfolgungsstart)
   const [lostAsk, setLostAsk] = useState(false)
+  const [awardAsk, setAwardAsk] = useState(false)
   const [notice, setNotice] = useState(null)
   const [fu, setFu] = useState(null)
   const [account, setAccount] = useState(null)
@@ -156,6 +158,8 @@ export default function QuoteEditor() {
   async function save(extra) {
     setError(null)
     if (!extra && q.status === 'abgelehnt' && orig !== 'abgelehnt') { setLostAsk(true); return }   // Grund ist Pflicht
+    // Auftrag erhalten: Ergebnis je Artikel abfragen (Teilbeauftragung, Varianten – MB-30)
+    if (!extra && !isNew && ['angenommen', 'teilweise'].includes(q.status) && q.status !== orig) { setAwardAsk(true); return }
     const body = {
       title: q.title, status: q.status, account_id: q.account_id, contact_id: q.contact_id, language: q.language || 'de',
       opportunity_id: q.opportunity_id, valid_until: q.valid_until || null, quote_date: q.quote_date || null,
@@ -167,6 +171,7 @@ export default function QuoteEditor() {
       })),
       ...(extra || {}),
     }
+    delete body._return
     try {
       const res = isNew ? await api.post('/quotes', body) : await api.patch(`/quotes/${id}`, body)
       if (res.status === 'versendet' && orig !== 'versendet' && res.followup)
@@ -174,6 +179,7 @@ export default function QuoteEditor() {
       setOrig(res.status)
       setQ(res)
       setSaved(true)
+      if (extra?._return) return res
       if (isNew) nav(`/angebote/${res.id}`, { replace: true })
     } catch (e) { setError(e) }
   }
@@ -218,6 +224,12 @@ export default function QuoteEditor() {
         </header>
         <ErrorBox error={error} />
         {notice && <div className="notice-ok">✓ {notice}</div>}
+        {awardAsk && <AwardDialog quote={q} onCancel={() => { setAwardAsk(false); if (['angenommen', 'teilweise'].includes(q.status) && !['angenommen', 'teilweise'].includes(orig)) set('status', orig) }}
+          beforeSave={() => save({ status: ['angenommen', 'teilweise'].includes(orig) ? orig : (orig === 'entwurf' ? 'versendet' : orig), _return: true })}
+          onDone={(res) => { setAwardAsk(false); setOrig(res.status); setQ(res); setSaved(true); setNotice(res.status === 'teilweise' ? 'Teilauftrag erfasst – nur die beauftragten Artikel zählen als Neuumsatz.' : 'Auftrag erfasst.') }} />}
+        {!isNew && canWrite && ['versendet', 'teilweise'].includes(orig) && !awardAsk && <div className="no-print award-bar">
+          <button className="btn btn-primary btn-sm" onClick={() => setAwardAsk(true)}>{orig === 'teilweise' ? 'Auftrag ergänzen …' : 'Auftrag erhalten …'}</button>
+          <small className="muted">beauftragte Artikel auswählen, Rest verloren / andere Variante / offen</small></div>}
         {lostAsk && <LostReasonDialog title="Angebot abgelehnt – warum?" confirmLabel="Als abgelehnt speichern" onCancel={() => setLostAsk(false)}
           onConfirm={({ reason, note }) => { setLostAsk(false); save({ lost_code: reason, lost_reason: note || null }) }} />}
         {!isNew && q.followup && <div className="followup-bar no-print"><span>Angebotsverfolgung</span>

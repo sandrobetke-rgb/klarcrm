@@ -13,6 +13,7 @@ from ..models import Account, Calculation, Machine, Material, Site, User
 router = APIRouter()
 
 WON, LOST, NO_BID = "gewonnen", "verloren", "kein_angebot"
+VARIANT = "andere_variante"
 QUOTED = ("angeboten", "verhandlung", WON, LOST)
 CLASSES = [(0, 100, "bis 100 t"), (100, 250, "100–250 t"), (250, 500, "250–500 t"), (500, 10 ** 9, "über 500 t")]
 
@@ -37,6 +38,8 @@ def _add(b: dict, c: Calculation) -> None:
     if c.status == WON:
         b["won"] += 1
         b["won_revenue"] += rev
+    elif c.status == LOST and c.close_reason == VARIANT:   # andere Variante beauftragt – kein Verlust (MB-33)
+        pass
     elif c.status == LOST:
         b["lost"] += 1
         b["lost_revenue"] += rev
@@ -101,7 +104,7 @@ def reports(date_from: date | None = Query(None), date_to: date | None = Query(N
         _add(g["status"][c.status], c)
         _add(g["feasibility"][c.feasibility or "nicht bewertet"], c)
         _add(g["site"][sites.get(c.site_id or inp.get("site_id"), "ohne Standort")], c)
-        if c.status == LOST:
+        if c.status == LOST and c.close_reason != VARIANT:
             _add(lost_reasons[c.close_reason or "ohne Grund"], c)
         if c.status == NO_BID:
             _add(no_bid_reasons[c.no_bid_reason or "ohne Grund"], c)
