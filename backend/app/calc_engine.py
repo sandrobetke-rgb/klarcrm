@@ -276,6 +276,12 @@ def _preload(f: list, idx: list, mode: str) -> float:
     return len(vals) / sum(vals) if sum(vals) else 1.0
 
 
+def peak_revenue(res: dict) -> float:
+    """Neuumsatz = Umsatz des stärksten Lieferjahres (Vertriebsziel). Ohne Jahrespreise = Jahresumsatz."""
+    years = [y.get("revenue") or 0 for y in res.get("price_years") or []]
+    return round(max(years + [0]) if years else float(res.get("annual_revenue") or 0), 2)
+
+
 def _price_years(i: dict, res: dict) -> dict:
     """Serienpreis je Lieferjahr: optional manueller Anlaufpreis Jahr 1, Abschläge je Jahr (vorab eingerechnet),
     Zukaufteile der Nebenkalkulation mit eigenen Abschlägen. Marge je Jahr gegen die Selbstkosten."""

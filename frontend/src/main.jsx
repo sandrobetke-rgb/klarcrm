@@ -30,6 +30,7 @@ import Changes from './pages/Changes'
 import Inquiries, { InquiryDetail } from './pages/Inquiries'
 import PriceList, { PriceChangeDetail } from './pages/PriceList'
 import Docs from './pages/Docs'
+import MonthlyReport from './pages/MonthlyReport'
 
 function Layout() {
   const { user, logout, isAdmin } = useAuth()
@@ -50,6 +51,7 @@ function Layout() {
     ['#', 'Planung & Analyse'],
     ['/auslastung', 'Auslastung', '▤'],
     ['/auswertungen', 'Auswertungen', '◔'],
+    ['/monatsbericht', 'Monatsbericht', '▦'],
     ['/beschaffung', 'Beschaffung', '⚒'],
     ['#', 'System'],
     ['/stammdaten', 'Stammdaten', '≡'],
@@ -114,6 +116,7 @@ function App() {
             <Route path="/stammdaten" element={<MasterData />} />
             <Route path="/auslastung" element={<Utilization />} />
             <Route path="/auswertungen" element={<Reports />} />
+            <Route path="/monatsbericht" element={<MonthlyReport />} />
             <Route path="/beschaffung" element={<ProcurementList />} />
             <Route path="/beschaffung/:id" element={<ProcurementDetail />} />
             <Route path="/protokoll" element={<AuditLog />} />

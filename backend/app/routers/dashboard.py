@@ -123,8 +123,10 @@ def dashboard(owner_id: int | None = None, db: Session = Depends(get_db), _: Use
         select(func.count()).select_from(Account).where(Account.created_at >= nowt - timedelta(days=30))
     )
 
+    from ..monthly import goal_status  # noqa: PLC0415
     return {
         "kpis": {
+            "sales_goal": goal_status(db),
             "open_pipeline": open_,
             "won_ytd": won_ytd,
             "lost_ytd": lost_ytd,

@@ -4,9 +4,9 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.25 |
-| **Stand** | 20.11.2026 |
-| **Status** | Testphase auf internem Server F&R; ausgeliefert v1.24; Preisliste (Kap. 14) vorgemerkt für das nächste große Update (Kap. 13.0) |
+| **Dokumentversion** | 1.26 |
+| **Stand** | 21.11.2026 |
+| **Status** | Testphase auf internem Server F&R; ausgeliefert v1.24; Preisliste (Kap. 14) und Monatsbericht (Kap. 15) vorgemerkt für das nächste große Update (Kap. 13.0) |
 
 > Dieses Lastenheft wird bei **jeder** Änderung am System mitgezogen. Neue Anforderungen, geänderte Regeln und
 > umgesetzte Punkte werden in der Änderungshistorie (Kapitel 12) dokumentiert. Anforderungen tragen eine feste ID
@@ -653,6 +653,7 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.23 | 17.11.2026 | **Testrückmeldung REV01, Phase 1** (Kap. 13): Speichern immer sichtbar, Standortwechsel übernimmt Standortsätze (Faktor Maschinenstundensatz), ein Angebot je Kalkulation mit Revisionen, keine Lieferanten im Angebot, freie Zahleneingabe, Maschinen-Löschschutz und Vier-Augen-Löschung, Planmaschinen, Schichtmodell, Verlustgrund Pflicht, Branchenliste, Rüstzeit in Minuten, Nummern A26-/K26-, Freigabe ab 250.000 €, Dashboard-Kacheln, Änderungswünsche & Prüfprotokoll, Dokumentation im Programm mit Word-Download. Phasen 2–4 geplant. |
 | 1.24 | 19.11.2026 | **REV01 Phase 2** (Kap. 13.2): Anfragen/Projekte mit n Artikeln und einem Angebot (AF26-0001), Entscheidung je Artikel vor der Kalkulation, Artikelanalyse vor Kalkulation mit Maschinenvorschlag und „technisches Gespräch“, unvollständige Analyse als Freigabegrund, neue Pipeline-Phasen mit Automatik und Endrunde, Positionsstruktur 1/1.1/1.2/1.3 mit Jahrespreisen, Angebotsverfolgung nach 5 Arbeitstagen mit Ampel, Aktivitäten am Angebot, keine Umsatzgewichtung, Menü nach Arbeitsablauf, Änderungswünsche mit Speicherbestätigung und freier Art; Übernahme der Altdaten. |
 | 1.25 | 20.11.2026 | **Preisliste** (Kap. 14, Auslieferung mit dem nächsten großen Update, Kap. 13.0): lebende VK-Preisliste je Kunde mit Materialien/Zukaufteilen und Preisbasis, Materialpreisänderung mit Vorschau der betroffenen Artikel, Vorgänge mit Kennzeichnung (weitergegeben / vertraglich gebunden / Sonstiges), Import Preisliste (F&R-Vorlage) und Materialpreise, Historie, Export; Materialnummer in den Stammdaten. |
+| 1.26 | 21.11.2026 | **Monatsbericht Vertrieb** (Kap. 15, Auslieferung mit dem nächsten großen Update): Bericht je Monat für die Gesellschafter als PDF – Neuumsatz (stärkstes Lieferjahr) seit Jahresbeginn gegen das Jahresziel mit Ampel, je Vertriebler, gewonnen/verloren/nicht angeboten, offene Pipeline, Handlungsbedarf, Auslastung Folgejahr je Maschine, Preisliste, Kommentar der GF; Stand speichern und freigeben; Vertriebsziele je Jahr; Kachel Vertriebsziel auf der Startseite. Kein Vorjahresvergleich. Neues Feld „Neuumsatz“ und „abgeschlossen am“ an der Kalkulation. |
 
 ## 13. Testrückmeldung REV01 (Nov. 2026) – Anforderungen und Umsetzung
 
@@ -673,9 +674,9 @@ Umsetzung erfolgt in vier Phasen:
 |---|---|---|---|
 | v1.23 | 17.11.2026 | REV01 Phase 1 | ausgeliefert |
 | **v1.24** | 19.11.2026 | REV01 Phase 2 (Anfrage → Angebot → Pipeline) | **aktuelle Auslieferung** – Git-Zweig `release-v1.24` |
-| nächstes großes Update | offen | REV01 Phase 3 (Kalkulationsblätter) **+ Preisliste (Kap. 14, PRL-01) + jährliche Preisrunde (PRL-02)** | in Arbeit – auf Wunsch vom 19.11.2026 gemeinsam ausliefern |
+| nächstes großes Update | offen | REV01 Phase 3 (Kalkulationsblätter) **+ Preisliste (Kap. 14, PRL-01) + jährliche Preisrunde (PRL-02) + Monatsbericht mit Vertriebsziel (Kap. 15, MB-01, REV01-D05, REV01-R01)** | in Arbeit – auf Wunsch vom 19.11.2026 gemeinsam ausliefern |
 
-Die Preisliste (v1.25) ist programmiert und getestet, wird aber **nicht einzeln** eingespielt, sondern mit dem
+Die Preisliste (v1.25) und der Monatsbericht (v1.26) sind programmiert und getestet, werden aber **nicht einzeln** eingespielt, sondern mit dem
 nächsten großen Update. Für den Server gilt bis dahin der Stand `v1.24`.
 
 ### 13.1 Phase 1 – umgesetzt (v1.23)
@@ -789,8 +790,9 @@ zu einer Anfrage; ohne Angabe wird eine angelegt.
   Duplizieren mit anderer Fachzahl; Risikoanalyse (13 Fragen, hoch > 60 %, mittel 35–60 %, niedrig < 35 %);
   Stundensatzblatt für zusätzliche Anlagen; Kickoff aus allen Daten bei Auftragsbestätigung.
 - REV01-E01 Beschaffung für Material, Zubehör, Verpackung (Staffeln), Vorrichtungen, Montageanlagen, Prüfmittel,
-  Kameras, Laser, Sonstiges mit Bezug zur Kalkulationsnummer. REV01-D05 Vertriebsziel mit Ampel. REV01-R01
-  Vertriebsbericht je Zeitraum, Durchlaufzeit Anfrage → Angebot (Ziel 10 Arbeitstage, Parameter), Anzahl kalkulierter Artikel.
+  Kameras, Laser, Sonstiges mit Bezug zur Kalkulationsnummer.
+- REV01-D05 Vertriebsziel mit Ampel und REV01-R01 Vertriebsbericht (Durchlaufzeit Anfrage → Angebot, kalkulierte
+  Artikel) sind mit dem Monatsbericht (Kap. 15) umgesetzt und kommen mit dem nächsten großen Update.
 
 ## 14. Preisliste (lebende VK-Preisliste)
 
@@ -862,3 +864,52 @@ bewerten und kennzeichnen.
 
 ### 14.6 Rechte
 - PRL-50: Lesen alle Rollen inkl. Gesellschafter; Anlegen, Ändern, Importieren und Kennzeichnen Vertrieb und Admin.
+
+## 15. Monatsbericht Vertrieb und Vertriebsziel
+
+Ziel: Die Gesellschafter werden einmal im Monat schriftlich informiert, statt eine Besprechung anzusetzen. Die
+Geschäftsführung erzeugt den Bericht im CRM, schreibt ihren Kommentar dazu, gibt ihn frei und verschickt das PDF
+selbst (kein automatischer Versand). Gesellschafter können das CRM lesend öffnen, müssen es für den Bericht aber nicht.
+
+### 15.1 Begriffe und Rechenregeln
+- MB-01: **Neuumsatz** eines gewonnenen Artikels = Umsatz des **stärksten Lieferjahres** aus der Kalkulation
+  (Feld „Neuumsatz“, `peak_revenue` = Maximum der Jahresumsätze der Preisstaffel; ohne Jahresstaffel der Jahresumsatz).
+  Beispiel: Jahr 1 0,5 Mio. €, Jahr 2 1,0 Mio. €, Jahr 3 1,5 Mio. € → Neuumsatz 1,5 Mio. €. Gewonnene Anfragen ohne
+  Kalkulation zählen mit ihrem Volumen.
+- MB-02: Zeitpunkt des Gewinns/Verlusts ist das Datum „abgeschlossen am“ der Kalkulation (wird beim Wechsel auf
+  gewonnen / verloren / kein Angebot gesetzt, beim Zurücksetzen gelöscht; Altdaten aus dem Abschlussdatum der Anfrage).
+- MB-03: **Vertriebsziel** = Neuumsatz je Kalenderjahr, gesamt und optional je Vertriebsmitarbeiter, dazu optional
+  ein Ziel für Werkzeug- und Einmalumsatz. Jedes Jahr wird ein neues Ziel festgelegt (z. B. 2,5 Mio. €).
+- MB-04: **Erreichung** = Neuumsatz seit 1.1. bis Monatsende ÷ Jahresziel. Soll zum Stichtag = Ziel × Monat ÷ 12
+  (Startseite: anteilig nach Kalendertagen). Ampel: grün ≥ 100 % des Solls, gelb ≥ 85 %, rot darunter.
+- MB-05: **Kein Vorjahres- oder Vormonatsvergleich** im Bericht (Vorgabe GF 21.11.2026).
+
+### 15.2 Inhalt des Berichts
+- MB-10: Vertriebsziel: erreicht / Ziel, %, Soll zum Stichtag, Rest bis Ziel, Ampel, Fortschrittsbalken; Werkzeug/Einmal;
+  Tabelle je Vertriebler; kumulierter Verlauf des Neuumsatzes gegen die Ziellinie.
+- MB-11: Kennzahlen: Neuumsatz im Monat und seit Jahresbeginn, Werkzeug/Einmal, Gewinnquote und Endrunde im laufenden
+  Jahr, verloren im Monat, neue Anfragen, versendete Angebote, Durchlaufzeit Anfrage → Angebot in Arbeitstagen gegen
+  das Ziel aus den Parametern (Standard 10 AT), kalkulierte Artikel, offene Pipeline.
+- MB-12: Gewonnen im Monat (Neuumsatz, Jahr 1, Werkzeug/Einmal, Maschine, SOP) und Liste aller Gewinne seit 1.1.
+- MB-13: Verloren und nicht angeboten im Monat mit Gründen und Endrunde, Zusammenfassung der Verlustgründe.
+- MB-14: Offene Pipeline je Phase, größte offene Anfragen (Großprojekte markiert), Entscheidungen im Folgemonat.
+- MB-15: „Wo fehlt etwas?“ (Stand heute): überfällige Angebotsverfolgung, Anfragen ohne Entscheidung, überschrittener
+  Abgabetermin ohne Angebot, offene Freigaben, unvollständige Artikelanalyse.
+- MB-16: Auslastung des Folgejahres je Maschine aus Bestand und gewonnenen Projekten, zusätzlich „mit Großprojekten“,
+  mit Liste der gewonnenen Projekte je Maschine.
+- MB-17: Preisliste: Preisänderungen im Monat, betroffene Artikel, Jahreseffekt, weitergegeben / vertraglich gebunden / offen.
+- MB-18: Kommentar der Geschäftsführung (Freitext).
+
+### 15.3 Ablauf und Nachweis
+- MB-20: Menü „Monatsbericht“ (Planung & Analyse). Monat wählen → Live-Stand aus den aktuellen Daten.
+- MB-21: „Stand speichern“ friert die Zahlen des Monats ein (ein Bericht je Monat; ein Entwurf wird überschrieben).
+  Gespeicherte Berichte bleiben abrufbar und ändern sich nicht mehr mit den Daten.
+- MB-22: „Freigeben“ durch Administrator oder Benutzer mit Freigaberecht; freigegebene Berichte ändert nur ein
+  Administrator (Freigabe zurücknehmen). Freigabe mit Name und Zeitpunkt (Nachweis IATF 16949 Kap. 7.5).
+- MB-23: „Drucken / PDF“: A4-Layout ohne Menü und Schaltflächen, Fußzeile „vertraulich“. Versand durch die GF.
+- MB-24: „Vertriebsziele“ pflegt der Administrator (Jahr, gesamt oder je Mitarbeiter, Neuumsatz, Werkzeug/Einmal, Notiz).
+- MB-25: Startseite: Kachel „Vertriebsziel“ mit % und Ampel, Klick öffnet den Monatsbericht.
+- MB-26: Lesen alle Rollen inkl. Gesellschafter; Speichern Vertrieb und Admin.
+- Schnittstellen: `GET /api/monthly-reports/live?year&month`, `GET/POST /api/monthly-reports`, `PATCH/DELETE /api/monthly-reports/{id}`,
+  `GET/POST/DELETE /api/sales-targets`. Tabellen `sales_targets`, `monthly_reports`; neue Spalten `calculations.peak_revenue`,
+  `calculations.closed_at` (werden beim Start ergänzt und befüllt).

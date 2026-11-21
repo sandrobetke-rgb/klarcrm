@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Programm** | KlarCRM – Vertrieb, Kalkulation Spritzguss, Angebote |
-| **Version** | 1.25 (Stand 20.11.2026) |
+| **Version** | 1.26 (Stand 21.11.2026) |
 | **Für** | Vertrieb, Kalkulation, Einkauf, Geschäftsführung, Gesellschafter |
 
 > Diese Beschreibung erklärt, **wie man mit KlarCRM arbeitet**. Die genauen Regeln und Rechenwege stehen im
@@ -122,6 +122,17 @@ Die **Wahrscheinlichkeit** gilt für den ganzen Auftrag. Summen werden nicht meh
   oder die Excel-Vorlage „Annual Price Inquiry List“). Erst Vorschau, dann Übernehmen; geänderte Preise landen mit
   Historie in einem Vorgang zur Kennzeichnung.
 - Rechnung: Δ je 100 Stk = (neu − Basis €/kg) × Gewicht g / 1000 × 100 × 1,08 (MGK 8 %).
+
+## 3b. Monatsbericht für die Gesellschafter
+
+- Menü **Monatsbericht**: Monat wählen, der Bericht entsteht aus den aktuellen Daten (Live-Stand).
+- Kernzahl ist der **Neuumsatz**: Umsatz des stärksten Lieferjahres jedes gewonnenen Artikels (0,5 / 1,0 / 1,5 Mio. € →
+  1,5 Mio. €), seit 1.1. aufsummiert und gegen das Jahresziel gestellt – mit %, Soll zum Monatsende und Ampel.
+- Dazu: gewonnen im Monat und seit Jahresbeginn, verloren / nicht angeboten mit Gründen, offene Pipeline, was fehlt
+  (überfällige Nachfassungen, fehlende Entscheidungen, Freigaben), Auslastung im Folgejahr je Maschine, Preisliste.
+- Kommentar schreiben → **Stand speichern** (Zahlen werden eingefroren) → **Freigeben** → **Drucken / PDF** und selbst versenden.
+- **Vertriebsziele** (Administrator): je Jahr Ziel gesamt und je Vertriebler, optional Werkzeug/Einmal.
+- Die Startseite zeigt die Zielerreichung als Kachel.
 
 ## 4. Stammdaten
 

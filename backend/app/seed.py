@@ -550,6 +550,25 @@ def seed_pricelist():
     db.close()
 
 
+def seed_monthly():
+    """Demo Monatsbericht: Abschlussdaten verteilen, Vertriebsziele (Platzhalterwerte)."""
+    from datetime import date as _d, timedelta as _td  # noqa: PLC0415
+    from .models import Calculation, SalesTarget, User  # noqa: PLC0415
+    db = SessionLocal()
+    today = _d.today()
+    closed = db.query(Calculation).filter(Calculation.status.in_(("gewonnen", "verloren", "kein_angebot"))).order_by(Calculation.id).all()
+    for n, c in enumerate(closed):
+        # abwechselnd laufender Monat, frühere Monate dieses Jahres und Vorjahr
+        back = [3, 40, 75, 330, 200, 380, 15, 300][n % 8]
+        c.closed_at = max(today - _td(days=back), _d(today.year - 1, 1, 15))
+    if not db.query(SalesTarget).count():
+        db.add(SalesTarget(year=today.year, revenue_target=2_500_000, one_time_target=600_000, note="Beispielziel"))
+        for u in db.query(User).filter(User.role == "vertrieb").limit(2).all():
+            db.add(SalesTarget(year=today.year, user_id=u.id, revenue_target=1_000_000, one_time_target=250_000, note="Beispiel"))
+    db.commit()
+    db.close()
+
+
 def seed_inquiries():
     """Demo: Kalkulationen in Anfragen überführen (wie beim Update eines bestehenden Servers)."""
     from .inquiry import migrate  # noqa: PLC0415
@@ -562,3 +581,4 @@ if __name__ == "__main__":
     run()
     seed_inquiries()
     seed_pricelist()
+    seed_monthly()

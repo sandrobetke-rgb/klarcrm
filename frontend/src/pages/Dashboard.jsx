@@ -48,7 +48,10 @@ export default function Dashboard() {
       <section className="kpi-grid">
         <Kpi label="Offene Pipeline" value={eur(k.open_pipeline.amount)} sub={`${k.open_pipeline.count} Anfragen · davon ≥ 50 % Wahrsch. ${eur(k.open_pipeline.likely)}`} to="/pipeline" />
         <Kpi label={`Entscheidung ${k.quarter}`} value={eur(k.forecast_quarter.amount)} sub={`${k.forecast_quarter.count} Anfragen · bereits gewonnen ${eur(k.won_quarter.amount)}`} to="/anfragen" />
-        <Kpi label="Gewonnen (lfd. Jahr)" value={eur(k.won_ytd.amount)} sub={`${k.won_ytd.count} Abschlüsse · Ø ${eur(k.avg_deal_won)}`} />
+        {k.sales_goal
+          ? <Kpi label={`Vertriebsziel ${k.sales_goal.year} (Neuumsatz)`} value={<>{k.sales_goal.pct.toLocaleString('de-DE')} % <span className={`l-${k.sales_goal.light}`}>●</span></>}
+              sub={`${eur(k.sales_goal.achieved)} von ${eur(k.sales_goal.target)} gewonnen · Monatsbericht ›`} to="/monatsbericht" />
+          : <Kpi label="Gewonnen (lfd. Jahr)" value={eur(k.won_ytd.amount)} sub={`${k.won_ytd.count} Abschlüsse · Ø ${eur(k.avg_deal_won)}`} />}
         <Kpi label="Gewinnquote" value={k.win_rate != null ? `${k.win_rate.toLocaleString('de-DE')} %` : '–'} sub={`${k.won_ytd.count} gewonnen / ${k.lost_ytd.count} verloren · Übersicht ›`} to="/auswertungen" />
         <Kpi label="Offene Angebote" value={eur(k.open_quotes.amount)} sub={`${k.open_quotes.count} versendet`} to="/angebote" />
         <Kpi label="Aufgaben" value={k.activities_overdue} sub={`überfällig · ${k.activities_today} heute fällig`} to="/aktivitaeten" />

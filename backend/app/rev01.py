@@ -206,11 +206,21 @@ ITEMS = [
      "Gewinnquote anklicken → Auswertungen.", "DAS-1"),
     ("REV01-D04", "Dashboard", "wunsch", "niedrig", 1, "Trefferquote Kalkulation entfernen",
      "Trefferquote Kalkulation kann raus.", U, "Kachel entfernt (Dashboard und Kalkulationsseite).", "Dashboard ansehen.", "DAS-1"),
-    ("REV01-D05", "Dashboard", "wunsch", "mittel", 4, "Vertriebsziel des Jahres mit Erreichung in % und Ampel",
-     "Vertriebsziel des Jahres, erreichte % und Ampel anzeigen.", O, None, None, "DAS"),
-    ("REV01-R01", "Berichte", "wunsch", "mittel", 4, "Vertriebsbericht für Zeitraum, Durchlaufzeit Anfrage → Angebot, Anzahl kalkulierter Artikel",
+    ("REV01-D05", "Dashboard", "wunsch", "mittel", 3, "Vertriebsziel des Jahres mit Erreichung in % und Ampel",
+     "Vertriebsziel des Jahres, erreichte % und Ampel anzeigen.", U,
+     "Vertriebsziele (Neuumsatz, gesamt und je Vertriebler, optional Werkzeug/Einmal) im Monatsbericht pflegen; Startseite zeigt "
+     "erreicht in % mit Ampel (Soll anteilig bis heute) und führt zum Monatsbericht.", "Ziel 2,5 Mio. € anlegen → Startseite Kachel „Vertriebsziel“.", "Kap. 15"),
+    ("REV01-R01", "Berichte", "wunsch", "mittel", 3, "Vertriebsbericht für Zeitraum, Durchlaufzeit Anfrage → Angebot, Anzahl kalkulierter Artikel",
      "Schöner Vertriebsbericht für einen gewählten Zeitraum; Durchlaufzeit Anfrage → Angebot messen, Ziel in Parametern (10 Arbeitstage); "
-     "Anzahl kalkulierter Artikel anzeigen.", O, None, None, "AUS"),
+     "Anzahl kalkulierter Artikel anzeigen.", U,
+     "Als Monatsbericht umgesetzt (Kap. 15): Durchlaufzeit Anfrage → Angebot gegen Ziel 10 AT, kalkulierte Artikel, gewonnen/verloren, "
+     "offene Pipeline, Handlungsbedarf, Auslastung; als PDF druckbar.", "Monatsbericht November öffnen → Kennzahlen prüfen.", "Kap. 15"),
+    ("MB-01", "Berichte", "wunsch", "hoch", 3, "Monatsbericht Vertrieb für die Gesellschafter (PDF) mit Neuumsatz gegen Jahresziel",
+     "Monatlicher Bericht statt Besprechung: wie lief der Monat, was ist offen, was fehlt, was wurde verloren, was seit Jahresbeginn "
+     "gewonnen; Ziel = Neuumsatz (Umsatz des stärksten Lieferjahres) und wie viel davon erreicht ist; Auslastung im Folgejahr aus "
+     "gewonnenen Projekten je Maschine. Kein Vorjahresvergleich. Versand macht die GF selbst.", U,
+     "Menü Monatsbericht: Live-Stand oder gespeicherter Stand je Monat, Freigabe, Kommentar der GF, Drucken/PDF; Vertriebsziele je Jahr.",
+     "November 2026 → Kommentar → Stand speichern → Freigeben → Drucken / PDF.", "Kap. 15"),
 
     # ---------------------------------------------------------------- Dokumentation
     ("REV01-X01", "Dokumentation", "doku", "hoch", 1, "Änderungsprotokoll zum Eintragen und Abarbeiten der Wünsche",

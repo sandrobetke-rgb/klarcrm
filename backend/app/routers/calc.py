@@ -356,6 +356,8 @@ def apply_results(calc: Calculation, res: dict, inputs: dict | None = None):
     calc.unit_price = res["unit_price"]
     calc.annual_volume = res["annual_volume"]
     calc.annual_revenue = res["annual_revenue"]
+    from ..calc_engine import peak_revenue  # noqa: PLC0415
+    calc.peak_revenue = peak_revenue(res)
     calc.one_time_revenue = res["one_time_price"]
     calc.margin_pct = res["margin_pct"]
 

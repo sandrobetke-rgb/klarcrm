@@ -11,7 +11,7 @@ from .context import current_user_id
 from .database import Base, SessionLocal, engine, ensure_columns
 from .models import User
 from . import events  # noqa: F401  (Session-Ereignisse registrieren)
-from .routers import audit, calc, dashboard, docs, entities, inquiries, pricelist, imports, procurement, quotes, reports, users, workflow
+from .routers import audit, calc, dashboard, docs, entities, inquiries, monthly, pricelist, imports, procurement, quotes, reports, users, workflow
 
 
 def init_db():
@@ -21,6 +21,18 @@ def init_db():
         # Bestandsmaschinen ohne Art (vor v1.12) sind Spritzgießmaschinen
         db.execute(text("UPDATE machines SET kind = 'spritzguss' WHERE kind IS NULL"))
         db.execute(text("ALTER TABLE contacts ALTER COLUMN first_name DROP NOT NULL"))   # Vorname optional (v1.24)
+        # Neuumsatz (stärkstes Lieferjahr) für bestehende Kalkulationen nachtragen
+        from .calc_engine import peak_revenue  # noqa: PLC0415
+        from .models import Calculation  # noqa: PLC0415
+        for c in db.query(Calculation).filter(Calculation.peak_revenue.is_(None)).all():
+            ver = next((v for v in c.versions if v.version_no == c.current_version), None)
+            c.peak_revenue = peak_revenue(ver.results or {}) if ver else (c.annual_revenue or 0)
+        db.commit()
+        # Abschlussdatum der Kalkulationen nachtragen (Monatsbericht): Datum der Anfrage, sonst letzte Änderung
+        db.execute(text("""UPDATE calculations c SET closed_at = COALESCE(o.closed_at, c.updated_at::date)
+                           FROM calculations c2 LEFT JOIN opportunities o ON o.id = c2.opportunity_id
+                           WHERE c.id = c2.id AND c.closed_at IS NULL
+                             AND c.status IN ('gewonnen', 'verloren', 'kein_angebot')"""))
         db.commit()
         # REV01: Freigabegrenzen von 500.000 € auf 250.000 € (einmalig, nur wenn noch der alte Standard steht)
         from .models import CalcSettings  # noqa: PLC0415
@@ -108,6 +120,8 @@ app.include_router(calc.calcs, prefix="/api/calculations", tags=["Kalkulation"])
 app.include_router(docs.changes, prefix="/api/changes", tags=["Änderungsprotokoll"])
 app.include_router(inquiries.router, prefix="/api/inquiries", tags=["Anfragen"])
 app.include_router(pricelist.router, prefix="/api/pricelist", tags=["Preisliste"])
+app.include_router(monthly.router, prefix="/api/monthly-reports", tags=["Monatsbericht"])
+app.include_router(monthly.targets, prefix="/api/sales-targets", tags=["Monatsbericht"])
 app.include_router(inquiries.decisions, prefix="/api/calculations", tags=["Anfragen"])
 app.include_router(inquiries.followups, prefix="/api/followups", tags=["Angebotsverfolgung"])
 app.include_router(docs.router, prefix="/api/docs", tags=["Dokumentation"])

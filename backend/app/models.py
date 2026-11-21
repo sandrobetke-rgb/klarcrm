@@ -328,6 +328,7 @@ class Calculation(TimestampMixin, Base):
     inquiry_date: Mapped[date | None] = mapped_column(Date)
     due_date: Mapped[date | None] = mapped_column(Date)              # Angebotsabgabe bis
     sop_date: Mapped[date | None] = mapped_column(Date)              # Serienstart (SOP)
+    closed_at: Mapped[date | None] = mapped_column(Date, index=True) # Datum gewonnen / verloren / kein Angebot (Monatsbericht)
     sync_opportunity: Mapped[bool] = mapped_column(Boolean, default=True)
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     # Machbarkeit / kein Angebot / Artikelanalyse
@@ -357,6 +358,7 @@ class Calculation(TimestampMixin, Base):
     unit_price: Mapped[float] = mapped_column(Float, default=0)
     annual_volume: Mapped[float] = mapped_column(Float, default=0)
     annual_revenue: Mapped[float] = mapped_column(Float, default=0)
+    peak_revenue: Mapped[float | None] = mapped_column(Float)          # Neuumsatz = Umsatz des stärksten Lieferjahres
     one_time_revenue: Mapped[float] = mapped_column(Float, default=0)
     margin_pct: Mapped[float] = mapped_column(Float, default=0)
 
@@ -831,3 +833,45 @@ class PriceImpact(Base):
     decided_by_id: Mapped[int | None] = mapped_column(Integer)
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     article = relationship("PriceArticle", lazy="joined")
+
+
+
+# ====================================================================== Vertriebsziele und Monatsbericht
+class SalesTarget(TimestampMixin, Base):
+    """Vertriebsziel je Jahr – gesamt (user_id leer) oder je Vertriebsmitarbeiter."""
+    __tablename__ = "sales_targets"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    year: Mapped[int] = mapped_column(Integer, index=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    revenue_target: Mapped[float] = mapped_column(Float, default=0)    # Neuumsatz: Umsatz des stärksten Lieferjahres gewonnener Artikel
+    one_time_target: Mapped[float | None] = mapped_column(Float)       # Werkzeug- und Einmalumsatz
+    note: Mapped[str | None] = mapped_column(String(255))
+
+
+class MonthlyReport(TimestampMixin, Base):
+    """Gespeicherter Monatsbericht (eingefrorener Stand) für Geschäftsführung und Gesellschafter."""
+    __tablename__ = "monthly_reports"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    year: Mapped[int] = mapped_column(Integer, index=True)
+    month: Mapped[int] = mapped_column(Integer)
+    data: Mapped[dict] = mapped_column(JSON)
+    comment: Mapped[str | None] = mapped_column(Text)                  # Kommentar Geschäftsführung
+    status: Mapped[str] = mapped_column(String(20), default="entwurf") # entwurf | freigegeben
+    created_by_id: Mapped[int | None] = mapped_column(Integer)
+    released_by_id: Mapped[int | None] = mapped_column(Integer)
+    released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sent_to: Mapped[str | None] = mapped_column(Text)
+
+
+from sqlalchemy import event as _event  # noqa: E402
+
+
+@_event.listens_for(Calculation.status, "set")
+def _calc_closed_at(target, value, oldvalue, initiator):
+    """Abschlussdatum der Kalkulation automatisch führen (gewonnen / verloren / kein Angebot)."""
+    if value in ("gewonnen", "verloren", "kein_angebot"):
+        if value != oldvalue or target.closed_at is None:
+            target.closed_at = date.today()
+    else:
+        target.closed_at = None
