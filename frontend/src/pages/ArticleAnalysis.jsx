@@ -69,16 +69,24 @@ export default function ArticleAnalysis({ calc, setCalc }) {
               <small className="hint">Kalkuliertes Material: {ver.inputs.material_name || '–'}</small></div>
             <div className="field"><label>Fachzahl (aus Kalkulation)</label><input disabled value={ver.inputs.cavities} className="num" /></div>
             <div className="field"><label>Zykluszeit (aus Kalkulation)</label><input disabled value={`${num(ver.inputs.cycle_time_s, 1)} s`} className="num" /></div>
-            {FIELDS.map(([k, l, u]) => numIn(k, l, u))}
+            {FIELDS.map(([k, l, u]) => k === 'projected_area_cm2' ? (
+              <div className="field" key={k}><label>{l} <span className="unit">{u}</span></label>
+                <NumInput type="number" step="any" className="num" value={a[k] ?? ''}
+                  placeholder={res?.projected_area_est_cm2 ? `${num(res.projected_area_est_cm2, 1)} (geschätzt)` : 'aus CAD oder leer lassen'}
+                  onChange={(e) => set(k, e.target.value === '' ? '' : Number(e.target.value))} />
+                <small className="hint">{res?.area_estimated
+                  ? <>Geschätzt: Länge × Breite ÷ 100 = {num(a.length_mm)} × {num(a.width_mm)} ÷ 100 = <strong>{num(res.projected_area_est_cm2, 1)} cm²</strong> (umschließendes Rechteck – eher zu hoch, Schließkraft liegt damit auf der sicheren Seite). Genauer Wert aus CAD (Projektion in Öffnungsrichtung) überschreibt die Schätzung.</>
+                  : a[k] ? 'Wert aus CAD / Zeichnung' : 'Länge und Breite eingeben → wird geschätzt'}</small>
+              </div>) : numIn(k, l, u))}
           </div>
         </div>
 
-        <div className="card">
-          <h3>Werkstoffkennwerte <span className="muted small">(Richtwerte, überschreibbar)</span></h3>
+        <details className="card card-collapsible">
+          <summary><h3>Werkstoffkennwerte <span className="muted small">(Richtwerte aus der Werkstoffgruppe – nur bei Bedarf ändern)</span></h3></summary>
           <div className="form-grid form-grid-3">
             {PARAMS.map(([k, l, u]) => numIn(k, l, u, a, (v) => set(k, v), res?.material_params?.[k] != null ? String(res.material_params[k]) : ''))}
           </div>
-        </div>
+        </details>
 
         <div className="card">
           <h3>Checkliste Machbarkeit</h3>
@@ -105,7 +113,7 @@ export default function ArticleAnalysis({ calc, setCalc }) {
           <div className="card result-card">
             <span className="muted small">Ergebnis Artikelanalyse</span>
             <div className="result-kpis">
-              <div><span>Schließkraft benötigt</span><b>{res ? `${num(res.clamping_force_t)} t` : '–'}</b></div>
+              <div><span>Schließkraft benötigt{res?.area_estimated ? ' (Fläche geschätzt)' : ''}</span><b>{res ? `${num(res.clamping_force_t)} t` : '–'}</b></div>
               <div><span>Fließweg / Wandstärke</span><b className={res && res.flow_ratio > res.flow_ratio_max ? 'text-critical' : ''}>{res?.flow_ratio ? `${num(res.flow_ratio)} : 1` : '–'}</b></div>
               <div><span>Grenze Werkstoff</span><b>{res ? `${num(res.flow_ratio_max)} : 1` : '–'}</b></div>
               <div><span>Kühlzeit (Richtwert)</span><b>{res?.cooling_time_s ? `${num(res.cooling_time_s, 1)} s` : '–'}</b></div>
@@ -114,6 +122,7 @@ export default function ArticleAnalysis({ calc, setCalc }) {
             </div>
             {res?.issues.map((i) => <div key={i} className="error-box small">✖ {i}</div>)}
             {res?.hints.map((i) => <div key={i} className="warn-box">⚠ {i}</div>)}
+            {res?.force_formula && res.clamping_force_t > 0 && <div className="muted small">Schließkraft = Fläche × Fachzahl × Innendruck ÷ 1000 × Sicherheitsfaktor: {res.force_formula}</div>}
             {res && <div className="muted small">Checkliste: {res.critical_checks} kritisch · {res.open_checks} offen</div>}
           </div>
 
@@ -146,7 +155,14 @@ export default function ArticleAnalysis({ calc, setCalc }) {
             <label className="radio-row" style={{ marginTop: 10 }}>
               <input type="checkbox" disabled={!canWrite} checked={!!a.tech_talk} onChange={(e) => { setSaved(false); set('tech_talk', e.target.checked) }} />
               <span><strong>Technisches Gespräch mit dem Kunden erforderlich</strong><br /><small className="muted">legt eine Aufgabe an und markiert die Anfrage</small></span></label>
-            {res && res.open_checks > 0 && <div className="warn-box small">Analyse unvollständig: {res.open_checks} Prüfpunkte offen – das Angebot braucht dann eine Freigabe durch den Vorgesetzten.</div>}
+            {/* REV02-04: wann ist die Artikelanalyse vollständig? */}
+            <div className="complete-list small">
+              <strong>Vollständig, wenn:</strong>
+              <span className={res && !res.open_checks ? 'ok' : 'miss'}>{res && !res.open_checks ? '✓' : '✗'} alle Prüfpunkte bewertet (ok, kritisch oder n. a.){res?.open_checks ? ` – ${res.open_checks} offen` : ''}</span>
+              <span className={feas ? 'ok' : 'miss'}>{feas ? '✓' : '✗'} Machbarkeit gewählt</span>
+              <span className={calc.analysis ? 'ok' : 'miss'}>{calc.analysis ? '✓' : '✗'} Analyse gespeichert</span>
+              <small className="muted">Unvollständig wird nur rot markiert und sperrt das Angebot nicht. „Kritisch“ zählt als bewertet.</small>
+            </div>
             <div className="field" style={{ marginTop: 10 }}><label>Anmerkung / erforderliche Anpassungen</label>
               <textarea rows={3} disabled={!canWrite} value={feasNote} onChange={(e) => { setSaved(false); setFeasNote(e.target.value) }} /></div>
             <ErrorBox error={error} />

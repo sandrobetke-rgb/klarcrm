@@ -105,7 +105,11 @@ export function EntityForm({ fields, initial, onSubmit, onCancel, onDelete, subm
   })
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
-  const set = (name, v) => setValues((s) => ({ ...s, [name]: v }))
+  // Feld mit onSet(wert, werte) kann abhängige Felder sofort mitsetzen (z. B. Schichtmodell → verfügbare Stunden)
+  const set = (name, v) => setValues((s) => {
+    const f = fields.find((x) => x.name === name)
+    return { ...s, [name]: v, ...(f?.onSet ? f.onSet(v, s) || {} : {}) }
+  })
 
   async function submit(e) {
     e.preventDefault()

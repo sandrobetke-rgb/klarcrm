@@ -10,6 +10,15 @@ from .database import get_db
 from .models import User
 
 
+def _wants_user(fn) -> bool:
+    """before_save(values, obj[, user]) – der Benutzer wird nur übergeben, wenn die Funktion ihn annimmt."""
+    import inspect  # noqa: PLC0415
+    try:
+        return len(inspect.signature(fn).parameters) >= 3
+    except (TypeError, ValueError):
+        return False
+
+
 def make_crud_router(
     *,
     model,
@@ -82,7 +91,7 @@ def make_crud_router(
             values["owner_id"] = user.id
         obj = model()
         if before_save:
-            values = before_save(values, None)
+            values = before_save(values, None, user) if _wants_user(before_save) else before_save(values, None)
         for k, v in values.items():
             setattr(obj, k, v)
         db.add(obj)
@@ -99,7 +108,7 @@ def make_crud_router(
             raise HTTPException(404, "Nicht gefunden")
         values = data.model_dump(exclude_unset=True)
         if before_save:
-            values = before_save(values, obj)
+            values = before_save(values, obj, user) if _wants_user(before_save) else before_save(values, obj)
         old = {k: getattr(obj, k, None) for k in values}
         for k, v in values.items():
             setattr(obj, k, v)

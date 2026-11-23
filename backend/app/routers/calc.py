@@ -502,7 +502,7 @@ def get_calc(calc_id: int, db: Session = Depends(get_db), _: User = Depends(can_
 def create_calc(data: s.CalcCreate, db: Session = Depends(get_db), user: User = Depends(can_write)):
     meta = data.model_dump(exclude={"inputs"}, exclude_none=True)
     meta.setdefault("status", "anfrage")
-    meta.setdefault("probability", STATUS_PROBABILITY[meta["status"]])
+    meta.setdefault("probability", 0)   # REV02-05: kommt aus der Anfrage (von Hand eingeschätzt)
     meta.setdefault("owner_id", user.id)
     meta.setdefault("inquiry_date", date.today())
     if not meta.get("opportunity_id"):
@@ -510,7 +510,7 @@ def create_calc(data: s.CalcCreate, db: Session = Depends(get_db), user: User = 
         from ..inquiry import next_inquiry_number  # noqa: PLC0415
         opp = Opportunity(name=meta.get("article_name") or "Neue Anfrage", account_id=meta.get("account_id"),
                           contact_id=meta.get("contact_id"), owner_id=meta["owner_id"], stage="neue_anfrage",
-                          probability=STAGE_PROBABILITY["neue_anfrage"], kind="anfrage", source="Anfrage",
+                          probability=0, kind="anfrage", source="Anfrage",
                           inquiry_date=meta["inquiry_date"], due_date=meta.get("due_date"), close_date=meta.get("due_date"),
                           number=next_inquiry_number(db))
         db.add(opp)
@@ -539,7 +539,8 @@ def update_calc(calc_id: int, data: s.CalcMeta, db: Session = Depends(get_db), _
         raise HTTPException(404, "Kalkulation nicht gefunden")
     values = data.model_dump(exclude_unset=True)
     old_opp = calc.opportunity_id
-    if "status" in values and "probability" not in values and values["status"] != calc.status:
+    if "status" in values and "probability" not in values and values["status"] != calc.status \
+            and values["status"] in ("gewonnen", "verloren", "kein_angebot"):
         values["probability"] = STATUS_PROBABILITY[values["status"]]
     if values.get("status") == "verloren" and calc.status != "verloren":
         reason = values.get("close_reason") or calc.close_reason
@@ -580,8 +581,7 @@ def add_version(calc_id: int, data: s.CalcVersionIn, db: Session = Depends(get_d
     calc = db.get(Calculation, calc_id)
     if not calc:
         raise HTTPException(404, "Kalkulation nicht gefunden")
-    from ..inquiry import require_decision  # noqa: PLC0415
-    require_decision(db, calc)
+    # REV02-03: Entscheidung blockiert das Speichern nicht mehr (nur rote Markierung, Pflicht erst beim Angebot)
     inputs = normalize(data.inputs)
     res = compute(inputs)
     no = (calc.versions[-1].version_no if calc.versions else 0) + 1
@@ -591,7 +591,6 @@ def add_version(calc_id: int, data: s.CalcVersionIn, db: Session = Depends(get_d
     apply_results(calc, res, inputs)
     if calc.status == "anfrage":
         calc.status = "kalkulation"
-        calc.probability = max(calc.probability, STATUS_PROBABILITY["kalkulation"])
     db.flush()
     sync_opportunity(db, calc)
     db.commit()
@@ -610,7 +609,7 @@ def create_opportunity(calc_id: int, db: Session = Depends(get_db), user: User =
         raise HTTPException(409, "Kalkulation gehört bereits zu einer Anfrage")
     from ..inquiry import next_inquiry_number  # noqa: PLC0415
     opp = Opportunity(name=f"{calc.article_name} ({calc.number})", account_id=calc.account_id,
-                      contact_id=calc.contact_id, stage="neue_anfrage", probability=STAGE_PROBABILITY["neue_anfrage"],
+                      contact_id=calc.contact_id, stage="neue_anfrage", probability=0,
                       amount=calc.annual_revenue + calc.one_time_revenue, owner_id=calc.owner_id or user.id,
                       close_date=calc.due_date, source="Kalkulation", kind="anfrage", inquiry_date=calc.inquiry_date,
                       due_date=calc.due_date, number=next_inquiry_number(db))
@@ -770,7 +769,6 @@ def build_quote(db: Session, pairs: list, user: User, lang: str = "de", target: 
     for calc in calcs:
         if calc.status in ("anfrage", "kalkulation"):
             calc.status = "angeboten"
-            calc.probability = max(calc.probability, STATUS_PROBABILITY["angeboten"])
     db.flush()
     for calc in calcs:
         sync_opportunity(db, calc)
@@ -1254,29 +1252,73 @@ def delete_template(template_id: int, db: Session = Depends(get_db), _: User = D
 
 
 # ---------------- Freigabe (Vier-Augen-Prinzip) ----------------
+def _close_approval_tasks(db: Session, calc: Calculation) -> None:
+    from ..models import Activity  # noqa: PLC0415
+    for t in db.query(Activity).filter(Activity.kind == "freigabe", Activity.done.is_(False),
+                                       Activity.subject.like(f"Freigabe prüfen: {calc.number} %")).all():
+        t.done = True
+
+
+@router.get("/approvers")
+def approvers_list(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Wer darf freigeben (Administratoren und Benutzer mit Freigaberecht), ohne den Anfragenden selbst."""
+    return [{"id": u.id, "name": u.name, "role": u.role} for u in _approvers(db) if u.id != user.id]
+
+
+@router.get("/approvals/mine")
+def my_approvals(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Offene Freigaben für mich: an mich gerichtet oder an alle Freigabeberechtigten."""
+    if not (user.role == "admin" or user.can_approve):
+        return []
+    rows = db.scalars(select(Calculation).where(Calculation.approval_status == "angefragt")).all()
+    return [{"id": c.id, "number": c.number, "name": c.article_name, "account": c.account.name if c.account else None,
+             "reasons": c.approval_reasons, "version": c.approval_version, "requested_by": c.approval_requested_by.name if c.approval_requested_by else None,
+             "requested_at": c.approval_requested_at, "to": c.approval_to.name if c.approval_to else "alle Freigabeberechtigten",
+             "comment": c.approval_comment}
+            for c in rows if c.approval_version == c.current_version and c.approval_requested_by_id != user.id
+            and (c.approval_to_id in (None, user.id))]
+
+
 def _approvers(db: Session) -> list[User]:
     return [u for u in db.scalars(select(User).where(User.active.is_(True))) if u.role == "admin" or u.can_approve]
 
 
 @calcs.post("/{calc_id}/approval/request", response_model=s.CalcDetail)
 def approval_request(calc_id: int, data: dict, db: Session = Depends(get_db), user: User = Depends(can_write)):
+    """REV02-02: Freigabe bei einer bestimmten Person anfragen – sie bekommt Benachrichtigung (in der Anwendung,
+    per E-Mail falls eingerichtet) und eine Aufgabe „Freigabe prüfen“; die Freigabeleiste zeigt, bei wem es liegt."""
+    from ..inquiry import add_workdays  # noqa: PLC0415
+    from ..models import Activity  # noqa: PLC0415
     calc = db.get(Calculation, calc_id)
     if not calc:
         raise HTTPException(404, "Kalkulation nicht gefunden")
+    data = data or {}
+    approvers = [u for u in _approvers(db) if u.id != user.id]
+    to = next((u for u in approvers if u.id == data.get("approver_id")), None) if data.get("approver_id") else None
+    if data.get("approver_id") and not to:
+        raise HTTPException(400, "Diese Person darf nicht freigeben (Administrator oder Freigaberecht nötig, nicht man selbst)")
+    if not approvers:
+        raise HTTPException(400, "Keine andere Person mit Freigaberecht vorhanden (Benutzerverwaltung › Freigaberecht)")
+    _close_approval_tasks(db, calc)
     calc.approval_status, calc.approval_version = "angefragt", calc.current_version
     calc.approval_requested_by_id, calc.approval_requested_at = user.id, datetime.now(timezone.utc)
-    calc.approval_comment, calc.approval_by_id, calc.approval_at = (data or {}).get("comment"), None, None
-    calc.approval_decision_comment = None
+    calc.approval_comment, calc.approval_by_id, calc.approval_at = data.get("comment"), None, None
+    calc.approval_decision_comment, calc.approval_to_id = None, (to.id if to else None)
     db.flush()
-    try:
-        from ..notify import notify
-        for u in _approvers(db):
-            if u.id != user.id:
-                notify(db, u.id, f"Freigabe angefragt: {calc.number} {calc.article_name}",
-                       f"V{calc.current_version} · {', '.join(calc.approval_reasons) or 'ohne Pflichtgrund'} · von {user.name}",
-                       f"/kalkulationen/{calc.id}")
-    except ImportError:
-        pass
+    reasons = ", ".join(calc.approval_reasons) or "ohne Pflichtgrund"
+    for u in ([to] if to else approvers):
+        db.add(Activity(type="aufgabe", kind="freigabe", subject=f"Freigabe prüfen: {calc.number} {calc.article_name}",
+                        description=f"V{calc.current_version} · {reasons} · angefragt von {user.name}"
+                                    + (f"\nBegründung: {data.get('comment')}" if data.get("comment") else "")
+                                    + f"\n/kalkulationen/{calc.id}",
+                        due_at=datetime.combine(add_workdays(date.today(), 2), datetime.min.time(), tzinfo=timezone.utc),
+                        account_id=calc.account_id, opportunity_id=calc.opportunity_id, owner_id=u.id))
+        try:
+            from ..notify import notify
+            notify(db, u.id, f"Freigabe angefragt: {calc.number} {calc.article_name}",
+                   f"V{calc.current_version} · {reasons} · von {user.name}", f"/kalkulationen/{calc.id}")
+        except ImportError:
+            pass
     db.commit()
     db.refresh(calc)
     return calc
@@ -1299,6 +1341,7 @@ def approval_decide(calc_id: int, data: dict, db: Session = Depends(get_db), use
     calc.approval_status, calc.approval_version = decision, calc.current_version
     calc.approval_by_id, calc.approval_at = user.id, datetime.now(timezone.utc)
     calc.approval_decision_comment = data.get("comment")
+    _close_approval_tasks(db, calc)
     try:
         from ..notify import notify
         if calc.approval_requested_by_id:

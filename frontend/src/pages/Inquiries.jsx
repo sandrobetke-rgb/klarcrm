@@ -8,7 +8,7 @@ import LostReasonDialog from '../components/LostReasonDialog'
 import { Badge, EntityForm, ErrorBox, Modal, RefSelect, SearchInput, useFetch } from '../components/ui'
 import {
   activityType, calcStatus, CLOSED_STAGES, contactName, eur, eur4, fmtDate, fmtDateTime, NO_BID_REASONS, num,
-  QUOTE_STATUS, STAGES, stageLabel,
+  PROB_CHOICES, PROB_CLASSES, probLabel, QUOTE_STATUS, STAGES, stageLabel,
 } from '../constants'
 import { activityFields, opportunityFields } from '../forms'
 
@@ -22,6 +22,7 @@ export default function Inquiries() {
   const [q, setQ] = useState('')
   const [stage, setStage] = useState(() => new URLSearchParams(window.location.search).get('stage') || 'offen')
   const [owner, setOwner] = useState(null)
+  const [prob, setProb] = useState('')
   const [creating, setCreating] = useState(null)
   const params = { q, owner_id: owner, limit: 500, ...(stage === 'offen' ? { open_only: true } : stage ? { stage } : {}) }
   const { data, error, reload } = useFetch('/inquiries' + qs(params))
@@ -47,14 +48,21 @@ export default function Inquiries() {
           {STAGES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
         </select>
         <label className="inline-label">Vertrieb <RefSelect kind="user" value={owner} onChange={setOwner} /></label>
+        <select value={prob} onChange={(e) => setProb(e.target.value)} title="Wahrscheinlichkeit, dass der Auftrag kommt">
+          <option value="">Wahrscheinlichkeit: alle</option>{PROB_CLASSES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}</select>
       </div>
       <ErrorBox error={error} />
+      {data?.items.length > 0 && <div className="prob-sums">{PROB_CLASSES.map((c) => {
+        const it = data.items.filter((o) => !CLOSED_STAGES.includes(o.stage) && c.test(o))
+        return <button key={c.value} className={`prob-sum ${prob === c.value ? 'on' : ''}`} onClick={() => setProb(prob === c.value ? '' : c.value)}>
+          <span>{c.label}</span><strong>{eur(it.reduce((s, o) => s + (o.amount || 0), 0))}</strong><small>{it.length} offene Anfragen · volles Volumen, nicht gewichtet</small></button>
+      })}</div>}
       <div className="card table-wrap">
         <table className="table">
           <thead><tr><th>Nr.</th><th>Projekt / Kunde</th><th>Phase</th><th className="num">Artikel</th><th>Entscheidung</th>
             <th>Angebot</th><th>Verfolgung</th><th>Abgabe bis</th><th className="num">Volumen</th><th className="num">Wahrsch.</th></tr></thead>
           <tbody>
-            {(data?.items || []).map((o) => (
+            {(data?.items || []).filter((o) => !prob || PROB_CLASSES.find((c) => c.value === prob).test(o)).map((o) => (
               <tr key={o.id} className="clickable" onClick={() => nav(`/anfragen/${o.id}`)}>
                 <td><strong>{o.number}</strong>{o.kind === 'lead' && <><br /><small className="muted">Lead</small></>}</td>
                 <td>{o.name}<br /><small className="muted">{o.account?.name || '–'}{o.owner ? ` · ${o.owner.name}` : ''}</small></td>
@@ -66,7 +74,7 @@ export default function Inquiries() {
                   o.quote?.last_contact_at ? <small className="muted">{fmtDate(o.quote.last_contact_at)}</small> : '–'}</td>
                 <td className={o.due_date && new Date(o.due_date) < new Date() && !o.quote ? 'text-critical' : ''}>{fmtDate(o.due_date)}</td>
                 <td className="num">{eur(o.amount)}</td>
-                <td className="num">{o.probability} %</td>
+                <td className="num">{probLabel(o)}</td>
               </tr>
             ))}
             {data && !data.items.length && <tr><td colSpan={10} className="muted">Keine Anfragen gefunden.</td></tr>}
@@ -89,17 +97,19 @@ function Steps({ o }) {
   const steps = [
     ['Anfrage', true],
     ['Entscheidung', calcs.length > 0 && o.undecided === 0],
-    ['Artikelanalyse', live.length > 0 && live.every((c) => c.analysis_complete || c.decision === 'nicht_anbieten')],
+    ['Artikelanalyse', live.length > 0 && live.every((c) => c.analysis_complete || c.decision === 'nicht_anbieten'), true],
     ['Kalkulation', live.length > 0 && live.every((c) => c.current_version > 1 || c.decision === 'nicht_anbieten')],
     ['Freigabe', live.length > 0 && live.every((c) => !c.approval_reasons.length || c.is_approved)],
     ['Angebot', !!q],
     ['Versendet', q && q.status !== 'entwurf'],
     ['Abschluss', CLOSED_STAGES.includes(o.stage)],
   ]
-  const cur = steps.findIndex(([, d]) => !d)
+  // weiche Schritte (Artikelanalyse) halten den Ablauf nicht auf, sondern werden rot markiert (REV02-01)
+  const cur = steps.findIndex(([, d, soft]) => !d && !soft)
   return (
     <ol className="stepper">
-      {steps.map(([l, d], i) => <li key={l} className={d ? 'done' : i === cur ? 'current' : ''}><span>{d ? '✓' : i + 1}</span>{l}</li>)}
+      {steps.map(([l, d, soft], i) => <li key={l} className={d ? 'done' : i === cur ? 'current' : soft && i < cur ? 'soft-open' : ''}
+        title={soft && !d ? 'noch unvollständig – sperrt aber nicht' : undefined}><span>{d ? '✓' : soft && i < cur ? '!' : i + 1}</span>{l}</li>)}
     </ol>
   )
 }
@@ -145,6 +155,12 @@ export function InquiryDetail() {
         <div className="toolbar">
           <Badge tone={stageTone(o.stage)}>{stageLabel(o.stage)}</Badge>
           {o.final_round && <Badge tone="warning">Endrunde</Badge>}
+          {!closed && <label className="inline-label" title="Wie wahrscheinlich kommt der gesamte Auftrag? (von Hand, ohne Gewichtung)">Wahrscheinlichkeit
+            <select disabled={!canWrite} value={o.probability_estimated ? String(o.probability) : ''}
+              onChange={(e) => e.target.value && run(() => api.patch(`/opportunities/${o.id}`, { probability: Number(e.target.value) }))}>
+              <option value="">nicht eingeschätzt</option>
+              {[...new Set([...PROB_CHOICES, ...(o.probability_estimated ? [o.probability] : [])])].sort((a, b) => a - b).map((p) => <option key={p} value={p}>{p} %</option>)}
+            </select></label>}
           {canWrite && <button className="btn btn-ghost" onClick={() => setEdit(true)}>Bearbeiten</button>}
         </div>
       </header>
@@ -170,7 +186,8 @@ export function InquiryDetail() {
                 <td><Link to={`/kalkulationen/${c.id}`}><strong>{c.number}</strong></Link><br /><small className="muted">V{c.current_version}</small></td>
                 <td>{c.article_name}{c.customer_article_no && <><br /><small className="muted">{c.customer_article_no}</small></>}</td>
                 <td><DecisionBox calc={c} onDone={reload} compact canWrite={canWrite && !closed} /></td>
-                <td>{c.analysis_complete ? <Badge tone="good">✓ vollständig</Badge> : <Link to={`/kalkulationen/${c.id}?tab=analyse`}><Badge tone="warning">offen</Badge></Link>}
+                <td>{c.analysis_complete ? <Badge tone="good">✓ vollständig</Badge> : <Link to={`/kalkulationen/${c.id}?tab=analyse`}><Badge tone="critical">unvollständig</Badge></Link>}
+                  {!c.analysis_complete && c.analysis_missing?.length > 0 && <><br /><small className="txt-crit">{c.analysis_missing.join(' · ')}</small></>}
                   {c.suggested_size_t && <><br /><small className="muted">Maschine ≈ {num(c.suggested_size_t)} t</small></>}
                   {c.tech_talk && <><br /><small>⚙ techn. Gespräch</small></>}</td>
                 <td><Badge tone={calcStatus(c.status).tone}>{calcStatus(c.status).label}</Badge></td>
@@ -179,7 +196,7 @@ export function InquiryDetail() {
                 <td className="num">{eur(c.annual_revenue)}</td>
                 <td className="num">{eur(c.one_time_revenue)}</td>
                 <td>{!c.approval_reasons.length ? <small className="muted">nicht nötig</small> : c.is_approved ? <Badge tone="good">freigegeben</Badge>
-                  : <Link to={`/kalkulationen/${c.id}`}><Badge tone={c.approval_status === 'angefragt' ? 'info' : 'warning'}>{c.approval_status === 'angefragt' ? 'angefragt' : 'nötig'}</Badge></Link>}
+                  : <Link to={`/kalkulationen/${c.id}`}><Badge tone={c.approval_status === 'angefragt' ? 'info' : 'warning'}>{c.approval_status === 'angefragt' ? `liegt bei ${c.approval_to || 'allen Freigebern'}` : 'nötig'}</Badge></Link>}
                   {!c.is_approved && c.approval_reasons.length > 0 && <><br /><small className="muted">{c.approval_reasons.join(', ')}</small></>}</td>
               </tr>))}
             </tbody>
@@ -192,7 +209,7 @@ export function InquiryDetail() {
             {canWrite && o.calculations.length > 0 && !closed && <button className="btn btn-primary btn-sm" onClick={makeQuote}>
               {q ? (q.status === 'entwurf' ? 'Angebot aktualisieren' : 'Neue Revision erstellen') : 'Angebot erstellen'}</button>}
           </div>
-          {!q ? <p className="muted">Noch kein Angebot. Voraussetzung: alle Artikel entschieden, Artikelanalyse vollständig oder freigegeben.</p> : (
+          {!q ? <p className="muted">Noch kein Angebot. Voraussetzung: alle Artikel entschieden; Freigabe nur bei Jahresumsatz bzw. Invest über der Schwelle. Rot markierte Punkte (z. B. Artikelanalyse) sollten erledigt sein, sperren aber nicht.</p> : (
             <dl className="kv">
               <dt>Angebot</dt><dd><Link to={`/angebote/${q.id}`}><strong>{q.number}</strong></Link> · {quoteStatus(q.status)} · {eur(q.net_total)} netto</dd>
               <dt>Versendet</dt><dd>{q.sent_at ? fmtDate(q.sent_at) : 'noch nicht – im Angebot Status „versendet“ setzen, dann startet die Verfolgung'}</dd>

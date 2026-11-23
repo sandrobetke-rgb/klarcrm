@@ -104,7 +104,8 @@ class Opportunity(TimestampMixin, Base):
     contact_id: Mapped[int | None] = mapped_column(ForeignKey("contacts.id", ondelete="SET NULL"))
     stage: Mapped[str] = mapped_column(String(30), default="lead", index=True)
     amount: Mapped[float] = mapped_column(Numeric(14, 2), default=0)
-    probability: Mapped[int] = mapped_column(Integer, default=10)
+    probability: Mapped[int] = mapped_column(Integer, default=0)
+    probability_estimated: Mapped[bool] = mapped_column(Boolean, default=False)   # REV02-05: von Hand eingeschätzt
     close_date: Mapped[date | None] = mapped_column(Date)
     closed_at: Mapped[date | None] = mapped_column(Date)
     source: Mapped[str | None] = mapped_column(String(100))
@@ -353,6 +354,7 @@ class Calculation(TimestampMixin, Base):
     approval_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     approval_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     approval_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    approval_to_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))   # REV02-02: an wen
     # Kennzahlen der aktuellen Version (für Listen/Sortierung)
     current_version: Mapped[int] = mapped_column(Integer, default=0)
     unit_price: Mapped[float] = mapped_column(Float, default=0)
@@ -368,6 +370,7 @@ class Calculation(TimestampMixin, Base):
     owner = relationship("User", lazy="joined", foreign_keys="Calculation.owner_id")
     approval_by = relationship("User", lazy="joined", foreign_keys="Calculation.approval_by_id")
     approval_requested_by = relationship("User", lazy="joined", foreign_keys="Calculation.approval_requested_by_id")
+    approval_to = relationship("User", lazy="joined", foreign_keys="Calculation.approval_to_id")
     versions = relationship("CalculationVersion", back_populates="calculation", cascade="all, delete-orphan",
                             order_by="CalculationVersion.version_no", lazy="selectin")
     post_calcs = relationship("PostCalculation", back_populates="calculation", cascade="all, delete-orphan",
@@ -501,29 +504,65 @@ class AuditLog(Base):
     changes: Mapped[dict | None] = mapped_column(JSON)
 
 
-def _approval_reasons(self):
-    """Gründe, warum die aktuelle Version freigegeben werden muss (Vier-Augen-Prinzip)."""
+def _settings(self) -> dict:
     from sqlalchemy.orm import object_session
     from .calc_engine import DEFAULT_SETTINGS
     sess = object_session(self)
     row = sess.get(CalcSettings, 1) if sess else None
-    st = {**DEFAULT_SETTINGS, **((row.data or {}) if row else {})}
+    return {**DEFAULT_SETTINGS, **((row.data or {}) if row else {})}
+
+
+def _te(v: float) -> str:
+    return f"{v / 1000:,.0f} T€".replace(",", ".")
+
+
+def _approval_reasons(self):
+    """Gründe für eine Freigabe im Vier-Augen-Prinzip (REV02-01): nur noch Umsatz und Invest über der Schwelle.
+    Alles andere (Artikelanalyse, Marge, Entscheidung) ist eine rote Markierung, blockiert aber nichts."""
+    st = _settings(self)
     r = []
     if (self.annual_revenue or 0) >= st["big_revenue_threshold"]:
-        r.append("Jahresumsatz ≥ Großprojekt-Schwelle")
+        r.append(f"Jahresumsatz ≥ {_te(st['big_revenue_threshold'])}")
     if (self.invest or 0) >= st["big_invest_threshold"]:
-        r.append("Invest ≥ Großprojekt-Schwelle")
-    if self.current_version and (self.margin_pct or 0) < st["approval_min_margin_pct"]:
-        r.append(f"Marge unter {st['approval_min_margin_pct']:g} %".replace(".", ","))
-    if not self.analysis_complete and self.decision_note != "übernommen aus Altdaten":
-        r.append("Artikelanalyse unvollständig")   # REV01-P03: Angebot nur nach Freigabe durch Vorgesetzten
+        r.append(f"Invest ≥ {_te(st['big_invest_threshold'])}")
     return r
 
 
-def _analysis_complete(self) -> bool:
-    """Artikelanalyse vollständig: gespeichert, alle Prüfpunkte bewertet, Machbarkeit eingetragen."""
+def _analysis_missing(self) -> list[str]:
+    """Was der Artikelanalyse zur Vollständigkeit fehlt (leer = vollständig)."""
     res = self.analysis_results or {}
-    return bool(self.analysis and res and res.get("open_checks", 1) == 0 and self.feasibility)
+    miss = []
+    if not (self.analysis and res):
+        miss.append("Artikelanalyse noch nicht gespeichert")
+    elif res.get("open_checks", 0):
+        miss.append(f"{res.get('open_checks')} Prüfpunkt(e) nicht bewertet")
+    if not self.feasibility:
+        miss.append("Machbarkeit nicht gewählt")
+    return miss
+
+
+def _analysis_complete(self) -> bool:
+    """Artikelanalyse vollständig: gespeichert, alle Prüfpunkte bewertet, Machbarkeit gewählt."""
+    return not _analysis_missing(self)
+
+
+def _warnings(self) -> list[str]:
+    """Rote Markierungen (REV02-01/03): weisen auf Fehlendes hin, sperren aber weder Speichern noch Angebot."""
+    if self.decision_note == "übernommen aus Altdaten":
+        return []
+    st = _settings(self)
+    w = []
+    if self.decision is None:
+        w.append("Entscheidung fehlt (anbieten / nicht anbieten)")
+    if self.decision != "nicht_anbieten":
+        w += [f"Artikelanalyse: {m}" for m in _analysis_missing(self)]
+    if self.current_version and (self.margin_pct or 0) < st["approval_min_margin_pct"]:
+        w.append(f"Marge unter {st['approval_min_margin_pct']:g} %".replace(".", ","))
+    return w
+
+
+Calculation.analysis_missing = property(_analysis_missing)
+Calculation.warnings = property(_warnings)
 
 
 Calculation.analysis_complete = property(_analysis_complete)

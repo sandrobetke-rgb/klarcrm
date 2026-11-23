@@ -237,7 +237,60 @@ ITEMS = [
      "Bitte für alles eine Beschreibung und ein Lastenheft erstellen, einmal in Word, aber auch auf dem Frontend zu finden.", U,
      "Seite „Dokumentation“ zeigt Lastenheft und Benutzerbeschreibung im Programm; Download als Word-Datei (.docx) direkt dort.",
      "Menü › Dokumentation → Lastenheft lesen, „Als Word herunterladen“.", "DOK-2"),
+
+    # ---------------------------------------------------------------- REV02: Testrunde Phase 2 (23.11.2026)
+    ("REV02-01", "Freigabe", "wunsch", "hoch", 2, "Freigabe nur noch ab Umsatz 500 T€ oder Invest 350 T€ – sonst rote Markierung",
+     "Freigabe so streng macht Unmut und Mehrarbeit: nur noch bei Teileumsatz > 500.000 € und Invest > 350.000 €; was fehlt, nur rot "
+     "markieren (Test REV01-P03, P06 und P08 waren wegen der Freigabe nicht prüfbar).", U,
+     "Freigabegründe nur noch Jahresumsatz ≥ 500 T€ und Invest ≥ 350 T€ (Parameter, bestehende Einstellung 250 T€ wird einmalig "
+     "umgestellt). Unvollständige Artikelanalyse, fehlende Entscheidung und Marge unter Grenze sperren nicht mehr, sondern stehen rot "
+     "unter „Noch offen“ in Kalkulation und Anfrage.", "Kalkulation unter 500 T€ mit offener Artikelanalyse → rote Markierung, keine "
+     "Freigabeleiste; Angebot der Anfrage erstellen geht. Danach REV01-P06 und P08 prüfen.", "Kap. 13.4"),
+    ("REV02-02", "Freigabe", "wunsch", "hoch", 2, "Freigabe-Workflow sichtbar: an wen geht die Freigabe",
+     "Wohin geht der Workflow, zu wem? Das ist aktuell nicht erkennbar.", U,
+     "Beim Anfordern wählt man, an wen (Administratoren und Benutzer mit Freigaberecht, nicht man selbst; oder alle). Die Person "
+     "bekommt eine Benachrichtigung (E-Mail, falls eingerichtet), die Aufgabe „Freigabe prüfen“ und auf der Startseite den Block "
+     "„Freigaben für mich“. Die Freigabeleiste zeigt „liegt bei … seit …“, die Anfrage ebenso.",
+     "Freigabe an Tim Kraus anfordern → als Tim anmelden → Startseite „Freigaben für mich“ und Aufgabe → freigeben → Aufgabe erledigt.", "Kap. 13.4"),
+    ("REV02-03", "Anfrage", "wunsch", "hoch", 2, "Entscheidung je Artikel weniger starr, Pflichtfelder klar",
+     "Entscheidung ist zu starr; es ist nicht angegeben, was Pflichtfelder sind (Test REV01-P02).", U,
+     "Die Entscheidung sperrt das Speichern der Kalkulation nicht mehr (rote Markierung „Entscheidung fehlt“). Gebraucht wird sie erst "
+     "beim Erstellen des Angebots („Alle offenen anbieten“ in der Anfrage). Im Entscheidungsfeld stehen die Pflichtangaben: Entscheidung, "
+     "Begründung bei „nicht anbieten“ und „Sonstiges“, Standort bei „anderer Standort“.",
+     "Neuen Artikel ohne Entscheidung kalkulieren und speichern → geht, rote Markierung. Angebot erstellen → Hinweis auf offene Entscheidung.", "Kap. 13.4"),
+    ("REV02-04", "Artikelanalyse", "wunsch", "mittel", 2, "Artikelanalyse: Fläche berechnen, Werkstoffwerte ausblenden, Vollständigkeit erklären",
+     "Projizierte Fläche selbst ausrechnen und Formel anzeigen; Werkstoffwerte können raus; wann ist eine Artikelanalyse vollständig?", U,
+     "Ohne CAD-Wert wird die projizierte Fläche aus Länge × Breite ÷ 100 geschätzt (umschließendes Rechteck, eher zu hoch → Schließkraft "
+     "auf der sicheren Seite), Formel wird angezeigt, ebenso die Schließkraftformel. Werkstoffkennwerte eingeklappt (Richtwerte aus der "
+     "Werkstoffgruppe). Vollständig = alle Prüfpunkte bewertet (ok/kritisch/n. a.) + Machbarkeit gewählt + gespeichert – als Liste mit ✓/✗.",
+     "Artikelanalyse: Länge 600, Breite 130, Fläche leer → 780 cm² geschätzt mit Formel. Werkstoffkennwerte zugeklappt. Liste „Vollständig, wenn“.", "Kap. 13.4"),
+    ("REV02-05", "Pipeline / Anfragen", "wunsch", "hoch", 2, "Wahrscheinlichkeit von Hand je Anfrage, ohne Gewichtung, filterbar",
+     "Wahrscheinlichkeit je Angebot angeben (z. B. 25/50/75 %) und filtern; Volumen bleibt voll (1,2 Mio. € bleibt 1,2 Mio. €). Woher kommt "
+     "die angezeigte Prozentzahl? (Test REV01-P09)", U,
+     "Die Prozentzahl wurde bisher automatisch aus der Phase gesetzt – entfällt. Wahrscheinlichkeit wird nur von Hand eingeschätzt (Anfrage-Kopf "
+     "oder Bearbeiten), sonst „–“ (nicht eingeschätzt); automatisch nur beim Abschluss 100 % / 0 %. Anfragenliste: Filter und Summen je "
+     "Klasse (≥ 75 %, 50–74 %, < 50 %, nicht eingeschätzt) mit vollem Volumen, keine Gewichtung. Bisherige Automatikwerte wurden zurückgesetzt.",
+     "Anfrage öffnen → Wahrscheinlichkeit 75 % wählen → Liste: Summe „≥ 75 %“ enthält das volle Volumen; Filter wählen.", "Kap. 13.4"),
+    ("REV02-06", "Stammdaten Maschinen", "fehler", "mittel", 2, "Schichtmodell setzt verfügbare Stunden sofort",
+     "Schichtmodell kann man auswählen, verfügbare Stunden ändern sich aber nicht (Test REV01-K01).", U,
+     "Die Stunden wurden erst beim Speichern berechnet. Jetzt springt das Feld „Verfügbare Stunden / Jahr“ bei der Auswahl sofort um "
+     "(1.920 / 3.840 / 5.760 h).", "Maschine bearbeiten → 2 Schichten → Feld zeigt sofort 3.840.", "Kap. 13.4"),
+    ("WUN-0001", "Änderungswünsche", "wunsch", "niedrig", 2, "In Änderungswünschen",
+     "In den Änderungswünschen sollte man per Klick angeben können, ob eine Änderung erfolgreich war, wenn nicht muss man dieses beschreiben. "
+     "Auch von wem Änderungswünsche gemeldet werden, sollte automatisch gefüllt sein. Änderungswünsche können nur durch einen Admin freigegeben werden.", U,
+     "Knöpfe „✓ i. O.“ und „✗ n. i. O.“ in der Liste (bei n. i. O. Beschreibung Pflicht) – Prüfer und Datum werden automatisch gesetzt. "
+     "„Gemeldet von“ wird beim Anlegen mit dem angemeldeten Benutzer gefüllt. Neue Wünsche sind „eingereicht“ und werden nur von einem "
+     "Administrator freigegeben (oder abgelehnt); vom Administrator angelegte Wünsche sind gleich freigegeben.",
+     "Als Vertrieb neuen Wunsch anlegen → Status eingereicht, Melder gesetzt → als Admin „Freigeben“. Bei einem umgesetzten Punkt „✗ n. i. O.“ → Text Pflicht.", "Kap. 13.4"),
 ]
+
+
+def _ver(code: str, phase) -> str:
+    if code.startswith("REV02") or code == "WUN-0001":
+        return "1.28"
+    if code.startswith("MB-"):
+        return "1.27" if code == "MB-02" else "1.26"
+    return "1.24" if phase == 2 else "1.23"
 
 
 def seed_rev01(db) -> int:
@@ -248,17 +301,18 @@ def seed_rev01(db) -> int:
     for code, area, kind, prio, phase, title, desc, status, solution, test, req in ITEMS:
         if code in have and status == U:
             cr = db.query(ChangeRequest).filter(ChangeRequest.code == code).first()
-            if cr and cr.status == "offen" and not (cr.test_result or "").strip():
+            if cr and cr.status in ("offen", "eingereicht", "freigegeben") and not (cr.test_result or "").strip():
                 cr.status, cr.solution, cr.test_steps = U, solution, test
-                cr.version = "1.24" if phase == 2 else "1.23"
+                cr.version = _ver(code, phase)
     for code, area, kind, prio, phase, title, desc, status, solution, test, req in ITEMS:
         if code in have:
             continue
-        db.add(ChangeRequest(code=code, revision="REV01" if code.startswith("REV01") else "Wunsch", area=area, kind=kind, priority=prio, phase=phase, title=title,
+        rev = code.split("-")[0] if code.startswith("REV") else "Wunsch"
+        db.add(ChangeRequest(code=code, revision=rev, area=area, kind=kind, priority=prio, phase=phase, title=title,
                              description=desc, status=status, solution=solution, test_steps=test,
                              req_ids=f"Lastenheft Kap. 13 · {code}",
-                             version=("1.24" if phase == 2 else "1.23") if status == U else None,
-                             requested_by="Sandro (REV01)"))
+                             version=_ver(code, phase) if status == U else None,
+                             requested_by=f"Sandro ({rev})" if rev != "Wunsch" else "Sandro"))
         n += 1
     db.commit()
     return n

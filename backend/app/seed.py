@@ -86,7 +86,8 @@ def run():
             closed = today - timedelta(days=random.randint(5, 300)) if stage in ("gewonnen", "verloren") else None
             o = Opportunity(name=f"{random.choice(DEALS)} – {name.split()[0]}", account_id=acc.id,
                             contact_id=contacts[0].id, stage=stage, amount=amount,
-                            probability=STAGE_PROBABILITY[stage], owner_id=owner.id,
+                            probability=(p := STAGE_PROBABILITY[stage] if stage in ("gewonnen", "verloren") else random.choice([0, 25, 50, 75])),
+                            probability_estimated=stage not in ("gewonnen", "verloren") and p > 0, owner_id=owner.id,
                             close_date=closed or today + timedelta(days=random.randint(-5, 120)),
                             closed_at=closed, source=random.choice(["Messe", "Bestandskunde", "Website", "Empfehlung"]))
             db.add(o)

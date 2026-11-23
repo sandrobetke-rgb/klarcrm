@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Programm** | KlarCRM – Vertrieb, Kalkulation Spritzguss, Angebote |
-| **Version** | 1.27 (Stand 21.11.2026) |
+| **Version** | 1.28 (Stand 23.11.2026) |
 | **Für** | Vertrieb, Kalkulation, Einkauf, Geschäftsführung, Gesellschafter |
 
 > Diese Beschreibung erklärt, **wie man mit KlarCRM arbeitet**. Die genauen Regeln und Rechenwege stehen im
@@ -122,6 +122,19 @@ Die **Wahrscheinlichkeit** gilt für den ganzen Auftrag. Summen werden nicht meh
   oder die Excel-Vorlage „Annual Price Inquiry List“). Erst Vorschau, dann Übernehmen; geänderte Preise landen mit
   Historie in einem Vorgang zur Kennzeichnung.
 - Rechnung: Δ je 100 Stk = (neu − Basis €/kg) × Gewicht g / 1000 × 100 × 1,08 (MGK 8 %).
+
+## 3a. Freigaben, rote Markierungen und Wahrscheinlichkeit
+
+- **Freigabe (Vier-Augen-Prinzip)** nur noch, wenn der Jahresumsatz ≥ 500.000 € oder das Invest ≥ 350.000 € ist.
+  In der Freigabeleiste wählst du, **an wen** sie geht. Die Person bekommt eine Benachrichtigung, eine Aufgabe
+  „Freigabe prüfen“ und sieht sie auf ihrer Startseite unter „Freigaben für mich“. Die Leiste zeigt, bei wem sie liegt.
+- **Rot markiert** wird, was noch fehlt – Entscheidung, Artikelanalyse, Marge unter Grenze. Das sperrt nichts; nur zum
+  Angebot muss jeder Artikel entschieden sein.
+- **Artikelanalyse:** Ohne CAD-Wert wird die projizierte Fläche aus Länge × Breite geschätzt (Formel steht darunter).
+  Vollständig ist sie, wenn alle Prüfpunkte bewertet sind und die Machbarkeit gewählt ist – die Liste zeigt ✓/✗.
+- **Wahrscheinlichkeit** schätzt du je Anfrage selbst ein (oben in der Anfrage). Das Volumen wird nicht gewichtet:
+  In der Anfragenliste stehen die Summen je Klasse (≥ 75 %, 50–74 %, < 50 %, nicht eingeschätzt) – ein Klick filtert.
+- **Änderungswünsche:** „✓ i. O.“ oder „✗ n. i. O.“ (mit Beschreibung) direkt in der Liste; neue Wünsche gibt der Administrator frei.
 
 ## 3b. Monatsbericht für die Gesellschafter
 

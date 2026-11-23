@@ -10,8 +10,8 @@ const HELP = [
     'Werte sind aus Stammdaten vorbelegt; Abweichungen werden gelb markiert und lassen sich mit „↺“ zurücksetzen.',
     'Teure Zukaufteile bei Bedarf per Haken in die Nebenkalkulation nehmen; Jahresabschläge und Vorserienpreis unten eintragen.',
     'Rechts stehen Preis, Kalkulationsschema und CO₂ – live. Mit „Version speichern“ (mit Änderungsnotiz) wird der Stand festgeschrieben.',
-    'Reihenfolge: 1 Artikelanalyse → Entscheidung (oben) → 2 Kalkulation. Ohne Entscheidung lässt sich nicht speichern.',
-    'Freigabe (Vier-Augen-Prinzip) bei Großprojekt, Marge unter Grenze oder unvollständiger Artikelanalyse. Danach „Angebot der Anfrage erstellen“.',
+    'Reihenfolge: 1 Artikelanalyse → Entscheidung (oben) → 2 Kalkulation. Was noch fehlt (Entscheidung, Artikelanalyse, Marge), steht rot unter „Noch offen“ – es sperrt aber nichts.',
+    'Freigabe (Vier-Augen-Prinzip) nur bei Jahresumsatz bzw. Invest über der Schwelle (Parameter, Standard 500 T€ / 350 T€): Empfänger wählen → „Freigabe anfordern“ – die Person bekommt Benachrichtigung und Aufgabe. Danach „Angebot der Anfrage erstellen“.',
     'Weitere Reiter: Lebensweg, Dokumente, Anrufe, Versionen (Vergleich), Nachkalkulation, Protokoll.',
   ]],
   ['/preisliste/aenderungen/', 'Preisänderung', 'Alle Artikel, die von einer Material- oder VK-Preisänderung betroffen sind – je Artikel kennzeichnen.', [
@@ -26,13 +26,14 @@ const HELP = [
   ]],
   ['/anfragen/', 'Anfrage / Projekt', 'Ein Vorgang je Kundenanfrage: Artikel, Entscheidung, Artikelanalyse, Kalkulation, Freigabe, Angebot, Verfolgung – die Schrittleiste zeigt, was als Nächstes dran ist.', [
     '„+ Artikel / Kalkulation“ legt je Artikel eine Kalkulation unter dieser Anfrage an (optional mit Werten eines anderen Artikels).',
-    'Je Artikel zuerst entscheiden: anbieten · nicht anbieten (mit Grund) · anderer Standort · Sonstiges. Erst dann lässt sich kalkulieren.',
-    'Artikelanalyse vollständig (alle Prüfpunkte, Machbarkeit) – sonst braucht das Angebot eine Freigabe durch den Vorgesetzten.',
+    'Je Artikel entscheiden: anbieten · nicht anbieten (mit Grund) · anderer Standort · Sonstiges. Kalkulieren geht auch vorher; spätestens zum Angebot muss jeder Artikel entschieden sein.',
+    'Artikelanalyse vollständig = alle Prüfpunkte bewertet + Machbarkeit gewählt. Unvollständiges steht rot in der Tabelle, sperrt aber nicht. Freigabe nur über der Umsatz- bzw. Invest-Schwelle – die Spalte zeigt, bei wem sie liegt.',
     '„Angebot erstellen“: ein Angebot je Anfrage mit allen angebotenen Artikeln (Pos. 1, 1.1 Werkzeug, 1.2 Sonstiges, 1.3 CO₂). Danach im Angebot Status „versendet“ → Verfolgung startet (5 Arbeitstage, Ampel).',
   ]],
   ['/anfragen', 'Anfragen & Projekte', 'Alle Kundenanfragen und Leads mit Phase, offener Entscheidung, Angebot und Verfolgungsampel.', [
     '„+ Neue Anfrage“: Kunde, Projekt und Abgabetermin frei eingeben, danach Artikel erfassen. „+ Lead“: Potenzial ohne konkrete Anfrage.',
     'Zeile anklicken öffnet die Anfrage. ⚠ = Artikel ohne Entscheidung; Ampel = Angebotsverfolgung (rot = Rücksprache überfällig).',
+    'Wahrscheinlichkeit: im Kopf der Anfrage von Hand einschätzen (– = nicht eingeschätzt). Die Kacheln oben summieren das volle Volumen je Klasse – ohne Gewichtung – und filtern die Liste.',
   ]],
   ['/pipeline', 'Pipeline', 'Eine Karte je Anfrage bzw. Lead.', [
     'Neue Anfrage → Qualifiziert → Angebot laufen automatisch (Entscheidung, Versand des Angebots). Verhandlung / technisches Gespräch (Endrunde), Gewonnen und Verloren per Drag & Drop.',
@@ -88,7 +89,7 @@ const HELP = [
   ['/protokoll', 'Systemprotokoll (Audit-Trail)', 'Wer hat wann was an Daten geändert (IATF/ISO-Nachweis). Für Änderungswünsche am Programm: Menü „Änderungswünsche“.', ['Nach Objekt, Benutzer oder Zeitraum filtern. Einträge sind nicht änderbar.']],
   ['/aenderungen', 'Änderungswünsche & Prüfprotokoll', 'Alle Testrückmeldungen (z. B. REV01) und neuen Wünsche an das Programm – mit Status, Umsetzung und Prüfung.', [
     '„+ Änderungswunsch“ erfasst einen neuen Punkt (Nummer WUN-0001 … automatisch).',
-    'Umgesetzte Punkte stehen auf „Umgesetzt – bitte prüfen“: Zeile öffnen, Prüfanweisung durchgehen, Prüfergebnis eintragen und Status „Geprüft ✓“ oder „Nachbessern“ setzen.',
+    'Umgesetzte Punkte stehen auf „Umgesetzt – bitte prüfen“: Zeile öffnen, Prüfanweisung durchgehen, Prüfergebnis eintragen und „✓ i. O.“ oder „✗ n. i. O.“ (mit Beschreibung) klicken – Prüfer und Datum werden automatisch eingetragen. Neue Wünsche sind „eingereicht“ und werden vom Administrator freigegeben.',
     'Phasen: 1 Fehler & Sofortmaßnahmen · 2 Anfrage → Angebot → Pipeline · 3 Kalkulationsblätter · 4 Beschaffung, Dashboard, Berichte. Export als CSV für Excel.',
   ]],
   ['/dokumentation', 'Dokumentation', 'Benutzerbeschreibung und Lastenheft der installierten Version.', [

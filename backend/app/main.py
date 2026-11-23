@@ -45,6 +45,33 @@ def init_db():
             d["_rev01_thresholds"] = True
             cs.data = d
             db.commit()
+        # REV02-01: Freigabe nur noch ab Umsatz 500 T€ / Invest 350 T€ (wenn noch der Stand 250 T€ eingestellt ist)
+        cs = db.get(CalcSettings, 1)
+        if cs and not (cs.data or {}).get("_rev02_thresholds"):
+            d = dict(cs.data or {})
+            if float(d.get("big_revenue_threshold") or 250000) == 250000:
+                d["big_revenue_threshold"] = 500000.0
+            if float(d.get("big_invest_threshold") or 250000) == 250000:
+                d["big_invest_threshold"] = 350000.0
+            d["_rev02_thresholds"] = True
+            cs.data = d
+            db.commit()
+        # REV02-05: Wahrscheinlichkeiten offener Anfragen wurden bisher automatisch (Phase/Status) gesetzt, nie von Hand
+        # → einmalig auf „nicht eingeschätzt“ zurücksetzen; ab jetzt nur noch von Hand
+        cs = db.get(CalcSettings, 1)
+        if cs and not (cs.data or {}).get("_rev02_probability"):
+            from .models import Calculation, Opportunity  # noqa: PLC0415
+            for o in db.query(Opportunity).all():
+                if o.stage in ("gewonnen", "verloren", "nicht_angeboten"):
+                    continue
+                o.probability, o.probability_estimated = 0, False
+                for c in db.query(Calculation).filter(Calculation.opportunity_id == o.id).all():
+                    if c.status not in ("gewonnen", "verloren", "kein_angebot", "zurueckgestellt"):
+                        c.probability = 0
+            d = dict(cs.data or {})
+            d["_rev02_probability"] = True
+            cs.data = d
+            db.commit()
         # REV01 Phase 2: Kalkulationen einmalig in Anfragen überführen (gruppiert nach Angebot)
         cs = db.get(CalcSettings, 1)
         if cs is None:

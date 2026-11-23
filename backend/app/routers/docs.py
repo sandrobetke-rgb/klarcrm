@@ -19,16 +19,37 @@ from ..models import ChangeRequest, User
 KIND_KEYS = {"fehler": "fehler", "wunsch": "wunsch", "doku": "doku", "dokumentation": "doku"}
 
 
-def _cr_before_save(values: dict, obj):
-    """Neue Wünsche bekommen automatisch eine Nummer (WUN-0001), Prüfdatum beim Setzen auf „geprüft“.
+def _cr_before_save(values: dict, obj, user=None):
+    """Neue Wünsche bekommen automatisch eine Nummer (WUN-0001) und den Melder; Prüfer und Prüfdatum werden beim
+    Prüfergebnis automatisch gesetzt (WUN-0001). Neue Wünsche sind „eingereicht“, bis ein Administrator sie freigibt.
     Art: Fehler/Wunsch/Dokumentation werden als Schlüssel gespeichert, alles andere als Freitext."""
+    from fastapi import HTTPException  # noqa: PLC0415
+    is_admin = bool(user and user.role == "admin")
     if values.get("kind"):
         k = values["kind"].strip()
         values["kind"] = KIND_KEYS.get(k.lower(), k)
-    if obj is None and not values.get("code"):
-        values["code"] = None  # Nummer WUN-0001 … nach dem Anlegen (number_new_requests)
-    if values.get("status") == "geprueft" and not values.get("tested_at") and not (obj and obj.tested_at):
-        values["tested_at"] = date.today()
+    if obj is None:
+        if not values.get("code"):
+            values["code"] = None  # Nummer WUN-0001 … nach dem Anlegen (number_new_requests)
+        if user and not (values.get("requested_by") or "").strip():
+            values["requested_by"] = user.name
+        if not is_admin:
+            values["status"] = "eingereicht"
+        elif values.get("status") in (None, "", "offen", "eingereicht"):
+            values["status"] = "freigegeben"     # vom Administrator angelegt = gleich freigegeben
+    new_status = values.get("status")
+    old_status = obj.status if obj else None
+    if new_status and new_status != old_status:
+        if new_status == "freigegeben" and not is_admin:
+            raise HTTPException(403, "Änderungswünsche gibt nur ein Administrator frei")
+        if old_status == "eingereicht" and new_status not in ("freigegeben", "abgelehnt", "eingereicht") and not is_admin:
+            raise HTTPException(403, "Erst nach Freigabe durch einen Administrator bearbeiten")
+        if new_status in ("geprueft", "nachbessern"):
+            if new_status == "nachbessern" and not (values.get("test_result") or "").strip():
+                raise HTTPException(400, "„Nicht in Ordnung“: bitte beschreiben, was nicht passt")
+            if user:
+                values["tested_by"] = user.name
+            values["tested_at"] = date.today()
     return values
 
 

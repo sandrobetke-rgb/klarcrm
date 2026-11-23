@@ -1,8 +1,13 @@
+import { useState } from 'react'
+import { api } from '../api'
+import { useAuth } from '../auth'
 import ListPage from '../components/ListPage'
-import { Badge, useFetch } from '../components/ui'
+import { Badge, ErrorBox, useFetch } from '../components/ui'
 
 // Änderungsprotokoll (REV01-X01): Testrückmeldungen und Wünsche erfassen, abarbeiten und prüfen
 export const CR_STATUS = [
+  { value: 'eingereicht', label: 'Eingereicht – wartet auf Freigabe (Admin)', tone: 'neutral' },
+  { value: 'freigegeben', label: 'Freigegeben zur Umsetzung', tone: 'info' },
   { value: 'offen', label: 'Offen', tone: 'neutral' },
   { value: 'in_arbeit', label: 'In Arbeit', tone: 'info' },
   { value: 'umgesetzt', label: 'Umgesetzt – bitte prüfen', tone: 'warning' },
@@ -35,11 +40,11 @@ const fields = [
   { name: 'phase', label: 'Phase', type: 'select', options: PHASES },
   { name: 'description', label: 'Anforderung / Fehlerbeschreibung', type: 'textarea', rows: 4, span: true },
   { name: 'status', label: 'Status', type: 'select', required: true, options: CR_STATUS },
-  { name: 'requested_by', label: 'Gemeldet von' },
+  { name: 'requested_by', label: 'Gemeldet von', hint: 'wird beim Anlegen automatisch mit dem angemeldeten Benutzer gefüllt' },
   { name: 'solution', label: 'Umsetzung (was wurde gelöst)', type: 'textarea', rows: 4, span: true },
   { name: 'test_steps', label: 'Prüfanweisung', type: 'textarea', rows: 3, span: true },
   { name: 'test_result', label: 'Prüfergebnis / Anmerkung', type: 'textarea', rows: 3, span: true, hint: 'Bei Status „Nachbessern“ bitte beschreiben, was noch nicht passt' },
-  { name: 'tested_by', label: 'Geprüft von' },
+  { name: 'tested_by', label: 'Geprüft von', hint: 'wird beim Prüfergebnis automatisch gesetzt' },
   { name: 'tested_at', label: 'Geprüft am', type: 'date' },
   { name: 'req_ids', label: 'Lastenheft-ID(s)' },
   { name: 'version', label: 'Umgesetzt in Version' },
@@ -65,7 +70,7 @@ function Summary() {
       <div className="kpi-grid">
         <div className="kpi"><span className="kpi-label">Punkte gesamt</span><span className="kpi-value">{items.length}</span>
           <span className="kpi-sub">{count((r) => ['fehler', 'Fehler'].includes(r.kind))} Fehler · {count((r) => ['wunsch', 'Wunsch'].includes(r.kind))} Wünsche</span></div>
-        {CR_STATUS.slice(0, 5).map((s) => (
+        {CR_STATUS.filter((s) => ['eingereicht', 'freigegeben', 'umgesetzt', 'geprueft', 'nachbessern'].includes(s.value)).map((s) => (
           <a key={s.value} className="kpi kpi-link" href={`/aenderungen?status=${s.value}`}><span className="kpi-label">{s.label}</span>
             <span className="kpi-value">{count((r) => r.status === s.value)}</span></a>))}
         <div className="kpi"><span className="kpi-label">Fortschritt</span><span className="kpi-value">{items.length ? Math.round(100 * done / items.length) : 0} %</span>
@@ -80,11 +85,39 @@ function Summary() {
   )
 }
 
-export default function Changes() {
+// WUN-0001: Prüfergebnis per Klick (bei „nicht in Ordnung“ Beschreibung Pflicht), Freigabe neuer Wünsche nur durch Admin
+function QuickActions({ r, onDone }) {
+  const { isAdmin, canWrite } = useAuth()
+  const [bad, setBad] = useState(false)
+  const [text, setText] = useState('')
+  const [err, setErr] = useState(null)
+  const patch = async (body) => { setErr(null); try { await api.patch(`/changes/${r.id}`, body); setBad(false); setText(''); onDone() } catch (e) { setErr(e) } }
+  const stop = (e) => e.stopPropagation()
+  if (!canWrite) return null
   return (
-    <ListPage title="Änderungswünsche & Prüfprotokoll" subtitle="Testrückmeldungen (REV01 ff.) und neue Wünsche – erfassen, umsetzen, prüfen, abhaken"
+    <div className="cr-actions" onClick={stop}>
+      {r.status === 'eingereicht' && isAdmin && <>
+        <button className="btn btn-primary btn-sm" onClick={() => patch({ status: 'freigegeben' })}>Freigeben</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => { const t = window.prompt('Begründung der Ablehnung'); if (t) patch({ status: 'abgelehnt', test_result: t }) }}>Ablehnen</button></>}
+      {r.status === 'eingereicht' && !isAdmin && <small className="muted">wartet auf Admin</small>}
+      {['umgesetzt', 'nachbessern'].includes(r.status) && !bad && <>
+        <button className="btn btn-ghost btn-sm btn-ok" title="Geprüft – in Ordnung" onClick={() => patch({ status: 'geprueft', test_result: r.status === 'nachbessern' ? `${r.test_result || ''}\n→ nachgeprüft: in Ordnung`.trim() : 'in Ordnung' })}>✓ i. O.</button>
+        <button className="btn btn-ghost btn-sm btn-danger-ghost" title="Nicht in Ordnung – bitte beschreiben" onClick={() => setBad(true)}>✗ n. i. O.</button></>}
+      {bad && <div className="cr-bad">
+        <textarea rows={2} autoFocus placeholder="Was passt nicht? (Pflicht)" value={text} onChange={(e) => setText(e.target.value)} />
+        <button className="btn btn-primary btn-sm" disabled={!text.trim()} onClick={() => patch({ status: 'nachbessern', test_result: text })}>Speichern</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => setBad(false)}>×</button></div>}
+      <ErrorBox error={err} />
+    </div>
+  )
+}
+
+export default function Changes() {
+  const [rev, setRev] = useState(0)
+  return (
+    <ListPage key={rev} title="Änderungswünsche & Prüfprotokoll" subtitle="Testrückmeldungen (REV01 ff.) und neue Wünsche – erfassen, umsetzen, prüfen, abhaken"
       path="/changes" entityLabel="Änderungswunsch" fields={fields} defaultSort="code" limit={200}
-      newDefaults={{ kind: 'Wunsch', priority: 'mittel', status: 'offen' }}
+      newDefaults={{ kind: 'Wunsch', priority: 'mittel', status: 'eingereicht' }}
       toForm={(r) => ({ ...r, kind: kindLabel(r.kind), phase: r.phase ? String(r.phase) : '' })}
       top={(n) => <Summary key={n} />}
       rowClass={(r) => (r.status === 'nachbessern' ? 'row-big' : '')}
@@ -98,6 +131,7 @@ export default function Changes() {
         { key: 'status', label: 'Status', sort: 'status', render: (r) => <Badge tone={st(r.status).tone}>{st(r.status).label}</Badge> },
         { key: 'solution', label: 'Umsetzung', render: (r) => <small className="clamp-3">{r.solution || '–'}</small> },
         { key: 'tested_at', label: 'Geprüft', render: (r) => (r.tested_at ? <small>{new Date(r.tested_at).toLocaleDateString('de-DE')}<br />{r.tested_by}</small> : '–') },
+        { key: 'act', label: '', render: (r) => <QuickActions r={r} onDone={() => setRev((x) => x + 1)} /> },
       ]} />
   )
 }

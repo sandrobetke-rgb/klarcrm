@@ -27,7 +27,9 @@ def _calc_row(c: Calculation) -> dict:
             "feasibility": c.feasibility, "analysis_complete": c.analysis_complete,
             "tech_talk": bool((c.analysis or {}).get("tech_talk")),
             "suggested_size_t": (c.analysis_results or {}).get("suggested_size_t"),
-            "approval_reasons": c.approval_reasons, "is_approved": c.is_approved, "approval_status": c.approval_status}
+            "approval_reasons": c.approval_reasons, "is_approved": c.is_approved, "approval_status": c.approval_status,
+            "approval_to": c.approval_to.name if c.approval_to else None,
+            "analysis_missing": c.analysis_missing, "warnings": c.warnings}
 
 
 def _quote_row(q: Quote | None) -> dict | None:

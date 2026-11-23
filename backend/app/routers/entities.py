@@ -33,13 +33,16 @@ contacts = make_crud_router(
 def opportunity_before_save(values: dict, obj):
     stage = values.get("stage")
     old_stage = obj.stage if obj else None
-    # Wahrscheinlichkeit automatisch aus Phase, wenn nicht explizit gesetzt
-    if stage and stage != old_stage and values.get("probability") is None:
-        values["probability"] = STAGE_PROBABILITY[stage]
-    if obj is None and values.get("probability") is None:
-        values["probability"] = STAGE_PROBABILITY[values.get("stage") or "lead"]
+    # REV02-05: Wahrscheinlichkeit nur von Hand (Auftrag kommt insgesamt), automatisch nur beim Abschluss 100 / 0 %
+    closed_p = {"gewonnen": 100, "verloren": 0, "nicht_angeboten": 0}
+    if stage in closed_p and stage != old_stage:
+        values["probability"] = closed_p[stage]
+    elif values.get("probability") is not None and (obj is None or values["probability"] != obj.probability):
+        values["probability_estimated"] = True
     if "probability" in values and values["probability"] is None:
         values.pop("probability")
+    if obj is None and values.get("probability") is None:
+        values["probability"] = 0
     if stage in ("verloren", "nicht_angeboten") and stage != old_stage and not (values.get("lost_reason") or "").strip():
         # REV01-P05: Verschieben nach „Verloren“ / „Nicht angeboten“ nur mit Grund
         raise HTTPException(400, "Verloren / nicht angeboten nur mit Grund – bitte Grund angeben")

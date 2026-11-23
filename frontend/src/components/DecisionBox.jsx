@@ -43,6 +43,8 @@ export default function DecisionBox({ calc, onDone, compact = false, canWrite = 
         <small className="hint">Kalkulation wird mit den Sätzen dieses Standorts als neue Version angelegt</small></div>}
       <div className="field"><label>Begründung {needNote ? '*' : '(optional)'}</label>
         <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={d === 'nicht_anbieten' ? 'z. B. Mengen zu klein, keine Maschine, Technologie passt nicht' : ''} /></div>
+      <small className="hint">Pflichtangaben: Entscheidung · bei „nicht anbieten“ und „Sonstiges“ eine Begründung · bei „anderer Standort“ der Standort.
+        Die Entscheidung wird spätestens beim Erstellen des Angebots gebraucht.</small>
       <div className="form-actions"><span className="spacer" />
         <button className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>Abbrechen</button>
         <button className="btn btn-primary btn-sm" disabled={(needNote && !note.trim()) || (d === 'anderer_standort' && !site)} onClick={save}>Entscheidung speichern</button>

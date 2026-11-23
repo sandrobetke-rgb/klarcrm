@@ -67,10 +67,10 @@ DEFAULT_SETTINGS = {
     "space_cost_m2_year": 90.0,     # Raumkosten €/m² und Jahr (Herleitung Maschinenstundensatz)
     "energy_price_kwh": 0.20,       # Strompreis €/kWh (Herleitung Maschinenstundensatz)
     "escalation_threshold_pct": 5.0,  # Preisgleitung: Anpassung ab Materialpreisänderung ± %
-    "approval_min_margin_pct": 3.0,  # Freigabe nötig unter dieser Marge (zusätzlich bei Großprojekten)
+    "approval_min_margin_pct": 3.0,  # Marge darunter → rote Markierung (seit REV02 kein Freigabegrund mehr)
     "transport_pct": 2.0,           # Transport pauschal % auf HK (wenn Details unbekannt)
-    "big_revenue_threshold": 250000.0,  # Großprojekt: Jahresumsatz ab … €
-    "big_invest_threshold": 250000.0,   # Großprojekt: Invest (Einmalkosten Werkzeug etc.) ab … €
+    "big_revenue_threshold": 500000.0,  # Großprojekt + Freigabe: Jahresumsatz ab … € (REV02-01)
+    "big_invest_threshold": 350000.0,   # Großprojekt + Freigabe: Invest (Einmalkosten Werkzeug etc.) ab … €
     "machine_rate_pct": 100.0,
     "followup_workdays": 5.0,         # Angebotsverfolgung: Rücksprache Kunde n Arbeitstage nach Versand (REV01-P06)
     "lead_time_target_workdays": 10.0,  # Ziel-Durchlaufzeit Anfrage → Angebot (REV01-R01)  # Standortfaktor Maschinenstundensatz, wenn am Standort keine eigene Maschine hinterlegt ist

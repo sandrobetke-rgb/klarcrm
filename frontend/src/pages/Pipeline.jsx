@@ -4,7 +4,7 @@ import { api, qs } from '../api'
 import { useAuth } from '../auth'
 import ListPage from '../components/ListPage'
 import { Badge, confirmDelete, EntityForm, ErrorBox, Modal, RefSelect, SearchInput, useFetch } from '../components/ui'
-import { eur, fmtDate, STAGES, stageLabel } from '../constants'
+import { eur, fmtDate, probLabel, STAGES, stageLabel } from '../constants'
 import { opportunityFields } from '../forms'
 import { bigReasons, useThresholds } from '../components/BigProject'
 import LostReasonDialog from '../components/LostReasonDialog'
@@ -30,7 +30,7 @@ export default function Pipeline() {
           { key: 'name', label: 'Projekt', sort: 'name', render: (r) => <strong>{r.name}</strong> },
           { key: 'account', label: 'Firma', render: (r) => r.account?.name || '–' },
           { key: 'stage', label: 'Phase', sort: 'stage', render: (r) => stageLabel(r.stage) },
-          { key: 'probability', label: 'Wahrsch. Auftrag', sort: 'probability', className: 'num', render: (r) => `${r.probability} %` },
+          { key: 'probability', label: 'Wahrsch. Auftrag', sort: 'probability', className: 'num', render: (r) => probLabel(r) },
           { key: 'final_round', label: 'Endrunde', render: (r) => (r.final_round ? '✓' : '') },
           { key: 'close_date', label: 'Entscheidung', sort: 'close_date', render: (r) => fmtDate(r.close_date) },
           { key: 'owner', label: 'Verantwortlich', render: (r) => r.owner?.name || '–' },
@@ -135,7 +135,7 @@ function Board({ toggle }) {
                         {fmtDate(o.close_date)}
                       </span>
                     </div>
-                    <div className="deal-owner muted">{o.owner?.name} · {o.probability} %{o.articles ? ` · ${o.articles} Art.` : ''}</div>
+                    <div className="deal-owner muted">{o.owner?.name} · {probLabel(o)}{o.articles ? ` · ${o.articles} Art.` : ''}</div>
                     <div className="deal-meta">
                       {o.undecided > 0 && <Badge tone="warning">⚠ {o.undecided} Entscheidung offen</Badge>}
                       {o.quote && <Badge tone="info">{o.quote.number}</Badge>}

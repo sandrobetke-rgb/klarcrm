@@ -55,6 +55,12 @@ def analyze(a: dict, inputs: dict, machines: list[dict]) -> dict:
         "pressure_bar", "flow_ratio_max", "a", "t_melt", "t_mold", "t_eject") if a.get(k) not in (None, "")}}
     cav = max(_f(inputs.get("cavities"), 1), 1)
     area = _f(a.get("projected_area_cm2"))
+    # REV02-04: ohne CAD-Wert Schätzung aus Länge × Breite (umschließendes Rechteck, eher zu hoch → Schließkraft sicher)
+    length, width = _f(a.get("length_mm")), _f(a.get("width_mm"))
+    area_est = round(length * width / 100, 1) if length > 0 and width > 0 else 0.0
+    area_estimated = area <= 0 and area_est > 0
+    if area_estimated:
+        area = area_est
     safety = _f(a.get("safety_factor"), 1.2)
     force_t = area * cav * _f(md["pressure_bar"]) / 1000 * safety
     wall_max, wall_min = _f(a.get("wall_max_mm")), _f(a.get("wall_min_mm"))
@@ -87,13 +93,18 @@ def analyze(a: dict, inputs: dict, machines: list[dict]) -> dict:
     if selected and selected.get("clamping_force_t") and force_t:
         selected_ok = _f(selected["clamping_force_t"]) >= force_t
         if not selected_ok:
-            issues.append(f"Gewählte Maschine ({_f(selected['clamping_force_t']):g} t) zu klein – benötigt ca. {force_t:.0f} t.")
+            (hints if area_estimated else issues).append(
+                f"Gewählte Maschine ({_f(selected['clamping_force_t']):g} t) zu klein – benötigt ca. {force_t:.0f} t"
+                + (" (mit geschätzter Fläche – genaue Fläche aus CAD eintragen)." if area_estimated else "."))
         elif _f(selected["clamping_force_t"]) > force_t * 3 and suitable and suitable[0]["id"] != selected["id"]:
             hints.append(f"Gewählte Maschine ist deutlich überdimensioniert – {suitable[0]['name']} würde reichen (niedrigerer Stundensatz).")
     capacity_ok = True
     if force_t and active and force_t > max_force:
-        capacity_ok = False
-        issues.append(f"Keine Maschine mit ≥ {force_t:.0f} t vorhanden (größte: {max_force:g} t).")
+        if area_estimated:   # REV02-04: Schätzung (Rechteck) ist eher zu hoch → kein „nicht herstellbar“ allein daraus
+            hints.append(f"Mit geschätzter Fläche ≥ {force_t:.0f} t nötig (größte Maschine {max_force:g} t) – genaue Fläche aus CAD eintragen.")
+        else:
+            capacity_ok = False
+            issues.append(f"Keine Maschine mit ≥ {force_t:.0f} t vorhanden (größte: {max_force:g} t).")
 
     checks = a.get("checklist") or {}
     critical = [lbl for key, lbl in CHECKLIST if (checks.get(key) or {}).get("status") == "kritisch"]
@@ -113,6 +124,9 @@ def analyze(a: dict, inputs: dict, machines: list[dict]) -> dict:
     return {
         "material_family": family, "material_params": md,
         "clamping_force_t": round(force_t, 1),
+        "projected_area_cm2": round(area, 1), "projected_area_est_cm2": area_est, "area_estimated": area_estimated,
+        "force_formula": f"{area:,.1f} cm² × Fachzahl {cav:g} × {_f(md['pressure_bar']):g} bar ÷ 1000 × {safety:g} = {force_t:,.1f} t"
+                         .replace(",", "X").replace(".", ",").replace("X", "."),
         "flow_ratio": round(flow_ratio, 1), "flow_ratio_max": md["flow_ratio_max"],
         "cooling_time_s": round(cooling, 1), "cycle_estimate_s": round(cycle_est, 1),
         "suitable_machines": [{"id": m["id"], "name": m["name"], "number": m.get("number"),

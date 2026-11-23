@@ -38,7 +38,7 @@ export const opportunityFields = [
   { name: 'inquiry_date', label: 'Anfrage eingegangen am', type: 'date' },
   { name: 'due_date', label: 'Angebotsabgabe bis', type: 'date' },
   { name: 'amount', label: 'Volumen (€ netto)', type: 'number', step: '0.01', min: 0, hint: 'bei Anfragen mit Artikeln automatisch aus den Kalkulationen' },
-  { name: 'probability', label: 'Wahrscheinlichkeit Auftrag %', type: 'number', min: 0, max: 100, hint: 'Wahrscheinlichkeit, dass der gesamte Auftrag kommt; leer = je Phase' },
+  { name: 'probability', label: 'Wahrscheinlichkeit Auftrag %', type: 'number', min: 0, max: 100, hint: 'Wie wahrscheinlich kommt der gesamte Auftrag? Von Hand einschätzen – wird nicht automatisch gesetzt, das Volumen wird nicht gewichtet' },
   { name: 'close_date', label: 'Erw. Entscheidung Kunde', type: 'date' },
   { name: 'source', label: 'Quelle', type: 'combo', options: ['Bestandskunde', 'Messe', 'Website', 'Empfehlung', 'Ausschreibung', 'Kaltakquise'], hint: 'Auswahl oder eigene Eingabe' },
   { name: 'owner_id', label: 'Verantwortlich', type: 'user' },

@@ -174,6 +174,7 @@ class OpportunityUpdate(OpportunityBase):
 class OpportunityOut(ORM, OpportunityBase):
     id: int
     probability: int
+    probability_estimated: bool = False
     closed_at: date | None = None
     number: str | None = None
     offered_at: date | None = None
@@ -493,6 +494,9 @@ class CalcOut(ORM, CalcMeta):
     approval_reasons: list[str] = []
     is_approved: bool = False
     analysis_complete: bool = False
+    analysis_missing: list[str] = []
+    warnings: list[str] = []
+    approval_to: UserRef | None = None
     decision: str | None = None
     decision_note: str | None = None
     decision_at: datetime | None = None
@@ -568,7 +572,7 @@ class ChangeRequestBase(BaseModel):
     description: str | None = None
     priority: Literal["hoch", "mittel", "niedrig"] = "mittel"
     phase: int | None = None
-    status: Literal["offen", "in_arbeit", "umgesetzt", "geprueft", "nachbessern", "abgelehnt", "zurueckgestellt"] = "offen"
+    status: Literal["eingereicht", "freigegeben", "offen", "in_arbeit", "umgesetzt", "geprueft", "nachbessern", "abgelehnt", "zurueckgestellt"] = "offen"
     solution: str | None = None
     req_ids: str | None = None
     version: str | None = None
@@ -583,7 +587,7 @@ class ChangeRequestUpdate(ChangeRequestBase):
     title: str | None = None
     kind: str | None = Field(default=None, max_length=40)
     priority: Literal["hoch", "mittel", "niedrig"] | None = None
-    status: Literal["offen", "in_arbeit", "umgesetzt", "geprueft", "nachbessern", "abgelehnt", "zurueckgestellt"] | None = None
+    status: Literal["eingereicht", "freigegeben", "offen", "in_arbeit", "umgesetzt", "geprueft", "nachbessern", "abgelehnt", "zurueckgestellt"] | None = None
 
 
 class ChangeRequestOut(ORM, ChangeRequestBase):

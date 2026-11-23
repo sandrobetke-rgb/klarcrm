@@ -4,8 +4,8 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.27 |
-| **Stand** | 21.11.2026 |
+| **Dokumentversion** | 1.28 |
+| **Stand** | 23.11.2026 |
 | **Status** | Testphase auf internem Server F&R; ausgeliefert v1.24; Preisliste (Kap. 14) und Monatsbericht (Kap. 15) vorgemerkt für das nächste große Update (Kap. 13.0) |
 
 > Dieses Lastenheft wird bei **jeder** Änderung am System mitgezogen. Neue Anforderungen, geänderte Regeln und
@@ -119,7 +119,7 @@ von Standardwerten werden markiert; jede Änderung an einer Kalkulation erzeugt 
 - STM-8: Gewinn (Standard **7 %**), Skonto, Rabatt.
 - STM-9: Fertigungs-Standards: Produktivität, Montage-Produktivität, Rüstzeit, Einrichter je Rüstvorgang, Anfahrausschuss.
 - STM-10: Ampel-Schwellen der Nachkalkulation (Standard grün bis +3 %, rot ab +10 %).
-- STM-12: Schwellen für **Großprojekte** und Freigabepflicht: Jahresumsatz ab 250.000 € und Invest ab 250.000 € (Standard, änderbar; bis v1.22: 500.000 €, REV01-F01).
+- STM-12: Schwellen für **Großprojekte** und Freigabepflicht: Jahresumsatz ab 500.000 € und Invest ab 350.000 € (Standard, änderbar; REV02-01 – v1.23 bis v1.27: je 250.000 €, bis v1.22: je 500.000 €).
 - STM-11: Nur Administratoren ändern Parameter. Änderungen wirken auf **neue** Kalkulationen; gespeicherte Versionen
   enthalten ihre Werte selbst und bleiben reproduzierbar.
 
@@ -655,6 +655,7 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.25 | 20.11.2026 | **Preisliste** (Kap. 14, Auslieferung mit dem nächsten großen Update, Kap. 13.0): lebende VK-Preisliste je Kunde mit Materialien/Zukaufteilen und Preisbasis, Materialpreisänderung mit Vorschau der betroffenen Artikel, Vorgänge mit Kennzeichnung (weitergegeben / vertraglich gebunden / Sonstiges), Import Preisliste (F&R-Vorlage) und Materialpreise, Historie, Export; Materialnummer in den Stammdaten. |
 | 1.26 | 21.11.2026 | **Monatsbericht Vertrieb** (Kap. 15, Auslieferung mit dem nächsten großen Update): Bericht je Monat für die Gesellschafter als PDF – Neuumsatz (stärkstes Lieferjahr) seit Jahresbeginn gegen das Jahresziel mit Ampel, je Vertriebler, gewonnen/verloren/nicht angeboten, offene Pipeline, Handlungsbedarf, Auslastung Folgejahr je Maschine, Preisliste, Kommentar der GF; Stand speichern und freigeben; Vertriebsziele je Jahr; Kachel Vertriebsziel auf der Startseite. Kein Vorjahresvergleich. Neues Feld „Neuumsatz“ und „abgeschlossen am“ an der Kalkulation. |
 | 1.27 | 21.11.2026 | **Teilbeauftragung und Varianten** (Kap. 15.4): „Auftrag erhalten“ am Angebot mit Ergebnis je Artikel – beauftragt / verloren mit Grund / andere Variante beauftragt (kein Verlust) / noch offen; Vorgabe für alle nicht beauftragten Artikel; neuer Angebotsstatus „teilweise beauftragt“; nur beauftragte Artikel zählen als Neuumsatz und in der Auslastung; Varianten nicht in Verlustliste und Gewinnquote. |
+| 1.28 | 23.11.2026 | **Testrunde Phase 2 – Korrekturen REV02** (Kap. 13.4): Freigabe nur noch ab Jahresumsatz 500 T€ oder Invest 350 T€, alles andere (Artikelanalyse, Entscheidung, Marge) als rote Markierung; Freigabe an eine gewählte Person mit Benachrichtigung, Aufgabe und Block „Freigaben für mich“; Entscheidung sperrt das Speichern nicht mehr (Pflicht erst zum Angebot); Artikelanalyse mit geschätzter projizierter Fläche (Länge × Breite) und Formeln, Werkstoffkennwerte eingeklappt, Vollständigkeit als Liste; Wahrscheinlichkeit nur von Hand, Filter und Summen ohne Gewichtung; Schichtmodell setzt Stunden sofort; Änderungswünsche: Prüfergebnis per Klick, Melder automatisch, Freigabe neuer Wünsche nur durch Administrator. Entscheidung Varianten (REV01-C07): eigene, verknüpfte Kalkulationen. |
 
 ## 13. Testrückmeldung REV01 (Nov. 2026) – Anforderungen und Umsetzung
 
@@ -675,7 +676,7 @@ Umsetzung erfolgt in vier Phasen:
 |---|---|---|---|
 | v1.23 | 17.11.2026 | REV01 Phase 1 | ausgeliefert |
 | **v1.24** | 19.11.2026 | REV01 Phase 2 (Anfrage → Angebot → Pipeline) | **aktuelle Auslieferung** – Git-Zweig `release-v1.24` |
-| nächstes großes Update | offen | REV01 Phase 3 (Kalkulationsblätter) **+ Preisliste (Kap. 14, PRL-01) + jährliche Preisrunde (PRL-02) + Monatsbericht mit Vertriebsziel (Kap. 15, MB-01, REV01-D05, REV01-R01) + Teilbeauftragung (Kap. 15.4, MB-02)** | in Arbeit – auf Wunsch vom 19.11.2026 gemeinsam ausliefern |
+| nächstes großes Update | offen | REV01 Phase 3 (Kalkulationsblätter) **+ Preisliste (Kap. 14, PRL-01) + jährliche Preisrunde (PRL-02) + Monatsbericht mit Vertriebsziel (Kap. 15, MB-01, REV01-D05, REV01-R01) + Teilbeauftragung (Kap. 15.4, MB-02) + Korrekturen Testrunde Phase 2 (Kap. 13.4, REV02-01 … 06, WUN-0001)** | in Arbeit – auf Wunsch vom 19.11.2026 gemeinsam ausliefern |
 
 Die Preisliste (v1.25) und der Monatsbericht (v1.26) sind programmiert und getestet, werden aber **nicht einzeln** eingespielt, sondern mit dem
 nächsten großen Update. Für den Server gilt bis dahin der Stand `v1.24`.
@@ -739,15 +740,14 @@ zu einer Anfrage; ohne Angabe wird eine angelegt.
   „+ Neue Anfrage“ mit frei eingebbarer Bezeichnung, Kunde, Eingang, Abgabetermin.
 - REV01-P02 **Entscheidung je Artikel vor Kalkulationsstart**: anbieten · nicht anbieten (Begründung Pflicht, Artikel
   → „kein Angebot“) · anderer Standort (Standort Pflicht; Kalkulation wird als neue Version mit den Sätzen dieses
-  Standorts angelegt) · Sonstiges (Freitext Pflicht). Ohne Entscheidung lässt sich keine Kalkulationsversion speichern
-  (Server prüft). „Alle offenen anbieten“ entscheidet alle offenen Artikel einer Anfrage. Entscheidung, Person und
+  Standorts angelegt) · Sonstiges (Freitext Pflicht). ~~Ohne Entscheidung lässt sich keine Kalkulationsversion speichern.~~
+  **Geändert durch REV02-03:** Die Entscheidung sperrt das Speichern nicht mehr, sie ist erst zum Angebot Pflicht. „Alle offenen anbieten“ entscheidet alle offenen Artikel einer Anfrage. Entscheidung, Person und
   Zeitpunkt werden gespeichert und protokolliert.
 - REV01-P03 **Artikelanalyse vor der Kalkulation** (Reiter 1): Vorschlag Maschinengröße (nächste Schließkraftklasse
   und kleinste vorhandene passende Maschine), Haken „technisches Gespräch erforderlich“ (markiert die Anfrage und legt
   einmalig eine Aufgabe „Technisches Gespräch vereinbaren“ an). *Vollständig* = gespeichert, alle Prüfpunkte bewertet,
-  Machbarkeit eingetragen. Unvollständig → zusätzlicher Freigabegrund „Artikelanalyse unvollständig“: das Angebot
-  entsteht erst nach Freigabe durch eine freigabeberechtigte zweite Person (Vier-Augen-Prinzip, KAL-Freigabe).
-  Übernommene Altdaten sind von dieser Regel ausgenommen.
+  Machbarkeit eingetragen. ~~Unvollständig → zusätzlicher Freigabegrund „Artikelanalyse unvollständig“.~~
+  **Geändert durch REV02-01:** Unvollständig wird nur rot markiert und sperrt das Angebot nicht (Kap. 13.4).
 - REV01-P04 **Angebot je Anfrage**: „Angebot erstellen“ in der Anfrage (oder aus einer Kalkulation) baut das Angebot
   aus allen zum Anbieten freigegebenen, nicht abgeschlossenen Artikeln. Voraussetzungen: alle Artikel entschieden,
   Kunde gesetzt, Freigaben erteilt. Entwurf → wird aktualisiert; versendet/angenommen/abgelehnt → Revision.
@@ -774,7 +774,7 @@ zu einer Anfrage; ohne Angabe wird eine angelegt.
   ohne Preis, zählt nicht zur Summe). Positionsnummern im Angebot änderbar; Unterpositionen im Druck eingerückt.
   Lieferzeit FOT/PPAP/SOP folgt mit dem Werkzeugblatt (Phase 3, REV01-C06).
 - REV01-P09 **Wahrscheinlichkeit** = Wahrscheinlichkeit, dass der gesamte Auftrag kommt; sie gilt für alle offenen
-  Artikel der Anfrage (Auslastung „erwartet“). Keine gewichteten Umsätze mehr in Pipeline und Dashboard; stattdessen
+  Artikel der Anfrage (Auslastung „erwartet“). **Ergänzt durch REV02-05:** nur noch von Hand eingeschätzt, Filter und Summen je Klasse. Keine gewichteten Umsätze mehr in Pipeline und Dashboard; stattdessen
   „davon ≥ 50 % Wahrscheinlichkeit“ und Volumen der Anfragen mit Entscheidung im laufenden Quartal.
 - REV01-X03 Änderungswünsche: Bestätigung nach dem Speichern (mit Nummer), Hinweis, wenn ein Filter den neuen Eintrag
   ausblendet; Art und Bereich mit Vorschlagsliste und freier Eingabe. Kontakte: Vorname optional.
@@ -794,6 +794,46 @@ zu einer Anfrage; ohne Angabe wird eine angelegt.
   Kameras, Laser, Sonstiges mit Bezug zur Kalkulationsnummer.
 - REV01-D05 Vertriebsziel mit Ampel und REV01-R01 Vertriebsbericht (Durchlaufzeit Anfrage → Angebot, kalkulierte
   Artikel) sind mit dem Monatsbericht (Kap. 15) umgesetzt und kommen mit dem nächsten großen Update.
+
+
+### 13.4 Korrekturen aus der Testrunde Phase 2 (REV02, 23.11.2026, v1.28)
+Grundlage: Testprotokoll „KlarCRM Test Phase 2“ und Änderungsprotokoll vom 23.11.2026. Leitlinie der GF: Freigaben nicht
+so streng halten (Unmut und Mehrarbeit) – stattdessen rot markieren, was fehlt.
+- REV02-01 **Freigabe nur über der Schwelle:** Freigabegründe sind nur noch Jahresumsatz ≥ 500.000 € und Invest
+  ≥ 350.000 € (STM-12, Parameter). Unvollständige Artikelanalyse, fehlende Entscheidung und Marge unter
+  `approval_min_margin_pct` sind **rote Markierungen** („Noch offen“ in Kalkulation, rote Hinweise in der Anfrage,
+  Schrittleiste mit „!“) und sperren weder Speichern noch Angebot. Bestehende Einstellung 250 T€ wird beim Update
+  einmalig auf 500 T€ / 350 T€ umgestellt.
+- REV02-02 **Freigabe-Workflow sichtbar:** Beim Anfordern wird der Empfänger gewählt (Administratoren und Benutzer mit
+  Freigaberecht ohne den Anfragenden; alternativ „alle Freigabeberechtigten“). Empfänger erhält Benachrichtigung
+  (in der Anwendung, E-Mail falls SMTP eingerichtet), die Aufgabe „Freigabe prüfen“ (fällig in 2 Arbeitstagen) und auf
+  der Startseite den Block „Freigaben für mich“. Freigabeleiste und Anfrage zeigen „liegt bei … seit …“. Die Aufgabe
+  wird bei Freigabe/Ablehnung erledigt. Fehlt eine zweite freigabeberechtigte Person, weist die Leiste darauf hin.
+  Freigeben darf weiterhin jede freigabeberechtigte Person außer dem Anfragenden (Vertretung).
+- REV02-03 **Entscheidung je Artikel:** sperrt das Speichern der Kalkulation nicht mehr; Pflicht erst beim Erstellen des
+  Angebots (Hinweis mit Artikelnummern, „Alle offenen anbieten“). Pflichtangaben stehen im Entscheidungsfeld:
+  Entscheidung · Begründung bei „nicht anbieten“ und „Sonstiges“ · Standort bei „anderer Standort“.
+- REV02-04 **Artikelanalyse:** projizierte Fläche ohne CAD-Wert = Länge × Breite ÷ 100 (cm², umschließendes Rechteck –
+  eher zu hoch, Schließkraft auf der sicheren Seite), Formel wird angezeigt; mit geschätzter Fläche führt eine zu kleine
+  Maschine nur zu einem gelben Hinweis, nicht zu „nicht herstellbar“. Schließkraftformel
+  F = A × Fachzahl × Innendruck ÷ 1000 × Sicherheitsfaktor wird mit Werten angezeigt. Werkstoffkennwerte eingeklappt
+  (Richtwerte aus der Werkstoffgruppe). **Vollständig** = Analyse gespeichert + alle Prüfpunkte bewertet (ok, kritisch
+  oder n. a.) + Machbarkeit gewählt; Anzeige als Liste mit ✓/✗.
+- REV02-05 **Wahrscheinlichkeit** (Auftrag kommt insgesamt) nur von Hand je Anfrage (Kopf der Anfrage oder Bearbeiten),
+  sonst „–“ = nicht eingeschätzt; automatisch nur beim Abschluss (gewonnen 100 %, verloren / nicht angeboten 0 %).
+  **Keine Gewichtung:** Anfragenliste mit Summen des vollen Volumens je Klasse (≥ 75 %, 50–74 %, < 50 %, nicht
+  eingeschätzt) und Filter. Bisherige, automatisch gesetzte Werte offener Anfragen werden beim Update einmalig auf
+  „nicht eingeschätzt“ gesetzt. Hinweis: Die Auslastung „erwartet“ (Kap. Auslastung) rechnet Maschinenstunden weiter mit
+  der Wahrscheinlichkeit – nicht eingeschätzte Anfragen zählen dort mit 0 %.
+- REV02-06 **Schichtmodell** setzt „Verfügbare Stunden / Jahr“ sofort bei der Auswahl (1.920 / 3.840 / 5.760 h).
+- WUN-0001 **Änderungswünsche:** Prüfergebnis per Klick „✓ i. O.“ / „✗ n. i. O.“ (bei n. i. O. Beschreibung Pflicht),
+  Prüfer und Datum automatisch; „Gemeldet von“ automatisch; neue Wünsche haben den Status „eingereicht“ und werden nur
+  von einem Administrator freigegeben oder abgelehnt (vom Administrator angelegte Wünsche gelten als freigegeben).
+- REV01-B05 (Stundensatz nicht änderbar): im aktuellen Stand nicht nachvollziehbar – Stundensätze lassen sich in
+  Kalkulation, Maschinen und Standorten frei eingeben; der Reiter „Stundensätze“ ist bewusst nur die Herleitung
+  (Werte unter „Maschinen“ pflegen, „übernehmen“). Rückfrage an den Tester, wo genau.
+- Entscheidung zu REV01-C07 (Phase 3): **Varianten** (z. B. 2-fach / 4-fach Werkzeug) werden als eigene, miteinander
+  verknüpfte Kalkulationen geführt; im Angebot wählbar und als Pos. 1 / 1a; beim Auftrag „andere Variante beauftragt“.
 
 ## 14. Preisliste (lebende VK-Preisliste)
 

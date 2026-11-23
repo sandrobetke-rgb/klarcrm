@@ -130,12 +130,16 @@ def refresh_inquiry(db: Session, opp: Opportunity):
             c.probability = opp.probability
 
 
+CLOSED_PROBABILITY = {"gewonnen": 100, "verloren": 0, "nicht_angeboten": 0}
+
+
 def set_stage(opp: Opportunity, stage: str, keep_probability: bool = False):
+    """REV02-05: Die Wahrscheinlichkeit wird nur noch von Hand eingeschätzt – automatisch gesetzt nur beim Abschluss."""
     if stage == opp.stage:
         return
     opp.stage = stage
-    if not keep_probability:
-        opp.probability = STAGE_PROBABILITY[stage]
+    if stage in CLOSED_PROBABILITY and not keep_probability:
+        opp.probability = CLOSED_PROBABILITY[stage]
     if stage == "verhandlung":
         opp.final_round = True
     opp.closed_at = date.today() if stage in CLOSED_STAGES else None
@@ -307,7 +311,7 @@ def migrate(db: Session) -> dict:
 
     def new_opp(c: Calculation, name: str) -> Opportunity:
         o = Opportunity(name=name, account_id=c.account_id, contact_id=c.contact_id, owner_id=c.owner_id,
-                        stage="neue_anfrage", probability=STAGE_PROBABILITY["neue_anfrage"], kind="anfrage",
+                        stage="neue_anfrage", probability=0, kind="anfrage",
                         inquiry_date=c.inquiry_date, due_date=c.due_date, close_date=c.due_date, source="Kalkulation",
                         number=next_inquiry_number(db, (c.created_at or datetime.now()).year))
         db.add(o)

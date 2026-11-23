@@ -28,7 +28,6 @@ export const calcMetaFields = [
   { name: 'opportunity_id', label: 'Anfrage / Projekt', type: 'opportunity', dependsOn: 'account_id', hint: 'Artikel einer anderen Anfrage zuordnen' },
   { name: 'owner_id', label: 'Verantwortlich', type: 'user' },
   { name: 'status', label: 'Status', type: 'select', required: true, options: CALC_STATUS },
-  { name: 'probability', label: 'Wahrscheinlichkeit Auftrag %', type: 'number', min: 0, max: 100, hint: 'Wird beim Statuswechsel vorgeschlagen, frei änderbar' },
   { name: 'close_reason', label: 'Grund bei Verlust', type: 'select', options: CLOSE_REASONS, hint: 'Pflicht bei Status „Verloren“' },
   { name: 'close_note', label: 'Begründung Verlust (Freitext)', hint: 'Pflicht bei „Sonstiges“' },
   { name: 'no_bid_reason', label: 'Grund „Kein Angebot“', type: 'select', options: NO_BID_REASONS, hint: 'nur bei Status „Kein Angebot abgegeben“' },
@@ -87,7 +86,7 @@ export default function CalculationEditor() {
             {calc.account ? <Link to={`/firmen/${calc.account.id}`}>{calc.account.name}</Link> : 'kein Kunde'}
             {calc.customer_article_no && ` · Kd.-Art.-Nr. ${calc.customer_article_no}`}
             {master.sites.find((x) => x.id === calc.site_id) && ` · Standort ${master.sites.find((x) => x.id === calc.site_id).name}`}
-            {` · Version ${calc.current_version} · ${calc.probability} % Wahrscheinlichkeit`}
+            {` · Version ${calc.current_version}`}
             {calc.close_reason && ` · ${reasonLabel(calc.close_reason)}${calc.close_note ? `: ${calc.close_note}` : ''}`}
             {calc.no_bid_reason && ` · Kein Angebot: ${noBidLabel(calc.no_bid_reason)}${calc.no_bid_note ? ` (${calc.no_bid_note})` : ''}`}
             {calc.opportunity && <> · Anfrage <Link to={`/anfragen/${calc.opportunity.id}`}>{calc.opportunity.number || ''} {calc.opportunity.name}</Link></>}
@@ -103,18 +102,14 @@ export default function CalculationEditor() {
         {canWrite && <HeaderActions calc={calc} setCalc={setCalc} onDelete={remove} onCall={() => setTab('calls')} />}
       </header>
       {/* REV01-P02: Entscheidung je Artikel vor Kalkulationsstart */}
-      {calc.opportunity_id && (!calc.decision ? (
-        <div className="warn-box decision-gate">
-          <strong>Erst entscheiden, dann kalkulieren:</strong> Wird dieser Artikel angeboten? Bis zur Entscheidung kann die Kalkulation
-          nicht gespeichert werden. Tipp: vorher die <button className="link-btn" onClick={() => setTab('analysis')}>Artikelanalyse</button> machen.
-          <div style={{ marginTop: 6 }}><DecisionBox calc={calc} canWrite={canWrite} onDone={async () => setCalc(await api.get(`/calculations/${calc.id}`))} /></div>
-        </div>
-      ) : (
+      {calc.opportunity_id && (
         <div className="decision-line no-print"><span className="muted small">Entscheidung:</span>
           <DecisionBox calc={calc} canWrite={canWrite} onDone={async () => setCalc(await api.get(`/calculations/${calc.id}`))} />
-          {!calc.analysis_complete && <Badge tone="warning">Artikelanalyse unvollständig – Angebot nur nach Freigabe</Badge>}
         </div>
-      ))}
+      )}
+      {/* REV02-01/03: rote Markierung statt Sperre – was noch fehlt */}
+      {calc.warnings?.length > 0 && <div className="red-marks no-print"><strong>Noch offen:</strong>
+        {calc.warnings.map((w) => <span key={w} className="red-mark">{w.startsWith('Artikelanalyse') ? <button className="link-btn" onClick={() => setTab('analysis')}>{w}</button> : w}</span>)}</div>}
       <ApprovalBar calc={calc} setCalc={setCalc} />
       <div className="tabs no-print">
         {TABS.map(([k, l]) => (

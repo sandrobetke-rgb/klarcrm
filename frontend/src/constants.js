@@ -195,3 +195,13 @@ export const MACHINE_KINDS = [
   { value: 'sonstige', label: 'Sonstige Anlage' },
 ]
 export const machineKindLabel = (k) => (MACHINE_KINDS.find((x) => x.value === k)?.label || 'Spritzgießmaschine').split(' (')[0]
+
+// REV02-05: Wahrscheinlichkeit = Auftrag kommt insgesamt, nur von Hand eingeschätzt (keine Gewichtung des Volumens)
+export const PROB_CHOICES = [10, 25, 50, 75, 90]
+export const PROB_CLASSES = [
+  { value: 'hoch', label: '≥ 75 %', test: (o) => o.probability_estimated && o.probability >= 75 },
+  { value: 'mittel', label: '50–74 %', test: (o) => o.probability_estimated && o.probability >= 50 && o.probability < 75 },
+  { value: 'niedrig', label: '< 50 %', test: (o) => o.probability_estimated && o.probability < 50 },
+  { value: 'keine', label: 'nicht eingeschätzt', test: (o) => !o.probability_estimated },
+]
+export const probLabel = (o) => (o.probability_estimated || ['gewonnen', 'verloren', 'nicht_angeboten'].includes(o.stage) ? `${o.probability} %` : '–')

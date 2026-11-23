@@ -28,7 +28,7 @@ function Stats() {
         <a className="kpi kpi-link" href="/kalkulationen?status=angeboten"><span className="kpi-label">Angebote beim Kunden</span><span className="kpi-value">{data.count_offered}</span>
           <span className="kpi-sub">{data.overdue_calls} seit &gt; 14 Tagen nicht angerufen</span></a>
         <div className="kpi"><span className="kpi-label">Potenzial Jahresumsatz (offen)</span><span className="kpi-value">{eur(data.open_revenue)}</span>
-          <span className="kpi-sub">gewichtet {eur(data.open_weighted)}</span></div>
+          <span className="kpi-sub">volles Volumen, nicht gewichtet</span></div>
         <a className="kpi kpi-big kpi-link" href="/kalkulationen?big=true"><span className="kpi-label">★ Großprojekte offen</span><span className="kpi-value">{data.big_open_count}</span>
           <span className="kpi-sub">Umsatz p. a. {eur(data.big_open_revenue)} · Invest {eur(data.big_open_invest)}</span></a>
         <div className={`kpi ${data.approvals_open ? 'kpi-big' : ''}`}><span className="kpi-label">Freigaben</span><span className="kpi-value">{data.approvals_open}</span>
@@ -163,7 +163,7 @@ export default function Calculations() {
         { key: 'unit_price', label: '€/Stk', sort: 'unit_price', className: 'num', render: (r) => eur4(r.unit_price) },
         { key: 'annual_volume', label: 'Menge p. a.', sort: 'annual_volume', className: 'num', render: (r) => num(r.annual_volume) },
         { key: 'annual_revenue', label: 'Umsatz p. a. / Invest', sort: 'annual_revenue', className: 'num', render: (r) => <>{eur(r.annual_revenue)}{r.invest > 0 && <><br /><small className="muted">Invest {eur(r.invest)}</small></>}</> },
-        { key: 'probability', label: 'Wahrsch.', sort: 'probability', className: 'num', render: (r) => <>{r.probability} %<br /><small className="muted">{eur(r.annual_revenue * r.probability / 100)}</small></> },
+        { key: 'probability', label: 'Wahrsch.', sort: 'probability', className: 'num', render: (r) => `${r.probability} %` },
         { key: 'last_call_at', label: 'Zuletzt angerufen / Ergebnis', sort: 'last_call_at', render: (r) => (
           <div onClick={(e) => e.stopPropagation()}>
             <LastCall call={r.last_call} date={r.last_call_at} open={!CLOSED_STATUS.includes(r.status)}

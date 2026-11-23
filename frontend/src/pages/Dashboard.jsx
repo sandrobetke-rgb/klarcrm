@@ -4,7 +4,7 @@ import { qs } from '../api'
 import { useAuth } from '../auth'
 import { BarList, ColumnChart } from '../components/charts'
 import { ErrorBox, RefSelect, useFetch } from '../components/ui'
-import { eur, fmtDate, num, stageLabel } from '../constants'
+import { eur, fmtDate, num, probLabel, stageLabel } from '../constants'
 import FollowupDialog, { LightBadge } from '../components/Followup'
 
 const MONTHS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
@@ -60,6 +60,7 @@ export default function Dashboard() {
         <Kpi label="Endrunde (lfd. Jahr)" value={`${k.final_round.gewonnen} / ${k.final_round.verloren}`} sub="gewonnen / verloren nach Verhandlung" to="/pipeline" />
       </section>
 
+      <MyApprovals />
       <Followups />
 
       {cs.data && (
@@ -141,7 +142,7 @@ export default function Dashboard() {
                 <td><Link to={`/anfragen/${o.id}`}>{o.number} {o.name}</Link></td>
                 <td><Link to={`/firmen/${o.account?.id}`}>{o.account?.name}</Link></td>
                 <td>{stageLabel(o.stage)}</td>
-                <td className="num">{o.probability} %</td>
+                <td className="num">{probLabel(o)}</td>
                 <td>{o.owner?.name}</td>
                 <td className="num">{eur(o.amount)}</td>
               </tr>
@@ -150,6 +151,25 @@ export default function Dashboard() {
         </table>
       </section>
     </div>
+  )
+}
+
+// REV02-02: Freigaben, die auf mich warten (Vier-Augen-Prinzip)
+function MyApprovals() {
+  const { data } = useFetch('/calc/approvals/mine')
+  if (!data || !data.length) return null
+  return (
+    <section className="card card-attn" id="freigaben">
+      <h3>Freigaben für mich ({data.length})</h3>
+      <p className="card-sub">Kalkulationen über der Freigabeschwelle – bitte prüfen und in der Kalkulation freigeben oder ablehnen</p>
+      <table className="table table-compact">
+        <thead><tr><th>Kalkulation</th><th>Kunde</th><th>Grund</th><th>angefragt von</th><th>seit</th><th>an</th><th>Begründung</th></tr></thead>
+        <tbody>{data.map((a) => (
+          <tr key={a.id}><td><Link to={`/kalkulationen/${a.id}`}><strong>{a.number}</strong></Link> V{a.version}<br /><small className="muted">{a.name}</small></td>
+            <td>{a.account || '–'}</td><td><small>{a.reasons.join(' · ') || '–'}</small></td><td>{a.requested_by}</td><td>{fmtDate(a.requested_at)}</td>
+            <td><small>{a.to}</small></td><td><small>{a.comment || '–'}</small></td></tr>))}</tbody>
+      </table>
+    </section>
   )
 }
 
