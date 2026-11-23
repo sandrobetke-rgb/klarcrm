@@ -740,13 +740,13 @@ zu einer Anfrage; ohne Angabe wird eine angelegt.
   „+ Neue Anfrage“ mit frei eingebbarer Bezeichnung, Kunde, Eingang, Abgabetermin.
 - REV01-P02 **Entscheidung je Artikel vor Kalkulationsstart**: anbieten · nicht anbieten (Begründung Pflicht, Artikel
   → „kein Angebot“) · anderer Standort (Standort Pflicht; Kalkulation wird als neue Version mit den Sätzen dieses
-  Standorts angelegt) · Sonstiges (Freitext Pflicht). ~~Ohne Entscheidung lässt sich keine Kalkulationsversion speichern.~~
+  Standorts angelegt) · Sonstiges (Freitext Pflicht). (Bis v1.27: ohne Entscheidung keine Kalkulationsversion.)
   **Geändert durch REV02-03:** Die Entscheidung sperrt das Speichern nicht mehr, sie ist erst zum Angebot Pflicht. „Alle offenen anbieten“ entscheidet alle offenen Artikel einer Anfrage. Entscheidung, Person und
   Zeitpunkt werden gespeichert und protokolliert.
 - REV01-P03 **Artikelanalyse vor der Kalkulation** (Reiter 1): Vorschlag Maschinengröße (nächste Schließkraftklasse
   und kleinste vorhandene passende Maschine), Haken „technisches Gespräch erforderlich“ (markiert die Anfrage und legt
   einmalig eine Aufgabe „Technisches Gespräch vereinbaren“ an). *Vollständig* = gespeichert, alle Prüfpunkte bewertet,
-  Machbarkeit eingetragen. ~~Unvollständig → zusätzlicher Freigabegrund „Artikelanalyse unvollständig“.~~
+  Machbarkeit eingetragen. (Bis v1.27: unvollständig = Freigabegrund.)
   **Geändert durch REV02-01:** Unvollständig wird nur rot markiert und sperrt das Angebot nicht (Kap. 13.4).
 - REV01-P04 **Angebot je Anfrage**: „Angebot erstellen“ in der Anfrage (oder aus einer Kalkulation) baut das Angebot
   aus allen zum Anbieten freigegebenen, nicht abgeschlossenen Artikeln. Voraussetzungen: alle Artikel entschieden,
