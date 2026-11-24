@@ -81,9 +81,9 @@ Die komplette API ist unter **http://localhost:8000/docs** (Swagger) dokumentier
    Materialien, Parameter), **Benutzer** (Rollen, Freigabeberechtigung).
 6. Outlook: jeder Benutzer findet unter „Mein Profil“ seine Kalender-Adresse („Kalender hinzufügen → Aus dem Internet“).
 
-**Update auf eine neue Version:** freigegebene Stände liegen im Zweig `release-v…` (aktuell `release-v1.24`):
-`git fetch && git checkout release-v1.24` und `docker compose up -d --build`. Der Zweig `main` enthält bereits
-Funktionen für das nächste große Update (z. B. Preisliste) und ist nicht für den Server gedacht. Neue Tabellen/Spalten werden beim Start
+**Update auf eine neue Version:** freigegebene Stände liegen im Zweig `release-v…` (aktuell `release-v1.30`,
+Schritt-für-Schritt in `docs/UPDATE_v1.30.md`): `git fetch && git checkout release-v1.30` und `docker compose up -d --build`
+(oder ZIP entpacken, `.env` bleibt). Der Zweig `main` enthält bereits Funktionen für das nächste Update und ist nicht für den Server gedacht. Neue Tabellen/Spalten werden beim Start
 automatisch ergänzt. Ab v1.23 baut das Backend-Image aus der Projektwurzel (damit `docs/` für das Menü
 „Dokumentation“ im Image liegt) – `docker compose` erledigt das automatisch, es ist nichts weiter zu tun.
 

@@ -659,7 +659,7 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.27 | 21.11.2026 | **Teilbeauftragung und Varianten** (Kap. 15.4): „Auftrag erhalten“ am Angebot mit Ergebnis je Artikel – beauftragt / verloren mit Grund / andere Variante beauftragt (kein Verlust) / noch offen; Vorgabe für alle nicht beauftragten Artikel; neuer Angebotsstatus „teilweise beauftragt“; nur beauftragte Artikel zählen als Neuumsatz und in der Auslastung; Varianten nicht in Verlustliste und Gewinnquote. |
 | 1.28 | 23.11.2026 | **Testrunde Phase 2 – Korrekturen REV02** (Kap. 13.4): Freigabe nur noch ab Jahresumsatz 500 T€ oder Invest 350 T€, alles andere (Artikelanalyse, Entscheidung, Marge) als rote Markierung; Freigabe an eine gewählte Person mit Benachrichtigung, Aufgabe und Block „Freigaben für mich“; Entscheidung sperrt das Speichern nicht mehr (Pflicht erst zum Angebot); Artikelanalyse mit geschätzter projizierter Fläche (Länge × Breite) und Formeln, Werkstoffkennwerte eingeklappt, Vollständigkeit als Liste; Wahrscheinlichkeit nur von Hand, Filter und Summen ohne Gewichtung; Schichtmodell setzt Stunden sofort; Änderungswünsche: Prüfergebnis per Klick, Melder automatisch, Freigabe neuer Wünsche nur durch Administrator. Entscheidung Varianten (REV01-C07): eigene, verknüpfte Kalkulationen. |
 | 1.29 | 24.11.2026 | **REV02-07 … 09:** Protokoll nur für den SuperUser mit erneuter Passworteingabe; Uhrzeit (Zeitzone Europe/Berlin, Zeitfelder mit Zeitzone); Listen in voller Breite, keine Browser-Vorschläge in Formularen, Kalkulationsauswahl in der Beschaffung. |
-| 1.30 | 24.11.2026 | **REV02-10:** Protokoll-Anzeige in diesem Update für alle Benutzer ausgeblendet (Aufzeichnung läuft weiter, Schalter im Code). |
+| 1.30 | 24.11.2026 | **REV02-10:** Protokoll-Anzeige in diesem Update für alle Benutzer ausgeblendet (Aufzeichnung läuft weiter, Schalter im Code). **Auslieferung v1.30** (Kap. 13.0) ohne Phase 3, Update-Anleitung `docs/UPDATE_v1.30.md`. |
 
 ## 13. Testrückmeldung REV01 (Nov. 2026) – Anforderungen und Umsetzung
 
@@ -679,11 +679,12 @@ Umsetzung erfolgt in vier Phasen:
 | Release | Stand | Inhalt | Status |
 |---|---|---|---|
 | v1.23 | 17.11.2026 | REV01 Phase 1 | ausgeliefert |
-| **v1.24** | 19.11.2026 | REV01 Phase 2 (Anfrage → Angebot → Pipeline) | **aktuelle Auslieferung** – Git-Zweig `release-v1.24` |
-| nächstes großes Update | offen | REV01 Phase 3 (Kalkulationsblätter) **+ Preisliste (Kap. 14, PRL-01) + jährliche Preisrunde (PRL-02) + Monatsbericht mit Vertriebsziel (Kap. 15, MB-01, REV01-D05, REV01-R01) + Teilbeauftragung (Kap. 15.4, MB-02) + Korrekturen Testrunde Phase 2 (Kap. 13.4, REV02-01 … 10, WUN-0001)** | in Arbeit – auf Wunsch vom 19.11.2026 gemeinsam ausliefern |
+| v1.24 | 19.11.2026 | REV01 Phase 2 (Anfrage → Angebot → Pipeline) | ausgeliefert |
+| **v1.30** | 24.11.2026 | Preisliste (Kap. 14, PRL-01) · Monatsbericht mit Vertriebsziel (Kap. 15, MB-01, REV01-D05, REV01-R01) · Teilbeauftragung (Kap. 15.4, MB-02) · Korrekturen Testrunde Phase 2 (Kap. 13.4, REV02-01 … 10, WUN-0001) | **aktuelle Auslieferung** – Git-Zweig `release-v1.30`, ZIP mit Anleitung `docs/UPDATE_v1.30.md` |
+| nächstes Update | offen | REV01 Phase 3 (Kalkulationsblätter, Varianten) + jährliche Preisrunde (PRL-02) | in Arbeit |
 
-Die Preisliste (v1.25) und der Monatsbericht (v1.26) sind programmiert und getestet, werden aber **nicht einzeln** eingespielt, sondern mit dem
-nächsten großen Update. Für den Server gilt bis dahin der Stand `v1.24`.
+Die zunächst für ein gemeinsames großes Update zurückgehaltenen Stände (v1.25 … v1.30) werden auf Wunsch vom 24.11.2026
+**ohne Phase 3** als v1.30 ausgeliefert, damit auf dem Server der aktuelle Teststand läuft. Phase 3 folgt als eigenes Update.
 
 ### 13.1 Phase 1 – umgesetzt (v1.23)
 - REV01-B01: **Speichern der Kalkulation** immer sichtbar: Speicherleiste bleibt beim Scrollen oben, gelb bei
