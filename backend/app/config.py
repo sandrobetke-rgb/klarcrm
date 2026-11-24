@@ -13,6 +13,9 @@ class Settings:
     # Erster Admin wird beim Start angelegt, falls noch keine Benutzer existieren
     ADMIN_EMAIL: str = os.getenv("ADMIN_EMAIL", "admin@firma.de")
     SUPERUSER_EMAIL: str = os.getenv("SUPERUSER_EMAIL", "")   # REV02-07: wer das Protokoll öffnen darf
+    # REV02-10: Anzeige des Protokolls in diesem Update komplett ausgeblendet (bewusst im Code, nicht per .env schaltbar).
+    # Aufgezeichnet wird weiter. Wieder einschalten: True setzen (zusammen mit AUDIT_VIEW in frontend/src/constants.js).
+    AUDIT_VIEW_ENABLED: bool = False
     ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "admin123")
     DEFAULT_TAX_RATE: float = float(os.getenv("DEFAULT_TAX_RATE", "19"))
     COMPANY_NAME: str = os.getenv("COMPANY_NAME", "Meine Firma GmbH")

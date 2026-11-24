@@ -6,6 +6,7 @@ import { useAuth } from '../auth'
 import { Badge, confirmDelete, EntityForm, ErrorBox } from '../components/ui'
 import {
   CALC_STATUS, calcStatus, CLOSE_REASONS, eur, eur4, feasibility, FEASIBILITY, fix4, NO_BID_REASONS, noBidLabel, CLOSED_STATUS, fmtDate, fmtDateTime, INPUT_LABELS, num, num2, reasonLabel,
+  AUDIT_VIEW,
 } from '../constants'
 import { Light } from './Calculations'
 import PostCalcTab from './PostCalcTab'
@@ -113,7 +114,7 @@ export default function CalculationEditor() {
         {calc.warnings.map((w) => <span key={w} className="red-mark">{w.startsWith('Artikelanalyse') ? <button className="link-btn" onClick={() => setTab('analysis')}>{w}</button> : w}</span>)}</div>}
       <ApprovalBar calc={calc} setCalc={setCalc} />
       <div className="tabs no-print">
-        {TABS.filter(([, , su]) => !su || user?.is_superuser).map(([k, l]) => (
+        {TABS.filter(([, , su]) => !su || (AUDIT_VIEW && user?.is_superuser)).map(([k, l]) => (
           <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>
             {l}{k === 'versions' && <span className="count">{calc.versions.length}</span>}
             {k === 'post' && <span className="count">{calc.post_calcs.length}</span>}

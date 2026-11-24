@@ -205,3 +205,6 @@ export const PROB_CLASSES = [
   { value: 'keine', label: 'nicht eingeschätzt', test: (o) => !o.probability_estimated },
 ]
 export const probLabel = (o) => (o.probability_estimated || ['gewonnen', 'verloren', 'nicht_angeboten'].includes(o.stage) ? `${o.probability} %` : '–')
+
+// REV02-10: Protokoll-Anzeige in diesem Update ausgeblendet (Aufzeichnung läuft weiter). Mit AUDIT_VIEW_ENABLED im Backend schalten.
+export const AUDIT_VIEW = false

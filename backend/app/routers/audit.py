@@ -18,6 +18,8 @@ UNLOCK_MINUTES = 30
 
 # REV02-07: Protokoll nur für den SuperUser und nur nach erneuter Passworteingabe (Freischaltung 30 Minuten)
 def require_audit(x_audit_token: str | None = Header(default=None), user: User = Depends(get_current_user)) -> User:
+    if not settings.AUDIT_VIEW_ENABLED:
+        raise HTTPException(403, "Das Protokoll ist in dieser Version ausgeblendet")
     if not user.is_superuser:
         raise HTTPException(403, "Das Protokoll ist gesperrt (nur SuperUser)")
     try:
@@ -31,6 +33,8 @@ def require_audit(x_audit_token: str | None = Header(default=None), user: User =
 
 @router.post("/unlock")
 def unlock(data: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    if not settings.AUDIT_VIEW_ENABLED:
+        raise HTTPException(403, "Das Protokoll ist in dieser Version ausgeblendet")
     if not user.is_superuser:
         raise HTTPException(403, "Das Protokoll ist gesperrt (nur SuperUser)")
     if not verify_password((data or {}).get("password") or "", user.password_hash):

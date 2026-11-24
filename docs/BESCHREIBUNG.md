@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Programm** | KlarCRM – Vertrieb, Kalkulation Spritzguss, Angebote |
-| **Version** | 1.29 (Stand 24.11.2026) |
+| **Version** | 1.30 (Stand 24.11.2026) |
 | **Für** | Vertrieb, Kalkulation, Einkauf, Geschäftsführung, Gesellschafter |
 
 > Diese Beschreibung erklärt, **wie man mit KlarCRM arbeitet**. Die genauen Regeln und Rechenwege stehen im
@@ -135,7 +135,7 @@ Die **Wahrscheinlichkeit** gilt für den ganzen Auftrag. Summen werden nicht meh
 - **Wahrscheinlichkeit** schätzt du je Anfrage selbst ein (oben in der Anfrage). Das Volumen wird nicht gewichtet:
   In der Anfragenliste stehen die Summen je Klasse (≥ 75 %, 50–74 %, < 50 %, nicht eingeschätzt) – ein Klick filtert.
 - **Änderungswünsche:** „✓ i. O.“ oder „✗ n. i. O.“ (mit Beschreibung) direkt in der Liste; neue Wünsche gibt der Administrator frei.
-- **Protokoll** (wer hat was geändert) sieht nur der SuperUser – nach erneuter Eingabe seines Passworts, 30 Minuten lang.
+- **Protokoll** (wer hat was geändert) ist in dieser Version ausgeblendet; im Hintergrund wird weiter aufgezeichnet.
 
 ## 3b. Monatsbericht für die Gesellschafter
 

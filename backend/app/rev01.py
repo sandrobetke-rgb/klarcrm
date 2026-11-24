@@ -280,6 +280,11 @@ ITEMS = [
      "Menü „Protokoll“ und Reiter „Protokoll“ der Kalkulation nur für den SuperUser, Öffnen nach erneuter Passworteingabe (30 Minuten). "
      "SuperUser beim Update: SUPERUSER_EMAIL, sonst ADMIN_EMAIL. Recht und Konto ändert nur der SuperUser selbst. Aufzeichnung läuft weiter.",
      "Als Vertrieb/anderer Admin: kein Menüpunkt Protokoll. Als SuperUser: Protokoll → Passwort → Einträge sichtbar.", "Kap. 13.4"),
+    ("REV02-10", "Protokoll", "wunsch", "hoch", 2, "Protokoll für dieses Update ausblenden",
+     "Das Protokoll soll in diesem Update für niemanden sichtbar sein.", U,
+     "Menü „Protokoll“ und Reiter „Protokoll“ der Kalkulation ausgeblendet, Schnittstelle gesperrt – für alle Benutzer. "
+     "Aufzeichnung läuft weiter. Einschalten nur über eine Code-Änderung, nicht über die .env.",
+     "Als Administrator anmelden → kein Menüpunkt Protokoll, kein Reiter in der Kalkulation; /protokoll zeigt „ausgeblendet“.", "Kap. 13.4"),
     ("REV02-08", "Allgemein", "fehler", "mittel", 2, "Uhrzeit nicht auf Winterzeit",
      "Die Uhrzeit des Systems scheint nicht auf Winterzeit zu sein.", U,
      "Zeitfelder (z. B. Fälligkeit von Aktivitäten) wurden ohne Zeitzone gesendet und als UTC gespeichert → eine Stunde verschoben. "

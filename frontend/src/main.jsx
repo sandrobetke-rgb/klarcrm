@@ -24,7 +24,7 @@ import PageHelp from './components/PageHelp'
 import AuditLog from './pages/AuditLog'
 import CompanySettings from './pages/CompanySettings'
 import NotificationBell from './components/NotificationBell'
-import { ROLES } from './constants'
+import { AUDIT_VIEW, ROLES } from './constants'
 import Footer from './components/Footer'
 import Changes from './pages/Changes'
 import Inquiries, { InquiryDetail } from './pages/Inquiries'
@@ -58,7 +58,7 @@ function Layout() {
     ['/aenderungen', 'Änderungswünsche', '✎'],
     ['/dokumentation', 'Dokumentation', '📖'],
   ]
-  if (user.is_superuser) nav.push(['/protokoll', 'Protokoll 🔒', '⎙'])   // REV02-07: nur SuperUser
+  if (AUDIT_VIEW && user.is_superuser) nav.push(['/protokoll', 'Protokoll 🔒', '⎙'])   // REV02-07: nur SuperUser
   if (isAdmin) nav.push(['/benutzer', 'Benutzer', '⚙'], ['/einstellungen', 'Firma & Layout', '✎'])
   return (
     <div className="app">

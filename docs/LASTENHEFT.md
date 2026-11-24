@@ -4,7 +4,7 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.29 |
+| **Dokumentversion** | 1.30 |
 | **Stand** | 24.11.2026 |
 | **Status** | Testphase auf internem Server F&R; ausgeliefert v1.24; Preisliste (Kap. 14) und Monatsbericht (Kap. 15) vorgemerkt für das nächste große Update (Kap. 13.0) |
 
@@ -511,6 +511,7 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 - PRT-3: Gesamtprotokoll mit Filtern (Bereich, Benutzer, Zeitraum, Suche); je Kalkulation Reiter „Protokoll“ inkl.
   Versionen, Anrufe, Nachkalkulationen. **Einsehen nur durch den SuperUser** nach erneuter Passworteingabe
   (Freischaltung 30 Minuten je Browser-Tab, REV02-07). Aufgezeichnet wird weiterhin alles (IATF-Nachweis).
+  **REV02-10: In diesem Update ist die Anzeige für alle Benutzer ausgeblendet** (Menü, Kalkulationsreiter, Schnittstelle).
 - PRT-4: Feldnamen werden im Protokoll mit deutschen Bezeichnungen angezeigt.
 
 ### 7a.3 Löschschutz / Aufbewahrung
@@ -658,6 +659,7 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.27 | 21.11.2026 | **Teilbeauftragung und Varianten** (Kap. 15.4): „Auftrag erhalten“ am Angebot mit Ergebnis je Artikel – beauftragt / verloren mit Grund / andere Variante beauftragt (kein Verlust) / noch offen; Vorgabe für alle nicht beauftragten Artikel; neuer Angebotsstatus „teilweise beauftragt“; nur beauftragte Artikel zählen als Neuumsatz und in der Auslastung; Varianten nicht in Verlustliste und Gewinnquote. |
 | 1.28 | 23.11.2026 | **Testrunde Phase 2 – Korrekturen REV02** (Kap. 13.4): Freigabe nur noch ab Jahresumsatz 500 T€ oder Invest 350 T€, alles andere (Artikelanalyse, Entscheidung, Marge) als rote Markierung; Freigabe an eine gewählte Person mit Benachrichtigung, Aufgabe und Block „Freigaben für mich“; Entscheidung sperrt das Speichern nicht mehr (Pflicht erst zum Angebot); Artikelanalyse mit geschätzter projizierter Fläche (Länge × Breite) und Formeln, Werkstoffkennwerte eingeklappt, Vollständigkeit als Liste; Wahrscheinlichkeit nur von Hand, Filter und Summen ohne Gewichtung; Schichtmodell setzt Stunden sofort; Änderungswünsche: Prüfergebnis per Klick, Melder automatisch, Freigabe neuer Wünsche nur durch Administrator. Entscheidung Varianten (REV01-C07): eigene, verknüpfte Kalkulationen. |
 | 1.29 | 24.11.2026 | **REV02-07 … 09:** Protokoll nur für den SuperUser mit erneuter Passworteingabe; Uhrzeit (Zeitzone Europe/Berlin, Zeitfelder mit Zeitzone); Listen in voller Breite, keine Browser-Vorschläge in Formularen, Kalkulationsauswahl in der Beschaffung. |
+| 1.30 | 24.11.2026 | **REV02-10:** Protokoll-Anzeige in diesem Update für alle Benutzer ausgeblendet (Aufzeichnung läuft weiter, Schalter im Code). |
 
 ## 13. Testrückmeldung REV01 (Nov. 2026) – Anforderungen und Umsetzung
 
@@ -678,7 +680,7 @@ Umsetzung erfolgt in vier Phasen:
 |---|---|---|---|
 | v1.23 | 17.11.2026 | REV01 Phase 1 | ausgeliefert |
 | **v1.24** | 19.11.2026 | REV01 Phase 2 (Anfrage → Angebot → Pipeline) | **aktuelle Auslieferung** – Git-Zweig `release-v1.24` |
-| nächstes großes Update | offen | REV01 Phase 3 (Kalkulationsblätter) **+ Preisliste (Kap. 14, PRL-01) + jährliche Preisrunde (PRL-02) + Monatsbericht mit Vertriebsziel (Kap. 15, MB-01, REV01-D05, REV01-R01) + Teilbeauftragung (Kap. 15.4, MB-02) + Korrekturen Testrunde Phase 2 (Kap. 13.4, REV02-01 … 09, WUN-0001)** | in Arbeit – auf Wunsch vom 19.11.2026 gemeinsam ausliefern |
+| nächstes großes Update | offen | REV01 Phase 3 (Kalkulationsblätter) **+ Preisliste (Kap. 14, PRL-01) + jährliche Preisrunde (PRL-02) + Monatsbericht mit Vertriebsziel (Kap. 15, MB-01, REV01-D05, REV01-R01) + Teilbeauftragung (Kap. 15.4, MB-02) + Korrekturen Testrunde Phase 2 (Kap. 13.4, REV02-01 … 10, WUN-0001)** | in Arbeit – auf Wunsch vom 19.11.2026 gemeinsam ausliefern |
 
 Die Preisliste (v1.25) und der Monatsbericht (v1.26) sind programmiert und getestet, werden aber **nicht einzeln** eingespielt, sondern mit dem
 nächsten großen Update. Für den Server gilt bis dahin der Stand `v1.24`.
@@ -839,6 +841,11 @@ so streng halten (Unmut und Mehrarbeit) – stattdessen rot markieren, was fehlt
   erneuter Passworteingabe (Freischaltung 30 Minuten je Browser-Tab). Das Recht überträgt nur der SuperUser selbst
   (Benutzerverwaltung); Passwort, E-Mail, Rolle und Aktiv-Status des SuperUser-Kontos ändert nur er selbst. Hinweis:
   Wer direkten Zugriff auf Server oder Datenbank hat (IT), kann das Protokoll technisch weiterhin lesen.
+- REV02-10 **Protokoll ausgeblendet (Vorgabe GF 24.11.2026):** Für dieses Update ist die Protokoll-Anzeige für alle
+  Benutzer abgeschaltet – Menü und Reiter erscheinen nicht, die Schnittstelle antwortet mit 403. Die Aufzeichnung läuft
+  weiter. Schalter bewusst im Code (`AUDIT_VIEW_ENABLED` in `backend/app/config.py`, `AUDIT_VIEW` in
+  `frontend/src/constants.js`), nicht über die `.env`. Offener Punkt: Schutz gegenüber Personen mit Server- oder
+  Datenbankzugriff (z. B. Verschlüsselung mit eigenem Protokoll-Passwort) – zurückgestellt.
 - REV02-08 **Uhrzeit Sommer-/Winterzeit:** Datums-/Zeitfelder senden die Ortszeit jetzt mit Zeitzone (vorher als UTC
   gespeichert → eine Stunde verschoben). Server und Datenbank laufen auf `Europe/Berlin` (docker-compose `TZ`,
   Postgres `timezone`).
