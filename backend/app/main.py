@@ -45,6 +45,18 @@ def init_db():
             d["_rev01_thresholds"] = True
             cs.data = d
             db.commit()
+        # REV02-07: genau ein SuperUser für das Protokoll (SUPERUSER_EMAIL, sonst ADMIN_EMAIL, sonst erster Admin)
+        from .models import User as _U  # noqa: PLC0415
+        if not db.query(_U).filter(_U.is_superuser.is_(True)).first():
+            su = None
+            for mail in (settings.SUPERUSER_EMAIL, settings.ADMIN_EMAIL):
+                if mail and not su:
+                    su = db.query(_U).filter(_U.email == mail.lower(), _U.active.is_(True)).first()
+            su = su or db.query(_U).filter(_U.role == "admin", _U.active.is_(True)).order_by(_U.id).first()
+            if su:
+                su.is_superuser = True
+                db.commit()
+                print(f"Protokoll: SuperUser ist {su.email}")
         # REV02-01: Freigabe nur noch ab Umsatz 500 T€ / Invest 350 T€ (wenn noch der Stand 250 T€ eingestellt ist)
         cs = db.get(CalcSettings, 1)
         if cs and not (cs.data or {}).get("_rev02_thresholds"):

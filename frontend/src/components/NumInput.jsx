@@ -15,7 +15,7 @@ const parse = (t) => {
 }
 
 export default function NumInput({ type = 'number', value, onChange, onBlur, step, min, max, className = '', ...rest }) {
-  if (type !== 'number') return <input type={type} value={value} onChange={onChange} onBlur={onBlur} className={className} step={step} min={min} max={max} {...rest} />
+  if (type !== 'number') return <input type={type} autoComplete={type === 'password' ? 'new-password' : 'off'} value={value} onChange={onChange} onBlur={onBlur} className={className} step={step} min={min} max={max} {...rest} />
   return <NumText value={value} onChange={onChange} onBlur={onBlur} className={className} {...rest} />
 }
 

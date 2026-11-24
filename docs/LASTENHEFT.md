@@ -4,8 +4,8 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.28 |
-| **Stand** | 23.11.2026 |
+| **Dokumentversion** | 1.29 |
+| **Stand** | 24.11.2026 |
 | **Status** | Testphase auf internem Server F&R; ausgeliefert v1.24; Preisliste (Kap. 14) und Monatsbericht (Kap. 15) vorgemerkt für das nächste große Update (Kap. 13.0) |
 
 > Dieses Lastenheft wird bei **jeder** Änderung am System mitgezogen. Neue Anforderungen, geänderte Regeln und
@@ -508,8 +508,9 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
   Benutzer, Aktion, Datensatz, je Feld **alter → neuer Wert**. Passwörter werden maskiert, große Strukturen
   (Kalkulationseingaben/-ergebnisse) als „geändert“ vermerkt – ihr Inhalt ist in der unveränderlichen Version gesichert.
 - PRT-2: Protokolleinträge sind über die Oberfläche **nicht änderbar oder löschbar**.
-- PRT-3: Gesamtprotokoll mit Filtern (Bereich, Benutzer, Zeitraum, Suche) für Administration, Gesellschafter und
-  Freigabeberechtigte; je Kalkulation Reiter „Protokoll“ inkl. Versionen, Anrufe, Nachkalkulationen.
+- PRT-3: Gesamtprotokoll mit Filtern (Bereich, Benutzer, Zeitraum, Suche); je Kalkulation Reiter „Protokoll“ inkl.
+  Versionen, Anrufe, Nachkalkulationen. **Einsehen nur durch den SuperUser** nach erneuter Passworteingabe
+  (Freischaltung 30 Minuten je Browser-Tab, REV02-07). Aufgezeichnet wird weiterhin alles (IATF-Nachweis).
 - PRT-4: Feldnamen werden im Protokoll mit deutschen Bezeichnungen angezeigt.
 
 ### 7a.3 Löschschutz / Aufbewahrung
@@ -656,6 +657,7 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.26 | 21.11.2026 | **Monatsbericht Vertrieb** (Kap. 15, Auslieferung mit dem nächsten großen Update): Bericht je Monat für die Gesellschafter als PDF – Neuumsatz (stärkstes Lieferjahr) seit Jahresbeginn gegen das Jahresziel mit Ampel, je Vertriebler, gewonnen/verloren/nicht angeboten, offene Pipeline, Handlungsbedarf, Auslastung Folgejahr je Maschine, Preisliste, Kommentar der GF; Stand speichern und freigeben; Vertriebsziele je Jahr; Kachel Vertriebsziel auf der Startseite. Kein Vorjahresvergleich. Neues Feld „Neuumsatz“ und „abgeschlossen am“ an der Kalkulation. |
 | 1.27 | 21.11.2026 | **Teilbeauftragung und Varianten** (Kap. 15.4): „Auftrag erhalten“ am Angebot mit Ergebnis je Artikel – beauftragt / verloren mit Grund / andere Variante beauftragt (kein Verlust) / noch offen; Vorgabe für alle nicht beauftragten Artikel; neuer Angebotsstatus „teilweise beauftragt“; nur beauftragte Artikel zählen als Neuumsatz und in der Auslastung; Varianten nicht in Verlustliste und Gewinnquote. |
 | 1.28 | 23.11.2026 | **Testrunde Phase 2 – Korrekturen REV02** (Kap. 13.4): Freigabe nur noch ab Jahresumsatz 500 T€ oder Invest 350 T€, alles andere (Artikelanalyse, Entscheidung, Marge) als rote Markierung; Freigabe an eine gewählte Person mit Benachrichtigung, Aufgabe und Block „Freigaben für mich“; Entscheidung sperrt das Speichern nicht mehr (Pflicht erst zum Angebot); Artikelanalyse mit geschätzter projizierter Fläche (Länge × Breite) und Formeln, Werkstoffkennwerte eingeklappt, Vollständigkeit als Liste; Wahrscheinlichkeit nur von Hand, Filter und Summen ohne Gewichtung; Schichtmodell setzt Stunden sofort; Änderungswünsche: Prüfergebnis per Klick, Melder automatisch, Freigabe neuer Wünsche nur durch Administrator. Entscheidung Varianten (REV01-C07): eigene, verknüpfte Kalkulationen. |
+| 1.29 | 24.11.2026 | **REV02-07 … 09:** Protokoll nur für den SuperUser mit erneuter Passworteingabe; Uhrzeit (Zeitzone Europe/Berlin, Zeitfelder mit Zeitzone); Listen in voller Breite, keine Browser-Vorschläge in Formularen, Kalkulationsauswahl in der Beschaffung. |
 
 ## 13. Testrückmeldung REV01 (Nov. 2026) – Anforderungen und Umsetzung
 
@@ -676,7 +678,7 @@ Umsetzung erfolgt in vier Phasen:
 |---|---|---|---|
 | v1.23 | 17.11.2026 | REV01 Phase 1 | ausgeliefert |
 | **v1.24** | 19.11.2026 | REV01 Phase 2 (Anfrage → Angebot → Pipeline) | **aktuelle Auslieferung** – Git-Zweig `release-v1.24` |
-| nächstes großes Update | offen | REV01 Phase 3 (Kalkulationsblätter) **+ Preisliste (Kap. 14, PRL-01) + jährliche Preisrunde (PRL-02) + Monatsbericht mit Vertriebsziel (Kap. 15, MB-01, REV01-D05, REV01-R01) + Teilbeauftragung (Kap. 15.4, MB-02) + Korrekturen Testrunde Phase 2 (Kap. 13.4, REV02-01 … 06, WUN-0001)** | in Arbeit – auf Wunsch vom 19.11.2026 gemeinsam ausliefern |
+| nächstes großes Update | offen | REV01 Phase 3 (Kalkulationsblätter) **+ Preisliste (Kap. 14, PRL-01) + jährliche Preisrunde (PRL-02) + Monatsbericht mit Vertriebsziel (Kap. 15, MB-01, REV01-D05, REV01-R01) + Teilbeauftragung (Kap. 15.4, MB-02) + Korrekturen Testrunde Phase 2 (Kap. 13.4, REV02-01 … 09, WUN-0001)** | in Arbeit – auf Wunsch vom 19.11.2026 gemeinsam ausliefern |
 
 Die Preisliste (v1.25) und der Monatsbericht (v1.26) sind programmiert und getestet, werden aber **nicht einzeln** eingespielt, sondern mit dem
 nächsten großen Update. Für den Server gilt bis dahin der Stand `v1.24`.
@@ -832,6 +834,18 @@ so streng halten (Unmut und Mehrarbeit) – stattdessen rot markieren, was fehlt
 - REV01-B05 (Stundensatz nicht änderbar): im aktuellen Stand nicht nachvollziehbar – Stundensätze lassen sich in
   Kalkulation, Maschinen und Standorten frei eingeben; der Reiter „Stundensätze“ ist bewusst nur die Herleitung
   (Werte unter „Maschinen“ pflegen, „übernehmen“). Rückfrage an den Tester, wo genau.
+- REV02-07 **Protokoll gesperrt:** Menü „Protokoll“ und Reiter „Protokoll“ der Kalkulation nur für den **SuperUser**
+  (genau ein Konto; beim Update: `SUPERUSER_EMAIL`, sonst `ADMIN_EMAIL`, sonst erster Administrator). Öffnen nur nach
+  erneuter Passworteingabe (Freischaltung 30 Minuten je Browser-Tab). Das Recht überträgt nur der SuperUser selbst
+  (Benutzerverwaltung); Passwort, E-Mail, Rolle und Aktiv-Status des SuperUser-Kontos ändert nur er selbst. Hinweis:
+  Wer direkten Zugriff auf Server oder Datenbank hat (IT), kann das Protokoll technisch weiterhin lesen.
+- REV02-08 **Uhrzeit Sommer-/Winterzeit:** Datums-/Zeitfelder senden die Ortszeit jetzt mit Zeitzone (vorher als UTC
+  gespeichert → eine Stunde verschoben). Server und Datenbank laufen auf `Europe/Berlin` (docker-compose `TZ`,
+  Postgres `timezone`).
+- REV02-09 **Bedienung:** Listen nutzen die volle Bildschirmbreite (Spaltenköpfe umbrechen, €/Stk und Menge in einer
+  Spalte); Browser-Vorschläge aus früheren Eingaben in Formularen abgeschaltet (z. B. Bezeichnung in Beschaffung);
+  Beschaffung: Kalkulation per Auswahl (Nummer · Artikel · Kunde) statt interner ID. Benutzerrechte werden beim Start
+  frisch geladen (neue Rechte ohne Neuanmeldung).
 - Entscheidung zu REV01-C07 (Phase 3): **Varianten** (z. B. 2-fach / 4-fach Werkzeug) werden als eigene, miteinander
   verknüpfte Kalkulationen geführt; im Angebot wählbar und als Pos. 1 / 1a; beim Auftrag „andere Variante beauftragt“.
 

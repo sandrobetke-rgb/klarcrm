@@ -133,7 +133,7 @@ export function NewProcurement({ onClose, calculationId }) {
       <EntityForm
         fields={[
           { name: 'kind', label: 'Art', type: 'select', required: true, options: PROC_KINDS },
-          ...(calculationId ? [] : [{ name: 'calculation_id', label: 'Kalkulations-ID (optional)', type: 'number', step: '1', hint: 'Eckdaten werden aus der Kalkulation vorbelegt' }]),
+          ...(calculationId ? [] : [{ name: 'calculation_id', label: 'Kalkulation (optional)', type: 'calculation', hint: 'Eckdaten werden aus der Kalkulation vorbelegt' }]),
           { name: 'title', label: 'Bezeichnung', hint: 'leer = automatisch, z. B. „Spritzgießwerkzeug Gehäuse …“' },
           { name: 'reply_by', label: 'Angebotsabgabe bis', type: 'date' },
           { name: 'needed_by', label: 'Benötigt bis (z. B. T0 / Abnahme)', type: 'date' },

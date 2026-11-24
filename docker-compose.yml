@@ -2,7 +2,9 @@ services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
+    command: ["postgres", "-c", "timezone=Europe/Berlin"]   # REV02-08: Sommer-/Winterzeit
     environment:
+      TZ: Europe/Berlin
       POSTGRES_DB: crm
       POSTGRES_USER: crm
       POSTGRES_PASSWORD: ${DB_PASSWORD:-crm}
@@ -22,6 +24,8 @@ services:
       db:
         condition: service_healthy
     environment:
+      TZ: Europe/Berlin                 # REV02-08: Serverzeit = deutsche Zeit (Sommer-/Winterzeit)
+      SUPERUSER_EMAIL: ${SUPERUSER_EMAIL:-}   # REV02-07: wer das Protokoll öffnen darf (leer = ADMIN_EMAIL)
       DATABASE_URL: postgresql+psycopg://crm:${DB_PASSWORD:-crm}@db:5432/crm
       SECRET_KEY: ${SECRET_KEY:-bitte-in-produktion-aendern}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@firma.de}

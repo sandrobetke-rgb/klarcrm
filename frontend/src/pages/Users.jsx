@@ -13,6 +13,7 @@ const fields = (isNew, sites = []) => [
   { name: 'password', label: isNew ? 'Passwort' : 'Neues Passwort', type: 'password', required: isNew, hint: isNew ? 'Mind. 8 Zeichen' : 'Leer lassen = unverändert' },
   ...(sites.length ? [{ name: 'site_id', label: 'Standard-Standort (für neue Kalkulationen)', type: 'select', options: siteOptions(sites) }] : []),
   { name: 'can_approve', label: 'Darf Kalkulationen freigeben (Vier-Augen-Prinzip)', type: 'checkbox' },
+  { name: 'is_superuser', label: 'SuperUser – darf das Protokoll öffnen (nur durch den SuperUser übertragbar)', type: 'checkbox', superOnly: true },
   { name: 'active', label: 'Aktiv', type: 'checkbox' },
 ]
 
@@ -25,6 +26,7 @@ export default function Users() {
 
   async function save(values) {
     if (!values.password) delete values.password
+    if (!me?.is_superuser || !!values.is_superuser === !!editing.is_superuser) delete values.is_superuser
     if (editing.id) await api.patch(`/users/${editing.id}`, values)
     else await api.post('/users', values)
     setEditing(null)
@@ -48,7 +50,7 @@ export default function Users() {
               <tr key={u.id} className="row-click" onClick={() => setEditing(u)}>
                 <td><strong>{u.name}</strong>{u.id === me.id && <small className="muted"> (du)</small>}</td>
                 <td>{u.email}</td>
-                <td>{ROLES.find((r) => r.value === u.role)?.label}{(u.can_approve || u.role === 'admin') && <><br /><small className="muted">✓ Freigabe</small></>}</td>
+                <td>{ROLES.find((r) => r.value === u.role)?.label}{(u.can_approve || u.role === 'admin') && <><br /><small className="muted">✓ Freigabe</small></>}{u.is_superuser && <><br /><small className="muted">🔒 SuperUser</small></>}</td>
                 <td>{u.active ? <Badge tone="good">aktiv</Badge> : <Badge>deaktiviert</Badge>}</td>
                 <td>{fmtDate(u.created_at)}</td>
               </tr>
@@ -58,7 +60,7 @@ export default function Users() {
       </div>
       {editing && (
         <Modal title={editing.id ? 'Benutzer bearbeiten' : 'Benutzer anlegen'} onClose={() => setEditing(null)}>
-          <EntityForm fields={fields(!editing.id, sites)} initial={editing} onSubmit={save} onCancel={() => setEditing(null)} />
+          <EntityForm fields={fields(!editing.id, sites).filter((f) => !f.superOnly || me?.is_superuser)} initial={editing} onSubmit={save} onCancel={() => setEditing(null)} />
         </Modal>
       )}
     </div>

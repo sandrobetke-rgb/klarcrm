@@ -60,7 +60,7 @@ h3 { font-size: 14px; margin: 0 0 12px; font-weight: 650; }
 .avatar { width: 32px; height: 32px; border-radius: 50%; background: #374151; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #fff; }
 .logout { width: 100%; margin-top: 6px; color: #9ca3af !important; border-color: #374151 !important; }
 .content { flex: 1; min-width: 0; }
-.page { padding: 28px 32px 48px; max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+.page { padding: 28px 32px 48px; max-width: 1680px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
 .page-wide { max-width: none; }
 .page-narrow { max-width: 640px; }
 .page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
@@ -749,3 +749,12 @@ tr.row-won td { background: #eef7f0; }
 .cr-actions { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; min-width: 120px; }
 .cr-bad { display: flex; flex-direction: column; gap: 4px; min-width: 220px; }
 .btn-ok { color: #2c7a3f; }
+
+.audit-lock { max-width: 460px; }
+/* REV02-09: Listen nutzen die volle Breite, Spaltenköpfe dürfen umbrechen, engere Zellen */
+.page-wide .table th { white-space: normal; padding: 8px 8px; }
+.page-wide .table td { padding: 9px 8px; }
+.table .badge { white-space: normal; }
+.table .big-badge { white-space: normal; flex-wrap: wrap; border-radius: 10px; }
+.table .lastcall-note { max-width: 200px; }
+.table .truncate { max-width: 110px; }

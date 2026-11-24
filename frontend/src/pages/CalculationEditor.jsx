@@ -13,6 +13,7 @@ import ArticleAnalysis from './ArticleAnalysis'
 import LifecycleTab from './LifecycleTab'
 import ApprovalBar from '../components/Approval'
 import { ProcurementTab } from './Procurement'
+import AuditGate from '../components/AuditGate'
 import AuditTable from '../components/AuditTable'
 import Attachments from '../components/Attachments'
 import CallPanel, { LastCall } from '../components/CallPanel'
@@ -42,12 +43,12 @@ export const calcMetaFields = [
   { name: 'remark', label: 'Bemerkung', type: 'textarea', span: true, rows: 3 },
 ]
 
-const TABS = [['analysis', '1 · Artikelanalyse'], ['calc', '2 · Kalkulation'], ['lifecycle', 'Lebensweg'], ['docs', 'Dokumente'], ['procurement', 'Beschaffung'], ['calls', 'Anrufe'], ['meta', 'Anfrage & Status'], ['versions', 'Versionen'], ['post', 'Nachkalkulation'], ['audit', 'Protokoll']]
+const TABS = [['analysis', '1 · Artikelanalyse'], ['calc', '2 · Kalkulation'], ['lifecycle', 'Lebensweg'], ['docs', 'Dokumente'], ['procurement', 'Beschaffung'], ['calls', 'Anrufe'], ['meta', 'Anfrage & Status'], ['versions', 'Versionen'], ['post', 'Nachkalkulation'], ['audit', 'Protokoll', true]]
 
 export default function CalculationEditor() {
   const { id } = useParams()
   const nav = useNavigate()
-  const { canWrite } = useAuth()
+  const { canWrite, user } = useAuth()
   const [calc, setCalc] = useState(null)
   const [error, setError] = useState(null)
   const [tab, setTab] = useState(() => (new URLSearchParams(window.location.search).get('tab') === 'analyse' ? 'analysis' : 'calc'))
@@ -112,7 +113,7 @@ export default function CalculationEditor() {
         {calc.warnings.map((w) => <span key={w} className="red-mark">{w.startsWith('Artikelanalyse') ? <button className="link-btn" onClick={() => setTab('analysis')}>{w}</button> : w}</span>)}</div>}
       <ApprovalBar calc={calc} setCalc={setCalc} />
       <div className="tabs no-print">
-        {TABS.map(([k, l]) => (
+        {TABS.filter(([, , su]) => !su || user?.is_superuser).map(([k, l]) => (
           <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>
             {l}{k === 'versions' && <span className="count">{calc.versions.length}</span>}
             {k === 'post' && <span className="count">{calc.post_calcs.length}</span>}
@@ -190,6 +191,10 @@ function NewCalc() {
 }
 
 function CalcAudit({ calc }) {
+  return <AuditGate><CalcAuditRows calc={calc} /></AuditGate>
+}
+
+function CalcAuditRows({ calc }) {
   const [rows, setRows] = useState(null)
   useEffect(() => { api.get(`/audit/ref/calculations/${calc.id}`).then(setRows) }, [calc])
   return <div className="card card-flush">{rows ? <AuditTable rows={rows} /> : <div className="loading">Lade…</div>}</div>

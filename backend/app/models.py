@@ -53,6 +53,7 @@ class User(TimestampMixin, Base):
     role: Mapped[str] = mapped_column(String(20), default="vertrieb")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     can_approve: Mapped[bool | None] = mapped_column(Boolean, default=False)  # darf Kalkulationen freigeben
+    is_superuser: Mapped[bool | None] = mapped_column(Boolean, default=False)  # REV02-07: darf das Protokoll öffnen
     calendar_token: Mapped[str | None] = mapped_column(String(64), index=True)  # Outlook-Kalenderabo
 
 

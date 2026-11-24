@@ -57,6 +57,16 @@ def update_user(user_id: int, data: s.UserUpdate, db: Session = Depends(get_db),
     if not user:
         raise HTTPException(404, "Benutzer nicht gefunden")
     values = data.model_dump(exclude_unset=True)
+    # REV02-07: SuperUser (Protokoll) – Konto nur vom SuperUser selbst änderbar, Recht nur von ihm übertragbar
+    if "is_superuser" in values:
+        if not admin.is_superuser:
+            raise HTTPException(403, "Nur der SuperUser kann dieses Recht vergeben")
+        if user.id == admin.id and not values["is_superuser"]:
+            raise HTTPException(400, "Erst einem anderen Benutzer das SuperUser-Recht geben, dann bei dir entfernen")
+    changed = {k for k in ("password", "email", "active", "role") if k in values and values[k] is not None
+               and (k == "password" or (str(values[k]).lower() if k == "email" else values[k]) != getattr(user, k))}
+    if user.is_superuser and not admin.is_superuser and changed:
+        raise HTTPException(403, "Das Konto des SuperUsers kann nur er selbst ändern")
     if user.id == admin.id and (values.get("role", "admin") != "admin" or values.get("active") is False):
         raise HTTPException(400, "Du kannst dir selbst die Admin-Rechte nicht entziehen")
     if pw := values.pop("password", None):

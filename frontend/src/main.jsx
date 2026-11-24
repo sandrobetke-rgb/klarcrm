@@ -58,7 +58,7 @@ function Layout() {
     ['/aenderungen', 'Änderungswünsche', '✎'],
     ['/dokumentation', 'Dokumentation', '📖'],
   ]
-  if (isAdmin || user.role === 'gesellschafter' || user.can_approve) nav.push(['/protokoll', 'Protokoll', '⎙'])
+  if (user.is_superuser) nav.push(['/protokoll', 'Protokoll 🔒', '⎙'])   // REV02-07: nur SuperUser
   if (isAdmin) nav.push(['/benutzer', 'Benutzer', '⚙'], ['/einstellungen', 'Firma & Layout', '✎'])
   return (
     <div className="app">

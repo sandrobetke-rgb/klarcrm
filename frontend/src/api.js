@@ -18,10 +18,20 @@ export function storedUser() {
   try { return JSON.parse(localStorage.getItem('crm_user')) } catch { return null }
 }
 
+// REV02-07: Freischaltung des Protokolls (nur dieser Tab, 30 Minuten)
+export function setAuditToken(token, minutes) {
+  try { sessionStorage.setItem('crm_audit', JSON.stringify({ token, until: Date.now() + minutes * 60000 })) } catch { /* ohne Speicher */ }
+}
+function auditToken() {
+  try { const a = JSON.parse(sessionStorage.getItem('crm_audit')); return a && a.until > Date.now() ? a.token : null } catch { return null }
+}
+export const auditUnlocked = () => !!auditToken()
+
 async function request(method, path, body) {
   const headers = {}
   const token = getToken()
   if (token) headers.Authorization = `Bearer ${token}`
+  if (path.startsWith('/audit') && auditToken()) headers['X-Audit-Token'] = auditToken()
   let payload
   if (body instanceof FormData) {
     payload = body
@@ -37,6 +47,7 @@ async function request(method, path, body) {
     window.location.href = '/login'
     throw new Error('Sitzung abgelaufen')
   }
+  if (res.status === 423) { try { sessionStorage.removeItem('crm_audit') } catch { /* egal */ } }
   if (res.status === 204) return null
   const data = await res.json().catch(() => null)
   if (!res.ok) {

@@ -1,15 +1,20 @@
 import { useState } from 'react'
+import AuditGate from '../components/AuditGate'
 import AuditTable from '../components/AuditTable'
 import { ErrorBox, Pager, RefSelect, SearchInput, useFetch } from '../components/ui'
 import { qs } from '../api'
 
 export default function AuditLog() {
+  return <div className="page page-wide"><AuditGate><AuditList /></AuditGate></div>
+}
+
+function AuditList() {
   const [f, setF] = useState({ entity: '', user_id: null, q: '', date_from: '', date_to: '' })
   const [offset, setOffset] = useState(0)
   const { data, error } = useFetch('/audit' + qs({ ...f, limit: 100, offset }))
   const set = (k, v) => { setF((s) => ({ ...s, [k]: v })); setOffset(0) }
   return (
-    <div className="page page-wide">
+    <>
       <header className="page-head">
         <div><h1>Änderungsprotokoll</h1>
           <p className="muted">Wer hat wann was geändert – alle Datensätze, mit altem und neuem Wert. Einträge sind nicht änderbar.</p></div>
@@ -27,6 +32,6 @@ export default function AuditLog() {
       <ErrorBox error={error} />
       <div className="card card-flush">{data && <AuditTable rows={data.items} />}</div>
       {data && <Pager total={data.total} limit={100} offset={offset} onChange={setOffset} />}
-    </div>
+    </>
   )
 }

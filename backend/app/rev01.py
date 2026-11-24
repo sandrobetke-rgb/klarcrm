@@ -275,6 +275,19 @@ ITEMS = [
      "Schichtmodell kann man auswählen, verfügbare Stunden ändern sich aber nicht (Test REV01-K01).", U,
      "Die Stunden wurden erst beim Speichern berechnet. Jetzt springt das Feld „Verfügbare Stunden / Jahr“ bei der Auswahl sofort um "
      "(1.920 / 3.840 / 5.760 h).", "Maschine bearbeiten → 2 Schichten → Feld zeigt sofort 3.840.", "Kap. 13.4"),
+    ("REV02-07", "Protokoll", "wunsch", "hoch", 2, "Protokoll per Passwort gesperrt, nur für den SuperUser",
+     "Das Protokoll soll per Passwort gesperrt und nur für mich als SuperUser zu öffnen sein; vorerst soll es niemand sehen.", U,
+     "Menü „Protokoll“ und Reiter „Protokoll“ der Kalkulation nur für den SuperUser, Öffnen nach erneuter Passworteingabe (30 Minuten). "
+     "SuperUser beim Update: SUPERUSER_EMAIL, sonst ADMIN_EMAIL. Recht und Konto ändert nur der SuperUser selbst. Aufzeichnung läuft weiter.",
+     "Als Vertrieb/anderer Admin: kein Menüpunkt Protokoll. Als SuperUser: Protokoll → Passwort → Einträge sichtbar.", "Kap. 13.4"),
+    ("REV02-08", "Allgemein", "fehler", "mittel", 2, "Uhrzeit nicht auf Winterzeit",
+     "Die Uhrzeit des Systems scheint nicht auf Winterzeit zu sein.", U,
+     "Zeitfelder (z. B. Fälligkeit von Aktivitäten) wurden ohne Zeitzone gesendet und als UTC gespeichert → eine Stunde verschoben. "
+     "Jetzt mit Zeitzone; Server und Datenbank auf Europe/Berlin.", "Aktivität mit Fälligkeit 10:00 anlegen → Liste zeigt 10:00.", "Kap. 13.4"),
+    ("REV02-09", "Allgemein", "wunsch", "mittel", 2, "Anzeige verbreitern; Beschaffung: Bezeichnung zeigt fremde Vorschläge",
+     "Kalkulationsliste breiter anzeigen. In der Beschaffung erscheint unter Bezeichnung z. B. „Pipeline mit allen Anfragen …“.", U,
+     "Listen nutzen die volle Breite. Der Vorschlag kam vom Browser (frühere Eingaben) – Browser-Vorschläge in Formularen abgeschaltet. "
+     "Beschaffung: Kalkulation per Auswahl statt interner ID.", "Kalkulationsliste bei 1440 px ohne Querscrollen; Beschaffung anlegen → keine Vorschläge.", "Kap. 13.4"),
     ("WUN-0001", "Änderungswünsche", "wunsch", "niedrig", 2, "In Änderungswünschen",
      "In den Änderungswünschen sollte man per Klick angeben können, ob eine Änderung erfolgreich war, wenn nicht muss man dieses beschreiben. "
      "Auch von wem Änderungswünsche gemeldet werden, sollte automatisch gefüllt sein. Änderungswünsche können nur durch einen Admin freigegeben werden.", U,

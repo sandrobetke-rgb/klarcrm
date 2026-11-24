@@ -67,11 +67,13 @@ class UserUpdate(BaseModel):
     can_approve: bool | None = None
     site_id: int | None = None
     password: str | None = Field(default=None, min_length=8)
+    is_superuser: bool | None = None   # nur durch den SuperUser selbst übertragbar
 
 
 class UserOut(ORM, UserBase):
     id: int
     created_at: datetime
+    is_superuser: bool | None = False
 
 
 class PasswordChange(BaseModel):

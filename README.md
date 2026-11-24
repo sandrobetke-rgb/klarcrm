@@ -40,6 +40,8 @@ docker compose up -d --build
 ```
 
 Danach im Browser: **http://localhost:8080** – Login mit `ADMIN_EMAIL` / `ADMIN_PASSWORD` aus der `.env`.
+
+**Protokoll (SuperUser):** Das Änderungsprotokoll darf nur ein Konto öffnen. Beim ersten Start mit v1.29 wird das Konto aus `SUPERUSER_EMAIL` (in der `.env`), sonst `ADMIN_EMAIL` zum SuperUser. Danach überträgt nur der SuperUser selbst das Recht (Benutzerverwaltung).
 Der erste Admin wird beim ersten Start automatisch angelegt.
 
 **Demo-Daten** (optional, nur in eine leere Datenbank):

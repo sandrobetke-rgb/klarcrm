@@ -62,6 +62,7 @@ const REF = {
   contact: { path: '/contacts', params: { sort: 'last_name', limit: 500 }, label: (r) => `${contactName(r)}${r.account ? ' · ' + r.account.name : ''}`, dep: 'account_id' },
   opportunity: { path: '/opportunities', params: { sort: 'name', limit: 500 }, label: (r) => `${r.number ? r.number + ' · ' : ''}${r.name}`, dep: 'account_id' },
   quote: { path: '/quotes', params: { sort: '-quote_date', limit: 500 }, label: (r) => `${r.number} · ${r.title}`, dep: 'account_id' },
+  calculation: { path: '/calculations', params: { limit: 500 }, label: (r) => `${r.number} · ${r.article_name}${r.account ? ' · ' + r.account.name : ''}` },
 }
 
 export function RefSelect({ kind, value, onChange, filter, required, id }) {
@@ -134,13 +135,13 @@ export function EntityForm({ fields, initial, onSubmit, onCancel, onDelete, subm
   }
 
   return (
-    <form onSubmit={submit} className="form">
+    <form onSubmit={submit} className="form" autoComplete="off">
       <div className="form-grid">
         {fields.map((f) => {
           const id = `f-${f.name}`
           const v = values[f.name]
           let input
-          if (['account', 'customer', 'contact', 'user', 'opportunity', 'quote'].includes(f.type)) {
+          if (['account', 'customer', 'contact', 'user', 'opportunity', 'quote', 'calculation'].includes(f.type)) {
             input = <RefSelect id={id} kind={f.type} value={v} required={f.required}
               filter={f.dependsOn ? values[f.dependsOn] : undefined} onChange={(x) => set(f.name, x)} />
           } else if (f.type === 'select') {
@@ -161,7 +162,7 @@ export function EntityForm({ fields, initial, onSubmit, onCancel, onDelete, subm
             input = <input id={id} type="checkbox" checked={!!v} onChange={(e) => set(f.name, e.target.checked)} />
           } else if (f.type === 'datetime') {
             input = <input id={id} type="datetime-local" value={toLocalInput(v)} required={f.required}
-              onChange={(e) => set(f.name, e.target.value)} />
+              onChange={(e) => set(f.name, e.target.value ? new Date(e.target.value).toISOString() : null)} />
           } else {
             input = <NumInput id={id} type={f.type || 'text'} step={f.step} min={f.min} max={f.max}
               value={v ?? ''} required={f.required} onChange={(e) => set(f.name, e.target.value)} />

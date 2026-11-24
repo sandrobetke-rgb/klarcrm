@@ -160,10 +160,9 @@ export default function Calculations() {
           {r.approval_reasons?.length > 0 && <div>{r.is_approved ? <Badge tone="good">✓ freigegeben</Badge>
             : r.approval_status === 'angefragt' && r.approval_version === r.current_version ? <Badge tone="warning">⏳ Freigabe angefragt</Badge>
             : <Badge tone="warning">Freigabe nötig</Badge>}</div>}</> },
-        { key: 'unit_price', label: '€/Stk', sort: 'unit_price', className: 'num', render: (r) => eur4(r.unit_price) },
-        { key: 'annual_volume', label: 'Menge p. a.', sort: 'annual_volume', className: 'num', render: (r) => num(r.annual_volume) },
+        { key: 'unit_price', label: '€/Stk · Menge p. a.', sort: 'unit_price', className: 'num', render: (r) => <>{eur4(r.unit_price)}<br /><small className="muted">{num(r.annual_volume)} Stk</small></> },
         { key: 'annual_revenue', label: 'Umsatz p. a. / Invest', sort: 'annual_revenue', className: 'num', render: (r) => <>{eur(r.annual_revenue)}{r.invest > 0 && <><br /><small className="muted">Invest {eur(r.invest)}</small></>}</> },
-        { key: 'probability', label: 'Wahrsch.', sort: 'probability', className: 'num', render: (r) => `${r.probability} %` },
+        { key: 'probability', label: 'Wahrsch.', sort: 'probability', className: 'num', render: (r) => (r.probability ? `${r.probability} %` : '–') },
         { key: 'last_call_at', label: 'Zuletzt angerufen / Ergebnis', sort: 'last_call_at', render: (r) => (
           <div onClick={(e) => e.stopPropagation()}>
             <LastCall call={r.last_call} date={r.last_call_at} open={!CLOSED_STATUS.includes(r.status)}

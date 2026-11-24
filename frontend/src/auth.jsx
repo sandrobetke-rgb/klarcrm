@@ -1,10 +1,15 @@
-import { createContext, useContext, useState } from 'react'
-import { api, setSession, storedUser } from './api'
+import { createContext, useContext, useEffect, useState } from 'react'
+import { api, getToken, setSession, storedUser } from './api'
 
 const AuthCtx = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(storedUser())
+  // Rechte (z. B. Freigabe, SuperUser) beim Start frisch vom Server holen – greifen ohne Neuanmeldung
+  useEffect(() => {
+    if (!getToken()) return
+    api.get('/auth/me').then((u) => { setSession(getToken(), u); setUser(u) }).catch(() => {})
+  }, [])
 
   async function login(email, password) {
     const res = await api.login(email, password)

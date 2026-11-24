@@ -51,7 +51,7 @@ export default function ListPage({
   const toggleSort = (key) => setSort((s) => (s === key ? `-${key}` : key))
 
   return (
-    <div className="page">
+    <div className="page page-wide">
       {notice && <div className="notice-ok no-print">✓ {notice.text}
         {notice.hidden && <> – der aktive Filter blendet ihn evtl. aus. <button className="btn btn-ghost btn-sm" onClick={() => { setFilterVals({}); window.history.replaceState(null, '', window.location.pathname); setNotice(null) }}>Filter zurücksetzen</button></>}
         <button className="btn-x" onClick={() => setNotice(null)} aria-label="schließen">×</button></div>}
