@@ -686,6 +686,15 @@ Umsetzung erfolgt in vier Phasen:
 Die zunächst für ein gemeinsames großes Update zurückgehaltenen Stände (v1.25 … v1.30) werden auf Wunsch vom 24.11.2026
 **ohne Phase 3** als v1.30 ausgeliefert, damit auf dem Server der aktuelle Teststand läuft. Phase 3 folgt als eigenes Update.
 
+**Vorgehen ab 24.11.2026 (Vorgabe GF):** ein Themenblock je Update – erst prüfen und abnehmen, dann der nächste Block.
+Vor jeder Umsetzung kurze Beschreibung mit Prüfanweisung und Freigabe durch die GF. Wirkt eine Änderung auf einen
+anderen Block, wird das vorher ausdrücklich genannt. Reihenfolge der Blöcke:
+1. Kalkulation (inkl. Artikelanalyse, Freigabe, Varianten, Phase 3 Kalkulationsblätter)
+2. Anfrage und Angebot (Entscheidung, Angebotsdruck, Angebotsverfolgung, Auftrag erhalten)
+3. Pipeline und Berichte (Wahrscheinlichkeit, Dashboard, Monatsbericht)
+4. Stammdaten und Verwaltung (Maschinen, Standorte, Benutzer, Änderungswünsche)
+5. Preisliste inkl. jährlicher Preisrunde (PRL-02) – erst, wenn alles andere läuft
+
 ### 13.1 Phase 1 – umgesetzt (v1.23)
 - REV01-B01: **Speichern der Kalkulation** immer sichtbar: Speicherleiste bleibt beim Scrollen oben, gelb bei
   ungespeicherten Änderungen, Knopf „💾 Speichern (Version n)“, Tastenkürzel Strg+S, Rückfrage beim Verlassen der Seite.
