@@ -176,7 +176,7 @@ class OpportunityUpdate(OpportunityBase):
 class OpportunityOut(ORM, OpportunityBase):
     id: int
     probability: int
-    probability_estimated: bool = False
+    probability_estimated: bool | None = False
     closed_at: date | None = None
     number: str | None = None
     offered_at: date | None = None
