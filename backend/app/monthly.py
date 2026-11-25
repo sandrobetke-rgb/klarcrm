@@ -60,10 +60,25 @@ def _sum(rows, key):
     return round(sum(r[key] for r in rows), 2)
 
 
+def total_target(db: Session, year: int):
+    """Gesamtziel des Jahres; ohne eigenes Gesamtziel die Summe der Ziele je Vertriebler (REV03-05)."""
+    from types import SimpleNamespace  # noqa: PLC0415
+    tg = db.scalars(select(SalesTarget).where(SalesTarget.year == year)).all()
+    t = next((x for x in tg if x.user_id is None), None)
+    if t:
+        return t
+    per = [x for x in tg if x.user_id]
+    if not per:
+        return None
+    one = [x.one_time_target for x in per if x.one_time_target]
+    return SimpleNamespace(revenue_target=sum(x.revenue_target or 0 for x in per), one_time_target=sum(one) if one else None,
+                           summed=True)
+
+
 def goal_status(db: Session, today: date | None = None) -> dict | None:
     """Stand Vertriebsziel (Neuumsatz, Spitzenjahr) seit 1.1. bis heute – für die Startseite. Soll anteilig nach Kalendertagen."""
     today = today or date.today()
-    t = db.scalar(select(SalesTarget).where(SalesTarget.year == today.year, SalesTarget.user_id.is_(None)))
+    t = total_target(db, today.year)
     if not t or not t.revenue_target:
         return None
     rows = _won_rows(db, date(today.year, 1, 1), today)
@@ -87,7 +102,7 @@ def compute(db: Session, year: int, month: int) -> dict:
 
     # ---------------- Ziele
     tg = db.scalars(select(SalesTarget).where(SalesTarget.year == year)).all()
-    total_t = next((t for t in tg if t.user_id is None), None)
+    total_t = total_target(db, year)
     frac = month / 12
     def target_block(t, rows):  # noqa: E306
         if not t:
@@ -244,7 +259,8 @@ def compute(db: Session, year: int, month: int) -> dict:
             "articles_calculated": len(calc_ids),
             "open_pipeline": {"count": len(open_opps), "amount": round(sum(float(o.amount or 0) for o in open_opps), 2)},
         },
-        "target": target_block(total_t, won_ytd), "by_owner": by_owner, "series": series,
+        "target": ({**target_block(total_t, won_ytd), "summed": bool(getattr(total_t, "summed", False))} if total_t else None),
+        "by_owner": by_owner, "series": series,
         "won": won_out(won_month), "won_ytd_list": sorted(won_out(won_ytd), key=lambda r: r["date"] or ""),
         "lost": sorted(lost, key=lambda r: -r["annual"]), "nobid": nobid, "variants": variants,
         "reasons": sorted([{**v, "annual": round(v["annual"], 2)} for v in reasons.values()], key=lambda r: -r["annual"]),

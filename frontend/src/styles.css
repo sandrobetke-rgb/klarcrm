@@ -758,3 +758,10 @@ tr.row-won td { background: #eef7f0; }
 .table .big-badge { white-space: normal; flex-wrap: wrap; border-radius: 10px; }
 .table .lastcall-note { max-width: 200px; }
 .table .truncate { max-width: 110px; }
+/* REV03-04: Speicherleiste Artikelanalyse */
+.analysis-save { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 10px; padding: 8px 12px; margin-bottom: 12px;
+  background: #fff; border: 1px solid var(--border, #dde2ea); border-radius: 10px; box-shadow: 0 2px 6px rgba(15, 23, 42, .06); font-size: 13px; }
+.analysis-save.dirty { border-color: #f59e0b; background: #fffbeb; }
+.combo-select { display: flex; gap: 6px; }
+.combo-select > * { flex: 1; }
+.prob-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 8px 0; }

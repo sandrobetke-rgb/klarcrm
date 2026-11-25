@@ -86,7 +86,7 @@ function Summary() {
 }
 
 // WUN-0001: Prüfergebnis per Klick (bei „nicht in Ordnung“ Beschreibung Pflicht), Freigabe neuer Wünsche nur durch Admin
-function QuickActions({ r, onDone }) {
+function QuickActions({ r, onDone }) {   // onDone = Liste neu laden, Filter bleiben stehen (REV03-06)
   const { isAdmin, canWrite } = useAuth()
   const [bad, setBad] = useState(false)
   const [text, setText] = useState('')
@@ -113,9 +113,8 @@ function QuickActions({ r, onDone }) {
 }
 
 export default function Changes() {
-  const [rev, setRev] = useState(0)
   return (
-    <ListPage key={rev} title="Änderungswünsche & Prüfprotokoll" subtitle="Testrückmeldungen (REV01 ff.) und neue Wünsche – erfassen, umsetzen, prüfen, abhaken"
+    <ListPage title="Änderungswünsche & Prüfprotokoll" subtitle="Testrückmeldungen (REV01 ff.) und neue Wünsche – erfassen, umsetzen, prüfen, abhaken"
       path="/changes" entityLabel="Änderungswunsch" fields={fields} defaultSort="code" limit={200}
       newDefaults={{ kind: 'Wunsch', priority: 'mittel', status: 'eingereicht' }}
       toForm={(r) => ({ ...r, kind: kindLabel(r.kind), phase: r.phase ? String(r.phase) : '' })}
@@ -131,7 +130,7 @@ export default function Changes() {
         { key: 'status', label: 'Status', sort: 'status', render: (r) => <Badge tone={st(r.status).tone}>{st(r.status).label}</Badge> },
         { key: 'solution', label: 'Umsetzung', render: (r) => <small className="clamp-3">{r.solution || '–'}</small> },
         { key: 'tested_at', label: 'Geprüft', render: (r) => (r.tested_at ? <small>{new Date(r.tested_at).toLocaleDateString('de-DE')}<br />{r.tested_by}</small> : '–') },
-        { key: 'act', label: '', render: (r) => <QuickActions r={r} onDone={() => setRev((x) => x + 1)} /> },
+        { key: 'act', label: '', render: (r, reload) => <QuickActions r={r} onDone={reload} /> },
       ]} />
   )
 }

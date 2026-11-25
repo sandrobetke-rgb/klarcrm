@@ -104,6 +104,7 @@ function Report({ d, saved, comment, setComment, editable, onSaveComment }) {
               <div className="goal-sub"><strong>{pct(t.pct)}</strong> des Jahresziels erreicht · Soll bis Ende {MONTHS[d.month - 1]}: {keur(t.expected)} · es fehlen noch <strong>{keur(Math.max(t.gap, 0))}</strong>
                 {t.light && <> <Badge tone={LIGHT[t.light][0]}>● {LIGHT[t.light][1]}</Badge></>}</div>
               <Progress value={t.achieved} max={t.target} mark={t.expected} />
+              {t.summed && <small className="muted">Jahresziel = Summe der Ziele je Vertriebler (kein eigenes Gesamtziel hinterlegt)</small>}
             </div>
             {t.one_time_target ? <div className="goal-side">
               <div className="small muted">Werkzeug- und Einmalumsatz</div>

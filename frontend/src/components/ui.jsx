@@ -97,6 +97,23 @@ const toLocalInput = (iso) => {
 /**
  * Generisches Formular. fields: [{name, label, type, options, required, span, dependsOn}]
  */
+// REV03-06: Auswahlliste mit „Eigene Eingabe …“ statt Browser-Vorschlagsliste (die klappte oft nicht auf)
+export function ComboSelect({ id, value, options, required, onChange }) {
+  const v = value ?? ''
+  const [custom, setCustom] = useState(v !== '' && !options.includes(v))
+  return (
+    <div className="combo-select">
+      <select id={id} required={required && !custom} value={custom ? '__custom' : v}
+        onChange={(e) => { if (e.target.value === '__custom') { setCustom(true); onChange('') } else { setCustom(false); onChange(e.target.value) } }}>
+        <option value="">– bitte wählen –</option>
+        {options.map((o) => <option key={o} value={o}>{o}</option>)}
+        <option value="__custom">Eigene Eingabe …</option>
+      </select>
+      {custom && <input value={v} required={required} autoFocus placeholder="eigenen Text eingeben" onChange={(e) => onChange(e.target.value)} />}
+    </div>
+  )
+}
+
 export function EntityForm({ fields, initial, onSubmit, onCancel, onDelete, submitLabel = 'Speichern' }) {
   // Felder mit scale (z. B. Faktor 0,3 als 30 %) werden skaliert angezeigt und zurückgerechnet gespeichert
   const [values, setValues] = useState(() => {
@@ -153,9 +170,7 @@ export function EntityForm({ fields, initial, onSubmit, onCancel, onDelete, subm
             )
           } else if (f.type === 'combo') {
             // Vorauswahl mit freier Eingabe (z. B. Branche)
-            input = <><input id={id} list={`${id}-list`} value={v ?? ''} required={f.required} autoComplete="off"
-              onChange={(e) => set(f.name, e.target.value)} placeholder="auswählen oder eingeben" />
-              <datalist id={`${id}-list`}>{f.options.map((o) => <option key={o} value={o} />)}</datalist></>
+            input = <ComboSelect id={id} value={v} options={f.options} required={f.required} onChange={(x) => set(f.name, x)} />
           } else if (f.type === 'textarea') {
             input = <textarea id={id} rows={f.rows || 3} value={v ?? ''} onChange={(e) => set(f.name, e.target.value)} />
           } else if (f.type === 'checkbox') {

@@ -52,11 +52,6 @@ export default function Inquiries() {
           <option value="">Wahrscheinlichkeit: alle</option>{PROB_CLASSES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}</select>
       </div>
       <ErrorBox error={error} />
-      {data?.items.length > 0 && <div className="prob-sums">{PROB_CLASSES.map((c) => {
-        const it = data.items.filter((o) => !CLOSED_STAGES.includes(o.stage) && c.test(o))
-        return <button key={c.value} className={`prob-sum ${prob === c.value ? 'on' : ''}`} onClick={() => setProb(prob === c.value ? '' : c.value)}>
-          <span>{c.label}</span><strong>{eur(it.reduce((s, o) => s + (o.amount || 0), 0))}</strong><small>{it.length} offene Anfragen · volles Volumen, nicht gewichtet</small></button>
-      })}</div>}
       <div className="card table-wrap">
         <table className="table">
           <thead><tr><th>Nr.</th><th>Projekt / Kunde</th><th>Phase</th><th className="num">Artikel</th><th>Entscheidung</th>
@@ -99,7 +94,8 @@ function Steps({ o }) {
     ['Entscheidung', calcs.length > 0 && o.undecided === 0],
     ['Artikelanalyse', live.length > 0 && live.every((c) => c.analysis_complete || c.decision === 'nicht_anbieten'), true],
     ['Kalkulation', live.length > 0 && live.every((c) => c.current_version > 1 || c.decision === 'nicht_anbieten')],
-    ['Freigabe', live.length > 0 && live.every((c) => !c.approval_reasons.length || c.is_approved)],
+    // REV03-03: Schritt „Freigabe“ nur, wenn eine Freigabe nötig ist (Workflow derzeit abgeschaltet)
+    ...(live.some((c) => c.approval_reasons.length || c.approval_status) ? [['Freigabe', live.every((c) => !c.approval_reasons.length || c.is_approved)]] : []),
     ['Angebot', !!q],
     ['Versendet', q && q.status !== 'entwurf'],
     ['Abschluss', CLOSED_STAGES.includes(o.stage)],
@@ -209,7 +205,7 @@ export function InquiryDetail() {
             {canWrite && o.calculations.length > 0 && !closed && <button className="btn btn-primary btn-sm" onClick={makeQuote}>
               {q ? (q.status === 'entwurf' ? 'Angebot aktualisieren' : 'Neue Revision erstellen') : 'Angebot erstellen'}</button>}
           </div>
-          {!q ? <p className="muted">Noch kein Angebot. Voraussetzung: alle Artikel entschieden; Freigabe nur bei Jahresumsatz bzw. Invest über der Schwelle. Rot markierte Punkte (z. B. Artikelanalyse) sollten erledigt sein, sperren aber nicht.</p> : (
+          {!q ? <p className="muted">Noch kein Angebot. „Angebot erstellen“ übernimmt alle Artikel, die nicht ausdrücklich „nicht angeboten“ sind. Rot markierte Punkte (z. B. Artikelanalyse) sollten erledigt sein, sperren aber nicht.</p> : (
             <dl className="kv">
               <dt>Angebot</dt><dd><Link to={`/angebote/${q.id}`}><strong>{q.number}</strong></Link> · {quoteStatus(q.status)} · {eur(q.net_total)} netto</dd>
               <dt>Versendet</dt><dd>{q.sent_at ? fmtDate(q.sent_at) : 'noch nicht – im Angebot Status „versendet“ setzen, dann startet die Verfolgung'}</dd>

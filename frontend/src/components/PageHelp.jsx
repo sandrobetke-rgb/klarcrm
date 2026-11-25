@@ -11,7 +11,7 @@ const HELP = [
     'Teure Zukaufteile bei Bedarf per Haken in die Nebenkalkulation nehmen; Jahresabschläge und Vorserienpreis unten eintragen.',
     'Rechts stehen Preis, Kalkulationsschema und CO₂ – live. Mit „Version speichern“ (mit Änderungsnotiz) wird der Stand festgeschrieben.',
     'Reihenfolge: 1 Artikelanalyse → Entscheidung (oben) → 2 Kalkulation. Was noch fehlt (Entscheidung, Artikelanalyse, Marge), steht rot unter „Noch offen“ – es sperrt aber nichts.',
-    'Freigabe (Vier-Augen-Prinzip) nur bei Jahresumsatz bzw. Invest über der Schwelle (Parameter, Standard 500 T€ / 350 T€): Empfänger wählen → „Freigabe anfordern“ – die Person bekommt Benachrichtigung und Aufgabe. Danach „Angebot der Anfrage erstellen“.',
+    'Angebot: „Angebot der Anfrage erstellen“ – noch nicht entschiedene Artikel werden dabei automatisch „angeboten“. Der Freigabe-Workflow ist derzeit abgeschaltet (Stammdaten › Parameter).',
     'Weitere Reiter: Lebensweg, Dokumente, Anrufe, Versionen (Vergleich), Nachkalkulation, Protokoll.',
   ]],
   ['/preisliste/aenderungen/', 'Preisänderung', 'Alle Artikel, die von einer Material- oder VK-Preisänderung betroffen sind – je Artikel kennzeichnen.', [
@@ -24,10 +24,10 @@ const HELP = [
     'Materialpreise: „Neuer Preis“ eingeben → sofort Liste der betroffenen Artikel mit Δ je Preiseinheit und Jahreseffekt; „Übernehmen“ legt einen Vorgang an. Monatlich: „Import Materialpreise“ mit Vorschau.',
     'Preisänderungen: alle Vorgänge mit Stand der Kennzeichnung. Formel: Δ = (neu − Basis €/kg) × Gewicht/1000 × Preiseinheit × (1 + MGK %).',
   ]],
-  ['/anfragen/', 'Anfrage / Projekt', 'Ein Vorgang je Kundenanfrage: Artikel, Entscheidung, Artikelanalyse, Kalkulation, Freigabe, Angebot, Verfolgung – die Schrittleiste zeigt, was als Nächstes dran ist.', [
+  ['/anfragen/', 'Anfrage / Projekt', 'Ein Vorgang je Kundenanfrage: Artikel, Entscheidung, Artikelanalyse, Kalkulation, Angebot, Verfolgung – die Schrittleiste zeigt, was als Nächstes dran ist.', [
     '„+ Artikel / Kalkulation“ legt je Artikel eine Kalkulation unter dieser Anfrage an (optional mit Werten eines anderen Artikels).',
     'Je Artikel entscheiden: anbieten · nicht anbieten (mit Grund) · anderer Standort · Sonstiges. Kalkulieren geht auch vorher; spätestens zum Angebot muss jeder Artikel entschieden sein.',
-    'Artikelanalyse vollständig = alle Prüfpunkte bewertet + Machbarkeit gewählt. Unvollständiges steht rot in der Tabelle, sperrt aber nicht. Freigabe nur über der Umsatz- bzw. Invest-Schwelle – die Spalte zeigt, bei wem sie liegt.',
+    'Artikelanalyse vollständig = alle Prüfpunkte bewertet + Machbarkeit gewählt. Unvollständiges steht rot in der Tabelle, sperrt aber nicht. Der Freigabe-Workflow ist derzeit abgeschaltet; beim Erstellen des Angebots werden offene Artikel automatisch „angeboten“.',
     '„Angebot erstellen“: ein Angebot je Anfrage mit allen angebotenen Artikeln (Pos. 1, 1.1 Werkzeug, 1.2 Sonstiges, 1.3 CO₂). Danach im Angebot Status „versendet“ → Verfolgung startet (5 Arbeitstage, Ampel).',
   ]],
   ['/anfragen', 'Anfragen & Projekte', 'Alle Kundenanfragen und Leads mit Phase, offener Entscheidung, Angebot und Verfolgungsampel.', [

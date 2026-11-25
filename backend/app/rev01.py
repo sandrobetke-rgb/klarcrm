@@ -293,6 +293,46 @@ ITEMS = [
      "Kalkulationsliste breiter anzeigen. In der Beschaffung erscheint unter Bezeichnung z. B. „Pipeline mit allen Anfragen …“.", U,
      "Listen nutzen die volle Breite. Der Vorschlag kam vom Browser (frühere Eingaben) – Browser-Vorschläge in Formularen abgeschaltet. "
      "Beschaffung: Kalkulation per Auswahl statt interner ID.", "Kalkulationsliste bei 1440 px ohne Querscrollen; Beschaffung anlegen → keine Vorschläge.", "Kap. 13.4"),
+    # ---------------------------------------------------------------- REV03: Testrunde 3 (25.11.2026)
+    ("REV03-01", "Pipeline / Anfragen", "fehler", "hoch", 2, "Pipeline und Anfragen: Fehler 500 nach Update auf v1.30",
+     "Die Pipeline ist leer, Fehler 500 (Test REV01-P01, P05).", U,
+     "Neue Ja/Nein-Spalte blieb in Altdaten leer → Listen brachen ab. Beim Start werden leere Ja/Nein-Werte gefüllt (Hotfix v1.30.1).",
+     "Pipeline und Anfragen öffnen → Karten/Zeilen sichtbar, kein Fehler.", "Kap. 13.5"),
+    ("REV03-02", "Angebot", "fehler", "hoch", 2, "Angebot lässt sich nicht erstellen",
+     "Man kann keine Angebote erstellen (Test REV01-P04, P07, P08, MB-02).", U,
+     "Ursache war die fehlende Entscheidung je Artikel. „Angebot der Anfrage erstellen“ setzt offene Artikel jetzt automatisch auf „anbieten“.",
+     "Anfrage mit nicht entschiedenem Artikel → „Angebot erstellen“ → Angebot entsteht, Artikel „angeboten (automatisch)“. Danach P04, P06, P08, MB-02 prüfen.", "Kap. 13.5"),
+    ("REV03-03", "Freigabe", "wunsch", "hoch", 2, "Freigabe-Workflow vorerst abschalten",
+     "Freigabe zunächst rausnehmen, bis alles funktioniert (WUN-0004, Test REV01-F01, REV02-02).", U,
+     "Parameter „Freigabe-Workflow aktiv“ (Stammdaten › Parameter), Standard 0 = aus: keine Freigabegründe, keine Sperre. Großprojekt-Markierung bleibt.",
+     "Großprojekt-Kalkulation öffnen → keine Freigabeleiste; Angebot erstellen geht.", "Kap. 13.5"),
+    ("REV03-04", "Artikelanalyse", "fehler", "hoch", 2, "Artikelanalyse lässt sich nicht speichern",
+     "Man kann in der Artikelanalyse nichts speichern (Test REV01-P03).", U,
+     "Der Knopf stand ganz unten rechts unter der Maschinenliste. Jetzt Speicherleiste oben, gelb bei ungespeicherten Änderungen.",
+     "Artikelanalyse öffnen → Länge ändern → Leiste gelb → „Analyse speichern“ → „✓ gespeichert“.", "Kap. 13.5"),
+    ("REV03-05", "Monatsbericht", "fehler", "mittel", 2, "Vertriebsziel eingegeben, aber nicht sichtbar",
+     "Vertriebsziel kann eingegeben werden, ist aber nicht sichtbar – auch in der Tabelle (Test REV01-D05).", U,
+     "Ziele je Vertriebler ohne Gesamtziel wurden nicht berücksichtigt. Jetzt gilt deren Summe als Jahresziel (Bericht und Startseite); alle Vertriebler mit Ziel stehen in der Tabelle.",
+     "Nur Ziele je Vertriebler anlegen → Monatsbericht und Startseite zeigen Ziel = Summe.", "Kap. 13.5"),
+    ("REV03-06", "Allgemein", "fehler", "mittel", 2, "Auswahl springt zurück; Branchen nicht zu sehen",
+     "Nach i. O. springt die Auswahl zurück; Branchen werden nicht angezeigt (Test REV01-S01).", U,
+     "Änderungswünsche: Filter bleiben nach i. O./n. i. O. stehen. Branche (und andere Felder mit eigener Eingabe): Auswahlliste mit „Eigene Eingabe …“.",
+     "Änderungswünsche filtern → i. O. klicken → Filter bleibt. Firma bearbeiten → Branche als Liste.", "Kap. 13.5"),
+    ("REV03-07", "Protokoll", "wunsch", "mittel", 2, "SuperUser fürs Protokoll zurücknehmen",
+     "REV02-07 soll vorerst nicht umgesetzt werden – bitte zurücknehmen.", U,
+     "SuperUser-Regeln und das Feld in der Benutzerverwaltung entfernt; Protokoll bleibt ausgeblendet (REV02-10).",
+     "Benutzer bearbeiten → kein SuperUser-Feld.", "Kap. 13.5"),
+    ("REV03-08", "Artikelanalyse", "wunsch", "hoch", 2, "Schließkraft nach F&R-Faustformel 0,55 t/cm²",
+     "Formeln prüfen: ich rechne cm Länge × cm Breite × 0,55 (Test REV02-04).", U,
+     "Schließkraft = Fläche × Fachzahl × 0,55 t/cm² (Parameter); Literatur bestätigt 3–5,5 kN/cm² → 0,55 ist das sichere Ende. Werkstoffbezogen nur noch als Option.",
+     "Länge 600, Breite 130, Fachzahl 1 → 780 cm² × 0,55 = 429 t.", "Kap. 13.5"),
+    ("REV03-09", "Angebot", "wunsch", "hoch", 2, "Wahrscheinlichkeit als eigene Einschätzung am Angebot",
+     "Es soll nur anzeigen, wie wahrscheinlich ich es sehe, dass ein Angebot an uns vergeben wird (Test REV02-05).", U,
+     "Feld im Angebot (10–90 % oder nicht eingeschätzt), Spalte und Filter in der Angebotsliste; keine Summen, keine Gewichtung.",
+     "Angebot öffnen → 75 % wählen → Angebotsliste zeigt 75 %, Filter 75 % findet es.", "Kap. 13.5"),
+    ("WUN-0004", "Freigabe", "wunsch", "hoch", 2, "Freigabeprozess",
+     "Freigabe zunächst einmal wieder rausnehmen, bis alles funktioniert – Sperrung durch fehlende Freigabe raus.", U,
+     "Umgesetzt mit REV03-03: Freigabe-Workflow per Parameter abgeschaltet.", "siehe REV03-03", "Kap. 13.5"),
     ("WUN-0001", "Änderungswünsche", "wunsch", "niedrig", 2, "In Änderungswünschen",
      "In den Änderungswünschen sollte man per Klick angeben können, ob eine Änderung erfolgreich war, wenn nicht muss man dieses beschreiben. "
      "Auch von wem Änderungswünsche gemeldet werden, sollte automatisch gefüllt sein. Änderungswünsche können nur durch einen Admin freigegeben werden.", U,
@@ -304,6 +344,8 @@ ITEMS = [
 
 
 def _ver(code: str, phase) -> str:
+    if code.startswith("REV03") or code == "WUN-0004":
+        return "1.31"
     if code.startswith("REV02") or code == "WUN-0001":
         return "1.28"
     if code.startswith("MB-"):

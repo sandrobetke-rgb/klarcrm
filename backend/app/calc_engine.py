@@ -67,6 +67,8 @@ DEFAULT_SETTINGS = {
     "space_cost_m2_year": 90.0,     # Raumkosten €/m² und Jahr (Herleitung Maschinenstundensatz)
     "energy_price_kwh": 0.20,       # Strompreis €/kWh (Herleitung Maschinenstundensatz)
     "escalation_threshold_pct": 5.0,  # Preisgleitung: Anpassung ab Materialpreisänderung ± %
+    "approval_enabled": 0,          # REV03-03: Freigabe-Workflow (Vier-Augen) 0 = aus, 1 = an – vorerst aus
+    "clamp_t_per_cm2": 0.55,         # REV03-08: F&R-Standard Schließkraft je cm² projizierter Fläche (≙ 550 bar)
     "approval_min_margin_pct": 3.0,  # Marge darunter → rote Markierung (seit REV02 kein Freigabegrund mehr)
     "transport_pct": 2.0,           # Transport pauschal % auf HK (wenn Details unbekannt)
     "big_revenue_threshold": 500000.0,  # Großprojekt + Freigabe: Jahresumsatz ab … € (REV02-01)

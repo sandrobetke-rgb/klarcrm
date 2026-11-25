@@ -171,6 +171,7 @@ class OpportunityUpdate(OpportunityBase):
     name: str | None = None
     stage: Stage | None = None
     amount: float | None = None
+    probability_estimated: bool | None = None   # False = Einschätzung zurücknehmen („nicht eingeschätzt“)
 
 
 class OpportunityOut(ORM, OpportunityBase):
@@ -294,6 +295,7 @@ class QuoteOut(ORM, QuoteBase):
     last_contact_at: datetime | None = None
     last_contact_note: str | None = None
     followup: dict | None = None
+    probability: int | None = None
     account: AccountRef | None = None
     contact: ContactRef | None = None
     opportunity: OpportunityRef | None = None

@@ -227,6 +227,19 @@ export default function QuoteEditor() {
         {awardAsk && <AwardDialog quote={q} onCancel={() => { setAwardAsk(false); if (['angenommen', 'teilweise'].includes(q.status) && !['angenommen', 'teilweise'].includes(orig)) set('status', orig) }}
           beforeSave={() => save({ status: ['angenommen', 'teilweise'].includes(orig) ? orig : (orig === 'entwurf' ? 'versendet' : orig), _return: true })}
           onDone={(res) => { setAwardAsk(false); setOrig(res.status); setQ(res); setSaved(true); setNotice(res.status === 'teilweise' ? 'Teilauftrag erfasst – nur die beauftragten Artikel zählen als Neuumsatz.' : 'Auftrag erfasst.') }} />}
+        {/* REV03-09: eigene Einschätzung, wie wahrscheinlich uns das Angebot vergeben wird (keine Rechnung, keine Gewichtung) */}
+        {!isNew && q.opportunity && !['angenommen', 'teilweise', 'abgelehnt', 'ersetzt'].includes(orig) && <div className="no-print prob-bar">
+          <label className="inline-label">Wahrscheinlichkeit, dass wir den Auftrag bekommen
+            <select disabled={!canWrite} value={q.probability ?? ''} onChange={async (e) => {
+              const p = e.target.value === '' ? null : Number(e.target.value)
+              await api.patch(`/opportunities/${q.opportunity.id}`, p == null ? { probability: 0, probability_estimated: false } : { probability: p })
+              setQ({ ...q, probability: p })
+            }}>
+              <option value="">– nicht eingeschätzt –</option>
+              {[10, 25, 50, 75, 90].map((p) => <option key={p} value={p}>{p} %</option>)}
+            </select></label>
+          <small className="muted">deine Einschätzung – das Angebotsvolumen bleibt unverändert</small>
+        </div>}
         {!isNew && canWrite && ['versendet', 'teilweise'].includes(orig) && !awardAsk && <div className="no-print award-bar">
           <button className="btn btn-primary btn-sm" onClick={() => setAwardAsk(true)}>{orig === 'teilweise' ? 'Auftrag ergänzen …' : 'Auftrag erhalten …'}</button>
           <small className="muted">beauftragte Artikel auswählen, Rest verloren / andere Variante / offen</small></div>}

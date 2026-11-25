@@ -19,7 +19,8 @@ export default function Quotes() {
       onRowClick={(r) => nav(`/angebote/${r.id}`)}
       rowClass={(r) => { const x = quoteSplit(r); return bigReasons(t, x.revenue, x.invest).length ? 'row-big' : '' }}
       extraActions={canWrite && <button className="btn btn-primary" onClick={() => nav('/angebote/neu')}>+ Angebot erstellen</button>}
-      filters={[{ name: 'status', label: 'Status', options: QUOTE_STATUS }]}
+      filters={[{ name: 'status', label: 'Status', options: QUOTE_STATUS },
+        { name: 'probability', label: 'Wahrscheinlichkeit', options: [...[90, 75, 50, 25, 10].map((p) => ({ value: String(p), label: `${p} %` })), { value: 'keine', label: 'nicht eingeschätzt' }] }]}
       columns={[
         { key: 'number', label: 'Nummer', render: (r) => <strong>{r.number}</strong> },
         { key: 'title', label: 'Titel', render: (r) => { const x = quoteSplit(r); return <>{r.title}<div><BigBadge revenue={x.revenue} invest={x.invest} /></div></> } },
@@ -29,6 +30,7 @@ export default function Quotes() {
         // REV01-P04: Status und letzte Rückmeldung / Anruf direkt in der Liste
         { key: 'followup', label: 'Verfolgung', render: (r) => (r.followup ? <LightBadge light={r.followup.light} due={r.followup.due_at} /> : '–') },
         { key: 'last_contact', label: 'Letzte Rückmeldung', render: (r) => (r.last_contact_at ? <small>{fmtDate(r.last_contact_at)} · {r.last_contact_note}</small> : <small className="muted">–</small>) },
+        { key: 'probability', label: 'Wahrsch.', className: 'num', render: (r) => (r.probability != null ? `${r.probability} %` : '–') },
         { key: 'net_total', label: 'Netto', className: 'num', render: (r) => eur(r.net_total, true) },
       ]}
     />

@@ -48,7 +48,7 @@ def _f(v, d=0.0):
         return float(d)
 
 
-def analyze(a: dict, inputs: dict, machines: list[dict]) -> dict:
+def analyze(a: dict, inputs: dict, machines: list[dict], clamp_t_cm2: float = 0.55) -> dict:
     a = a or {}
     family = a.get("material_family") or "sonstiges"
     md = {**MATERIAL_DEFAULTS.get(family, MATERIAL_DEFAULTS["sonstiges"]), **{k: a[k] for k in (
@@ -61,8 +61,14 @@ def analyze(a: dict, inputs: dict, machines: list[dict]) -> dict:
     area_estimated = area <= 0 and area_est > 0
     if area_estimated:
         area = area_est
-    safety = _f(a.get("safety_factor"), 1.2)
-    force_t = area * cav * _f(md["pressure_bar"]) / 1000 * safety
+    # REV03-08: F&R-Standard Schließkraft = Fläche × Fachzahl × 0,55 t/cm² (≙ 550 bar, oberes, sicheres Ende
+    # der üblichen 3–5,5 kN/cm²). Optional werkstoffbezogen: Innendruck der Werkstoffgruppe × Sicherheitsfaktor.
+    by_material = bool(a.get("use_material_pressure"))
+    safety = _f(a.get("safety_factor"), 1.2) if by_material else 1.0
+    if by_material:
+        force_t = area * cav * _f(md["pressure_bar"]) / 1000 * safety
+    else:
+        force_t = area * cav * clamp_t_cm2
     wall_max, wall_min = _f(a.get("wall_max_mm")), _f(a.get("wall_min_mm"))
     flow = _f(a.get("flow_length_mm"))
     flow_ratio = flow / wall_min if wall_min > 0 else 0
@@ -125,8 +131,10 @@ def analyze(a: dict, inputs: dict, machines: list[dict]) -> dict:
         "material_family": family, "material_params": md,
         "clamping_force_t": round(force_t, 1),
         "projected_area_cm2": round(area, 1), "projected_area_est_cm2": area_est, "area_estimated": area_estimated,
-        "force_formula": f"{area:,.1f} cm² × Fachzahl {cav:g} × {_f(md['pressure_bar']):g} bar ÷ 1000 × {safety:g} = {force_t:,.1f} t"
+        "force_formula": (f"{area:,.1f} cm² × Fachzahl {cav:g} × {_f(md['pressure_bar']):g} bar ÷ 1000 × {safety:g} = {force_t:,.1f} t"
+                          if by_material else f"{area:,.1f} cm² × Fachzahl {cav:g} × {clamp_t_cm2:g} t/cm² = {force_t:,.1f} t")
                          .replace(",", "X").replace(".", ",").replace("X", "."),
+        "force_by_material": by_material,
         "flow_ratio": round(flow_ratio, 1), "flow_ratio_max": md["flow_ratio_max"],
         "cooling_time_s": round(cooling, 1), "cycle_estimate_s": round(cycle_est, 1),
         "suitable_machines": [{"id": m["id"], "name": m["name"], "number": m.get("number"),

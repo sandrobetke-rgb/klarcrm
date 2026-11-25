@@ -63,10 +63,6 @@ def update_user(user_id: int, data: s.UserUpdate, db: Session = Depends(get_db),
             raise HTTPException(403, "Nur der SuperUser kann dieses Recht vergeben")
         if user.id == admin.id and not values["is_superuser"]:
             raise HTTPException(400, "Erst einem anderen Benutzer das SuperUser-Recht geben, dann bei dir entfernen")
-    changed = {k for k in ("password", "email", "active", "role") if k in values and values[k] is not None
-               and (k == "password" or (str(values[k]).lower() if k == "email" else values[k]) != getattr(user, k))}
-    if user.is_superuser and not admin.is_superuser and changed:
-        raise HTTPException(403, "Das Konto des SuperUsers kann nur er selbst ändern")
     if user.id == admin.id and (values.get("role", "admin") != "admin" or values.get("active") is False):
         raise HTTPException(400, "Du kannst dir selbst die Admin-Rechte nicht entziehen")
     if pw := values.pop("password", None):

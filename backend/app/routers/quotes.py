@@ -65,12 +65,21 @@ def list_quotes(
     status: str | None = None,
     account_id: int | None = None,
     opportunity_id: int | None = None,
+    probability: str | None = None,
     limit: int = Query(50, le=500),
     offset: int = 0,
     db: Session = Depends(get_db),
     _: User = Depends(can_read),
 ):
     stmt = select(Quote)
+    # REV03-09: Filter nach Einschätzung „wie wahrscheinlich wird uns das Angebot vergeben“ (z. B. 75 oder „keine“)
+    if probability:
+        from ..models import Opportunity  # noqa: PLC0415
+        stmt = stmt.join(Opportunity, Quote.opportunity_id == Opportunity.id, isouter=probability == "keine")
+        if probability == "keine":
+            stmt = stmt.where(or_(Opportunity.id.is_(None), Opportunity.probability_estimated.isnot(True)))
+        else:
+            stmt = stmt.where(Opportunity.probability_estimated.is_(True), Opportunity.probability == int(probability))
     if q:
         stmt = stmt.where(or_(Quote.number.ilike(f"%{q}%"), Quote.title.ilike(f"%{q}%")))
     if status:

@@ -790,9 +790,12 @@ def inquiry_quote(db: Session, opp: Opportunity, user: User, lang: str = "de") -
     """Ein Angebot je Anfrage mit n Positionen (REV01-P04). Entwurf → aktualisieren, versendet → Revision -R1."""
     from ..inquiry import RELEASED, calcs_of, quote_of  # noqa: PLC0415
     calcs = calcs_of(db, opp.id)
-    open_ = [c for c in calcs if c.decision is None and c.status not in ("verloren", "kein_angebot")]
-    if open_:
-        raise HTTPException(409, "Noch nicht entschieden (anbieten / nicht anbieten): " + ", ".join(f"{c.number} {c.article_name}" for c in open_))
+    # REV03-02: Wer das Angebot erstellt, hat entschieden – offene Artikel werden „angeboten“ (mit Vermerk)
+    for c in calcs:
+        if c.decision is None and c.status not in ("verloren", "kein_angebot", "zurueckgestellt"):
+            c.decision, c.decision_note = "anbieten", "automatisch beim Erstellen des Angebots"
+            c.decided_by_id, c.decided_at = user.id, datetime.now(timezone.utc)
+    db.flush()
     offer = [c for c in calcs if c.decision in RELEASED and c.status not in ("verloren", "kein_angebot", "zurueckgestellt")]
     if not offer:
         raise HTTPException(409, "Kein Artikel zum Anbieten freigegeben")
@@ -969,6 +972,12 @@ def delete_postcalc(calc_id: int, pc_id: int, db: Session = Depends(get_db), _: 
 
 
 # ---------------- Artikelanalyse ----------------
+def _clamp(db: Session) -> float:
+    """F&R-Standard Schließkraft je cm² (Parameter clamp_t_per_cm2, Standard 0,55 t/cm²)."""
+    row = db.get(CalcSettings, 1)
+    return float(((row.data or {}) if row else {}).get("clamp_t_per_cm2") or DEFAULT_SETTINGS["clamp_t_per_cm2"])
+
+
 def _machines(db: Session) -> list[dict]:
     return [{"id": m.id, "name": m.name, "number": m.number, "clamping_force_t": m.clamping_force_t,
              "hourly_rate": m.hourly_rate, "active": m.active}
@@ -977,7 +986,7 @@ def _machines(db: Session) -> list[dict]:
 
 @router.post("/analyze")
 def analyze_preview(data: dict, db: Session = Depends(get_db), _: User = Depends(can_read)):
-    return analyze(data.get("analysis") or {}, data.get("inputs") or {}, _machines(db))
+    return analyze(data.get("analysis") or {}, data.get("inputs") or {}, _machines(db), _clamp(db))
 
 
 @calcs.put("/{calc_id}/analysis", response_model=s.CalcDetail)
@@ -987,7 +996,7 @@ def save_analysis(calc_id: int, data: dict, db: Session = Depends(get_db), _: Us
         raise HTTPException(404, "Kalkulation nicht gefunden")
     ver = next((v for v in calc.versions if v.version_no == calc.current_version), None)
     calc.analysis = data.get("analysis") or {}
-    calc.analysis_results = analyze(calc.analysis, ver.inputs if ver else {}, _machines(db))
+    calc.analysis_results = analyze(calc.analysis, ver.inputs if ver else {}, _machines(db), _clamp(db))
     if data.get("feasibility") in FEASIBILITY_LABELS:
         calc.feasibility = data["feasibility"]
     if "feasibility_note" in data:

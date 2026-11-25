@@ -521,6 +521,8 @@ def _approval_reasons(self):
     """Gründe für eine Freigabe im Vier-Augen-Prinzip (REV02-01): nur noch Umsatz und Invest über der Schwelle.
     Alles andere (Artikelanalyse, Marge, Entscheidung) ist eine rote Markierung, blockiert aber nichts."""
     st = _settings(self)
+    if not float(st.get("approval_enabled") or 0):   # REV03-03: Freigabe vorerst abgeschaltet
+        return []
     r = []
     if (self.annual_revenue or 0) >= st["big_revenue_threshold"]:
         r.append(f"Jahresumsatz ≥ {_te(st['big_revenue_threshold'])}")
@@ -599,6 +601,17 @@ def _quote_followup(self):
 
 Activity.light = property(_activity_light)
 Quote.followup = property(_quote_followup)
+
+
+def _quote_probability(self):
+    """REV03-09: Einschätzung, wie wahrscheinlich uns das Angebot vergeben wird (liegt an der Anfrage, 1 Anfrage = 1 Angebot)."""
+    o = self.opportunity
+    if not o or not o.probability_estimated:
+        return None
+    return o.probability
+
+
+Quote.probability = property(_quote_probability)
 Calculation.is_approved = property(_is_approved)
 
 

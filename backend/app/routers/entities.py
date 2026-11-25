@@ -37,6 +37,8 @@ def opportunity_before_save(values: dict, obj):
     closed_p = {"gewonnen": 100, "verloren": 0, "nicht_angeboten": 0}
     if stage in closed_p and stage != old_stage:
         values["probability"] = closed_p[stage]
+    elif values.get("probability_estimated") is False:
+        values["probability"] = 0          # Einschätzung zurückgenommen
     elif values.get("probability") is not None and (obj is None or values["probability"] != obj.probability):
         values["probability_estimated"] = True
     if "probability" in values and values["probability"] is None:

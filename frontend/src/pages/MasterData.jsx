@@ -80,7 +80,9 @@ const PARAMS = [
   ['CO₂-Fußabdruck', [['co2_grid_kg_kwh', 'Strom-Emissionsfaktor', 'kg CO₂e/kWh'], ['co2_scope1_kg_h', 'Werksemissionen Scope 1', 'kg CO₂e/Masch.-h'],
     ['co2_masterbatch_kg_kg', 'Masterbatch', 'kg CO₂e/kg'], ['co2_transport_kg_tkm', 'Lkw-Transport', 'kg CO₂e/tkm']]],
   ['Stundensatz & Preisgleitung', [['space_cost_m2_year', 'Raumkosten', '€/m² · Jahr'], ['energy_price_kwh', 'Strompreis', '€/kWh'], ['machine_rate_pct', 'Faktor Maschinenstundensatz (Standort ohne eigene Maschine)', '%'], ['escalation_threshold_pct', 'Preisgleitklausel ab Änderung', '± %']]],
-  ['Großprojekte (Hervorhebung)', [['big_revenue_threshold', 'Ab Jahresumsatz', '€'], ['big_invest_threshold', 'Ab Invest (Einmalkosten)', '€']]],
+  ['Großprojekte und Freigabe', [['big_revenue_threshold', 'Großprojekt ab Jahresumsatz', '€'], ['big_invest_threshold', 'Großprojekt ab Invest (Einmalkosten)', '€'],
+    ['approval_enabled', 'Freigabe-Workflow aktiv (0 = aus, 1 = an) – bei „an“ brauchen Großprojekte eine Freigabe', '0/1']]],
+  ['Artikelanalyse', [['clamp_t_per_cm2', 'Schließkraft je cm² projizierter Fläche (F&R-Standard)', 't/cm²']]],
   ['Nachkalkulation (Ampel)', [['nk_green_pct', 'Grün bis Abweichung Selbstkosten', '%'], ['nk_red_pct', 'Rot ab Abweichung Selbstkosten', '%']]],
 ]
 

@@ -13,7 +13,6 @@ const fields = (isNew, sites = []) => [
   { name: 'password', label: isNew ? 'Passwort' : 'Neues Passwort', type: 'password', required: isNew, hint: isNew ? 'Mind. 8 Zeichen' : 'Leer lassen = unverändert' },
   ...(sites.length ? [{ name: 'site_id', label: 'Standard-Standort (für neue Kalkulationen)', type: 'select', options: siteOptions(sites) }] : []),
   { name: 'can_approve', label: 'Darf Kalkulationen freigeben (Vier-Augen-Prinzip)', type: 'checkbox' },
-  { name: 'is_superuser', label: 'SuperUser – darf das Protokoll öffnen (nur durch den SuperUser übertragbar)', type: 'checkbox', superOnly: true },
   { name: 'active', label: 'Aktiv', type: 'checkbox' },
 ]
 

@@ -4,8 +4,8 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.30 |
-| **Stand** | 24.11.2026 |
+| **Dokumentversion** | 1.31 |
+| **Stand** | 25.11.2026 |
 | **Status** | Testphase auf internem Server F&R; ausgeliefert v1.24; Preisliste (Kap. 14) und Monatsbericht (Kap. 15) vorgemerkt für das nächste große Update (Kap. 13.0) |
 
 > Dieses Lastenheft wird bei **jeder** Änderung am System mitgezogen. Neue Anforderungen, geänderte Regeln und
@@ -660,6 +660,7 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.28 | 23.11.2026 | **Testrunde Phase 2 – Korrekturen REV02** (Kap. 13.4): Freigabe nur noch ab Jahresumsatz 500 T€ oder Invest 350 T€, alles andere (Artikelanalyse, Entscheidung, Marge) als rote Markierung; Freigabe an eine gewählte Person mit Benachrichtigung, Aufgabe und Block „Freigaben für mich“; Entscheidung sperrt das Speichern nicht mehr (Pflicht erst zum Angebot); Artikelanalyse mit geschätzter projizierter Fläche (Länge × Breite) und Formeln, Werkstoffkennwerte eingeklappt, Vollständigkeit als Liste; Wahrscheinlichkeit nur von Hand, Filter und Summen ohne Gewichtung; Schichtmodell setzt Stunden sofort; Änderungswünsche: Prüfergebnis per Klick, Melder automatisch, Freigabe neuer Wünsche nur durch Administrator. Entscheidung Varianten (REV01-C07): eigene, verknüpfte Kalkulationen. |
 | 1.29 | 24.11.2026 | **REV02-07 … 09:** Protokoll nur für den SuperUser mit erneuter Passworteingabe; Uhrzeit (Zeitzone Europe/Berlin, Zeitfelder mit Zeitzone); Listen in voller Breite, keine Browser-Vorschläge in Formularen, Kalkulationsauswahl in der Beschaffung. |
 | 1.30 | 24.11.2026 | **REV02-10:** Protokoll-Anzeige in diesem Update für alle Benutzer ausgeblendet (Aufzeichnung läuft weiter, Schalter im Code). **Auslieferung v1.30** (Kap. 13.0) ohne Phase 3, Update-Anleitung `docs/UPDATE_v1.30.md`. |
+| 1.31 | 25.11.2026 | **Testrunde 3 – Korrekturen REV03** (Kap. 13.5): Hotfix Fehler 500 (v1.30.1); Angebot ohne Entscheidungssperre; Freigabe-Workflow per Parameter abgeschaltet; Speicherleiste Artikelanalyse; Vertriebsziel als Summe der Einzelziele; Filter bleiben in Änderungswünschen; Auswahllisten mit eigener Eingabe; SuperUser zurückgenommen; Schließkraft 0,55 t/cm²; Wahrscheinlichkeit als Einschätzung am Angebot. Tests auf dem Update-Weg. |
 
 ## 13. Testrückmeldung REV01 (Nov. 2026) – Anforderungen und Umsetzung
 
@@ -680,7 +681,9 @@ Umsetzung erfolgt in vier Phasen:
 |---|---|---|---|
 | v1.23 | 17.11.2026 | REV01 Phase 1 | ausgeliefert |
 | v1.24 | 19.11.2026 | REV01 Phase 2 (Anfrage → Angebot → Pipeline) | ausgeliefert |
-| **v1.30** | 24.11.2026 | Preisliste (Kap. 14, PRL-01) · Monatsbericht mit Vertriebsziel (Kap. 15, MB-01, REV01-D05, REV01-R01) · Teilbeauftragung (Kap. 15.4, MB-02) · Korrekturen Testrunde Phase 2 (Kap. 13.4, REV02-01 … 10, WUN-0001) | **aktuelle Auslieferung** – Git-Zweig `release-v1.30`, ZIP mit Anleitung `docs/UPDATE_v1.30.md` |
+| v1.30 | 24.11.2026 | Preisliste (Kap. 14, PRL-01) · Monatsbericht mit Vertriebsziel (Kap. 15, MB-01, REV01-D05, REV01-R01) · Teilbeauftragung (Kap. 15.4, MB-02) · Korrekturen Testrunde Phase 2 (Kap. 13.4, REV02-01 … 10, WUN-0001) | ausgeliefert – Fehler 500 in Pipeline/Anfragen nach dem Update (behoben in v1.30.1) |
+| v1.30.1 | 25.11.2026 | Hotfix REV03-01: Fehler 500 in Pipeline und Anfragen (leere Ja/Nein-Spalten in Altdaten) | ausgeliefert – Git-Zweig `release-v1.30.1` |
+| **v1.31** | 25.11.2026 | Korrekturen Testrunde 3 (Kap. 13.5, REV03-01 … 09) | **aktuelle Auslieferung** – Git-Zweig `release-v1.31`, Anleitung `docs/UPDATE_v1.31.md` |
 | nächstes Update | offen | REV01 Phase 3 (Kalkulationsblätter, Varianten) + jährliche Preisrunde (PRL-02) | in Arbeit |
 
 Die zunächst für ein gemeinsames großes Update zurückgehaltenen Stände (v1.25 … v1.30) werden auf Wunsch vom 24.11.2026
@@ -865,6 +868,38 @@ so streng halten (Unmut und Mehrarbeit) – stattdessen rot markieren, was fehlt
   frisch geladen (neue Rechte ohne Neuanmeldung).
 - Entscheidung zu REV01-C07 (Phase 3): **Varianten** (z. B. 2-fach / 4-fach Werkzeug) werden als eigene, miteinander
   verknüpfte Kalkulationen geführt; im Angebot wählbar und als Pos. 1 / 1a; beim Auftrag „andere Variante beauftragt“.
+
+
+### 13.5 Korrekturen aus der Testrunde 3 (REV03, 25.11.2026, v1.30.1 / v1.31)
+Grundlage: Testprotokoll „KlarCRM Test Phase 3“ und Änderungsprotokoll vom 25.11.2026. Lehre aus v1.30: Jede Auslieferung
+wird zusätzlich auf dem **Update-Weg** getestet (Datenbank des Vorgängerstands mit Daten → neuer Stand, alle Listen und
+Detailseiten), nicht nur mit frisch angelegten Testdaten.
+- REV03-01 (Hotfix v1.30.1) **Fehler 500 in Pipeline und Anfragen:** Neue Ja/Nein-Spalten blieben in Altdaten leer.
+  Beim Start werden leere Ja/Nein-Werte mit dem Standard gefüllt (`ensure_columns`), das Schema toleriert leere Werte.
+- REV03-02 **Angebot erstellen:** Wer „Angebot der Anfrage erstellen“ klickt, hat entschieden – noch nicht entschiedene
+  Artikel werden automatisch „angeboten“ (Vermerk „automatisch beim Erstellen des Angebots“). Ersetzt die Sperre aus REV02-03.
+- REV03-03 **Freigabe-Workflow abgeschaltet** (WUN-0004): Parameter `approval_enabled` (Stammdaten › Parameter ›
+  Großprojekte und Freigabe), Standard 0 = aus. Dann gibt es keine Freigabegründe und keine Sperre; die
+  Großprojekt-Markierung bleibt. Mit 1 gilt wieder REV02-01/02.
+- REV03-04 **Artikelanalyse speichern:** Speicherleiste oben (bleibt beim Scrollen stehen, gelb bei ungespeicherten
+  Änderungen); vorher stand der Knopf ganz unten rechts unter der Maschinenliste.
+- REV03-05 **Vertriebsziel:** Ohne eigenes Gesamtziel gilt die Summe der Ziele je Vertriebler (Monatsbericht und
+  Startseite, mit Hinweis); in der Tabelle stehen alle Vertriebler mit Ziel, auch ohne Gewinn.
+- REV03-06 **Bedienung:** Änderungswünsche – nach „i. O.“/„n. i. O.“ bleiben Filter stehen (vorher Neuladen mit
+  Zurücksetzen). Auswahlfelder mit eigener Eingabe (z. B. Branche) sind eine normale Auswahlliste mit „Eigene Eingabe …“
+  (die Browser-Vorschlagsliste klappte oft nicht auf).
+- REV03-07 **SuperUser fürs Protokoll zurückgenommen** (REV02-07): keine Sonderrechte, kein Feld in der
+  Benutzerverwaltung; das Protokoll bleibt ausgeblendet (REV02-10).
+- REV03-08 **Schließkraft F&R-Standard:** F = projizierte Fläche [cm²] × Fachzahl × 0,55 t/cm² (Parameter
+  `clamp_t_per_cm2`, ≙ 550 bar; Literatur: Werkzeuginnendruck je nach Kunststoff meist 3 … 5,5 kN/cm², d. h. 0,55 ist
+  das obere, sichere Ende). Optional „werkstoffbezogen rechnen“: Innendruck der Werkstoffgruppe × Sicherheitsfaktor.
+  Länge × Breite in mm ÷ 100 = cm² (wie L [cm] × B [cm]).
+- REV03-09 **Wahrscheinlichkeit = eigene Einschätzung am Angebot:** Feld „Wahrscheinlichkeit, dass wir den Auftrag
+  bekommen“ (–, 10, 25, 50, 75, 90 %) im Angebot, Spalte und Filter in der Angebotsliste. Keine Rechnung, keine
+  Gewichtung, keine Summen-Kacheln mehr (ersetzt REV02-05). Der Wert liegt an der Anfrage (1 Anfrage = 1 Angebot).
+- Offen (nächste Blöcke): WUN-0003 „direkt zur geänderten Stelle springen“; Zukaufteile mit Freitext → Stammdaten
+  (Block 1, Phase 3); Preisliste-Punkte (Umsatz Vorjahr automatisch, Teilgewicht aus Materialien, Pflege großer
+  Datenmengen) → Block 5.
 
 ## 14. Preisliste (lebende VK-Preisliste)
 

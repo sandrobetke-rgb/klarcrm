@@ -13,7 +13,7 @@ const FIELDS = [
   ['length_mm', 'Länge', 'mm'], ['width_mm', 'Breite', 'mm'], ['height_mm', 'Höhe', 'mm'],
   ['projected_area_cm2', 'Projizierte Fläche je Kavität (inkl. Anguss)', 'cm²'],
   ['wall_min_mm', 'Wandstärke min.', 'mm'], ['wall_max_mm', 'Wandstärke max.', 'mm'],
-  ['flow_length_mm', 'Längster Fließweg', 'mm'], ['safety_factor', 'Sicherheitsfaktor Schließkraft', ''],
+  ['flow_length_mm', 'Längster Fließweg', 'mm'],
   ['handling_time_s', 'Nebenzeit (Öffnen, Entformen)', 's'],
 ]
 const PARAMS = [
@@ -25,12 +25,12 @@ const PARAMS = [
 export default function ArticleAnalysis({ calc, setCalc }) {
   const { canWrite } = useAuth()
   const ver = calc.versions.find((v) => v.version_no === calc.current_version)
-  const [a, setA] = useState(() => ({ safety_factor: 1.2, handling_time_s: 4, checklist: {}, ...(calc.analysis || {}) }))
+  const [a, setA] = useState(() => ({ handling_time_s: 4, checklist: {}, ...(calc.analysis || {}) }))
   const [feas, setFeas] = useState(calc.feasibility || '')
   const [feasNote, setFeasNote] = useState(calc.feasibility_note || '')
   const [res, setRes] = useState(calc.analysis_results)
   const [error, setError] = useState(null)
-  const [saved, setSaved] = useState(false)
+  const [saved, setSaved] = useState(!!calc.analysis)
   const t = useRef()
 
   useEffect(() => {
@@ -58,6 +58,12 @@ export default function ArticleAnalysis({ calc, setCalc }) {
   return (
     <div className="calc-layout">
       <fieldset disabled={!canWrite} className="calc-fieldset">
+        {/* REV03-04: Speichern immer sichtbar oben (vorher nur ganz unten rechts unter der Maschinenliste) */}
+        {canWrite && <div className={`save-bar analysis-save ${saved ? '' : 'dirty'}`}>
+          <span>{saved ? '✓ Artikelanalyse gespeichert' : 'Artikelanalyse – Änderungen noch nicht gespeichert'}</span>
+          <span className="spacer" />
+          <button type="button" className="btn btn-primary" onClick={save}>💾 Analyse speichern</button>
+        </div>}
         <div className="card">
           <h3>Artikeldaten</h3>
           <div className="form-grid form-grid-3">
@@ -122,7 +128,12 @@ export default function ArticleAnalysis({ calc, setCalc }) {
             </div>
             {res?.issues.map((i) => <div key={i} className="error-box small">✖ {i}</div>)}
             {res?.hints.map((i) => <div key={i} className="warn-box">⚠ {i}</div>)}
-            {res?.force_formula && res.clamping_force_t > 0 && <div className="muted small">Schließkraft = Fläche × Fachzahl × Innendruck ÷ 1000 × Sicherheitsfaktor: {res.force_formula}</div>}
+            {res?.force_formula && res.clamping_force_t > 0 && <div className="muted small">{res.force_by_material
+              ? 'Schließkraft = Fläche × Fachzahl × Innendruck ÷ 1000 × Sicherheitsfaktor'
+              : 'Schließkraft = Fläche × Fachzahl × F&R-Standard (t/cm², Parameter)'}: {res.force_formula}</div>}
+            <label className="check small" style={{ marginTop: 6 }}><input type="checkbox" checked={!!a.use_material_pressure}
+              onChange={(e) => set('use_material_pressure', e.target.checked)} /> werkstoffbezogen rechnen (Innendruck der Werkstoffgruppe × Sicherheitsfaktor)</label>
+            {a.use_material_pressure && numIn('safety_factor', 'Sicherheitsfaktor Schließkraft', '')}
             {res && <div className="muted small">Checkliste: {res.critical_checks} kritisch · {res.open_checks} offen</div>}
           </div>
 

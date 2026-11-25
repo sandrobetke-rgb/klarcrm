@@ -130,8 +130,11 @@ def test_artikelanalyse_schliesskraft():
     r = analyze({"material_family": "PA6", "projected_area_cm2": 40, "wall_max_mm": 2.5, "wall_min_mm": 1.5,
                  "flow_length_mm": 120}, {"cavities": 4, "machine_id": 1},
                 [{"id": 1, "name": "110t", "clamping_force_t": 110}, {"id": 2, "name": "250t", "clamping_force_t": 250}])
-    assert r["clamping_force_t"] == pytest.approx(40 * 4 * 500 / 1000 * 1.2, abs=0.1)
+    # REV03-08: F&R-Standard 0,55 t/cm² je projizierter Fläche und Kavität (ohne Zusatzfaktor)
+    assert r["clamping_force_t"] == pytest.approx(40 * 4 * 0.55, abs=0.1)
     assert r["suitable_machines"][0]["id"] == 1
+    rm = analyze({"material_family": "PA6", "projected_area_cm2": 40, "use_material_pressure": True}, {"cavities": 4}, [])
+    assert rm["clamping_force_t"] == pytest.approx(40 * 4 * 500 / 1000 * 1.2, abs=0.1)   # werkstoffbezogen (Option)
     a = 0.12
     cool = 2.5 ** 2 / (math.pi ** 2 * a) * math.log(8 / math.pi ** 2 * (270 - 80) / (160 - 80))
     assert r["cooling_time_s"] == pytest.approx(cool, abs=0.1)
