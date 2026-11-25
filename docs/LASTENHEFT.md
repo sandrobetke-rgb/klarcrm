@@ -680,7 +680,8 @@ Umsetzung erfolgt in vier Phasen:
 |---|---|---|---|
 | v1.23 | 17.11.2026 | REV01 Phase 1 | ausgeliefert |
 | v1.24 | 19.11.2026 | REV01 Phase 2 (Anfrage → Angebot → Pipeline) | ausgeliefert |
-| **v1.30** | 24.11.2026 | Preisliste (Kap. 14, PRL-01) · Monatsbericht mit Vertriebsziel (Kap. 15, MB-01, REV01-D05, REV01-R01) · Teilbeauftragung (Kap. 15.4, MB-02) · Korrekturen Testrunde Phase 2 (Kap. 13.4, REV02-01 … 10, WUN-0001) | **aktuelle Auslieferung** – Git-Zweig `release-v1.30`, ZIP mit Anleitung `docs/UPDATE_v1.30.md` |
+| v1.30 | 24.11.2026 | Preisliste (Kap. 14, PRL-01) · Monatsbericht mit Vertriebsziel (Kap. 15, MB-01, REV01-D05, REV01-R01) · Teilbeauftragung (Kap. 15.4, MB-02) · Korrekturen Testrunde Phase 2 (Kap. 13.4, REV02-01 … 10, WUN-0001) | ausgeliefert |
+| **v1.30.1** | 25.11.2026 | Hotfix REV03-01: Pipeline und Anfragenliste brachen nach dem Update mit Fehler 500 ab (neue Ja/Nein-Spalte in Altdaten leer). Leere Ja/Nein-Werte werden beim Start mit dem Standard gefüllt. | **aktuelle Auslieferung** – Git-Zweig `release-v1.30.1` |
 | nächstes Update | offen | REV01 Phase 3 (Kalkulationsblätter, Varianten) + jährliche Preisrunde (PRL-02) | in Arbeit |
 
 Die zunächst für ein gemeinsames großes Update zurückgehaltenen Stände (v1.25 … v1.30) werden auf Wunsch vom 24.11.2026

@@ -46,3 +46,15 @@ def ensure_columns():
                 ddl = col.type.compile(dialect=engine.dialect)
                 conn.execute(text(f'ALTER TABLE {table.name} ADD COLUMN "{col.name}" {ddl}'))
                 print(f"DB: Spalte {table.name}.{col.name} ergänzt")
+                have.add(col.name)
+            # REV03-01: Spalten mit festem Standardwert (z. B. Ja/Nein-Felder) dürfen in Altdaten nicht leer bleiben –
+            # leere Werte machen sonst ganze Listen unlesbar (Fehler 500 in Pipeline/Anfragen nach dem Update auf v1.30).
+            for col in table.columns:
+                d = col.default
+                if col.name not in have or col.primary_key or d is None or not getattr(d, "is_scalar", False):
+                    continue
+                if not isinstance(d.arg, bool):   # bewusst nur Ja/Nein-Felder: dort heißt leer nie „unbekannt“
+                    continue
+                res = conn.execute(text(f'UPDATE {table.name} SET "{col.name}" = :v WHERE "{col.name}" IS NULL'), {"v": d.arg})
+                if res.rowcount:
+                    print(f"DB: {res.rowcount} leere Werte in {table.name}.{col.name} mit Standard {d.arg!r} gefüllt")
