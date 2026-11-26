@@ -330,6 +330,10 @@ ITEMS = [
      "Es soll nur anzeigen, wie wahrscheinlich ich es sehe, dass ein Angebot an uns vergeben wird (Test REV02-05).", U,
      "Feld im Angebot (10–90 % oder nicht eingeschätzt), Spalte und Filter in der Angebotsliste; keine Summen, keine Gewichtung.",
      "Angebot öffnen → 75 % wählen → Angebotsliste zeigt 75 %, Filter 75 % findet es.", "Kap. 13.5"),
+    ("REV04-01", "Allgemein", "wunsch", "mittel", 3, "Softwarestand anzeigen: Version und wann eingespielt",
+     "Auf die Seite muss, wann zuletzt aktualisiert wurde (Softwarestand).", "freigegeben",
+     "Vorgemerkt fürs nächste Update: „KlarCRM v… · eingespielt am …“ unten in der Seitenleiste, auf der Anmeldeseite und unter "
+     "Dokumentation; Datum = erster Start der neuen Version.", "Nach dem Update: neue Versionsnummer mit heutigem Datum; Server-Neustart ändert das Datum nicht.", "Kap. 13.5"),
     ("WUN-0004", "Freigabe", "wunsch", "hoch", 2, "Freigabeprozess",
      "Freigabe zunächst einmal wieder rausnehmen, bis alles funktioniert – Sperrung durch fehlende Freigabe raus.", U,
      "Umgesetzt mit REV03-03: Freigabe-Workflow per Parameter abgeschaltet.", "siehe REV03-03", "Kap. 13.5"),
