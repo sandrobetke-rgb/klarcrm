@@ -173,7 +173,7 @@ textarea { resize: vertical; }
 .act-type { color: var(--text-2); white-space: nowrap; }
 
 /* Kanban */
-.board { display: grid; grid-template-columns: repeat(6, minmax(190px, 1fr)); gap: 12px; overflow-x: auto; padding-bottom: 8px; align-items: start; }
+.board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(145px, 1fr); gap: 8px; overflow-x: auto; padding-bottom: 8px; align-items: start; }  /* REV04-03: alle Phasen in einer Reihe (vorher fest 6 Spalten → „Verloren“ rutschte in Reihe 2) */
 .board-col { background: #eceef2; border-radius: var(--radius); padding: 10px; min-height: 300px; border: 2px dashed transparent; }
 .board-col.drag-over { border-color: var(--brand); background: var(--brand-50); }
 .board-col-head { padding: 2px 4px 10px; border-bottom: 3px solid var(--series-1); margin-bottom: 10px; }

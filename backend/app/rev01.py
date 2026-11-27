@@ -338,6 +338,11 @@ ITEMS = [
      "Abhaken ist verwirrend: alte und neue Punkte durcheinander, Nachbessern gemischt; eins nach dem anderen prüfen können.", "freigegeben",
      "Vorgemerkt fürs nächste Update: Seite „Prüfen“ mit den Punkten des aktuellen Updates in Prüfreihenfolge, „Hinspringen“, "
      "✓ passt / ✗ passt nicht; ersetzte Altpunkte automatisch „überholt“. Vorher Vorschau zur Freigabe.", "", "Kap. 13.5"),
+    ("REV04-03", "Pipeline", "fehler", "hoch", 2, "Pipeline: Spalte „Verloren“ fehlt",
+     "Die Pipeline hat den Reiter „Verloren“ nicht mehr (Test REV01-P05).", "in_arbeit",
+     "Ursache: Board fest auf 6 Spalten, seit Phase 2 (v1.24) gibt es 7 Phasen → „Verloren“ rutschte in eine zweite Reihe unter „Lead“. "
+     "Jetzt alle Phasen in einer Reihe (bei schmalem Bildschirm seitlich scrollbar). Kommt mit v1.32.",
+     "Pipeline öffnen → rechts außen Spalte „Verloren“; Karte hineinziehen → Dialog mit Pflichtgrund (REV01-P05).", "Kap. 13.5"),
     ("WUN-0004", "Freigabe", "wunsch", "hoch", 2, "Freigabeprozess",
      "Freigabe zunächst einmal wieder rausnehmen, bis alles funktioniert – Sperrung durch fehlende Freigabe raus.", U,
      "Umgesetzt mit REV03-03: Freigabe-Workflow per Parameter abgeschaltet.", "siehe REV03-03", "Kap. 13.5"),
