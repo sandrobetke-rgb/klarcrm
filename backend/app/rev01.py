@@ -334,6 +334,10 @@ ITEMS = [
      "Auf die Seite muss, wann zuletzt aktualisiert wurde (Softwarestand).", "freigegeben",
      "Vorgemerkt fürs nächste Update: „KlarCRM v… · eingespielt am …“ unten in der Seitenleiste, auf der Anmeldeseite und unter "
      "Dokumentation; Datum = erster Start der neuen Version.", "Nach dem Update: neue Versionsnummer mit heutigem Datum; Server-Neustart ändert das Datum nicht.", "Kap. 13.5"),
+    ("REV04-02", "Änderungswünsche", "wunsch", "hoch", 3, "Prüfseite je Update: nur aktuelle Punkte, Reihenfolge, Hinspringen, abhaken",
+     "Abhaken ist verwirrend: alte und neue Punkte durcheinander, Nachbessern gemischt; eins nach dem anderen prüfen können.", "freigegeben",
+     "Vorgemerkt fürs nächste Update: Seite „Prüfen“ mit den Punkten des aktuellen Updates in Prüfreihenfolge, „Hinspringen“, "
+     "✓ passt / ✗ passt nicht; ersetzte Altpunkte automatisch „überholt“. Vorher Vorschau zur Freigabe.", "", "Kap. 13.5"),
     ("WUN-0004", "Freigabe", "wunsch", "hoch", 2, "Freigabeprozess",
      "Freigabe zunächst einmal wieder rausnehmen, bis alles funktioniert – Sperrung durch fehlende Freigabe raus.", U,
      "Umgesetzt mit REV03-03: Freigabe-Workflow per Parameter abgeschaltet.", "siehe REV03-03", "Kap. 13.5"),

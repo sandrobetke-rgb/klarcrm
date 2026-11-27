@@ -684,7 +684,7 @@ Umsetzung erfolgt in vier Phasen:
 | v1.30 | 24.11.2026 | Preisliste (Kap. 14, PRL-01) · Monatsbericht mit Vertriebsziel (Kap. 15, MB-01, REV01-D05, REV01-R01) · Teilbeauftragung (Kap. 15.4, MB-02) · Korrekturen Testrunde Phase 2 (Kap. 13.4, REV02-01 … 10, WUN-0001) | ausgeliefert – Fehler 500 in Pipeline/Anfragen nach dem Update (behoben in v1.30.1) |
 | v1.30.1 | 25.11.2026 | Hotfix REV03-01: Fehler 500 in Pipeline und Anfragen (leere Ja/Nein-Spalten in Altdaten) | ausgeliefert – Git-Zweig `release-v1.30.1` |
 | **v1.31** | 25.11.2026 | Korrekturen Testrunde 3 (Kap. 13.5, REV03-01 … 09) | **aktuelle Auslieferung** – Git-Zweig `release-v1.31`, Anleitung `docs/UPDATE_v1.31.md` |
-| nächstes Update | offen | REV04-01 Softwarestand anzeigen; Block 1 Kalkulation (Phase 3) nach Bewertung durch die GF | vorgemerkt |
+| nächstes Update | offen | REV04-02 Prüfseite je Update (wichtig) · REV04-01 Softwarestand anzeigen · danach Block 1 Kalkulation (Phase 3) nach Bewertung durch die GF | vorgemerkt |
 
 Die zunächst für ein gemeinsames großes Update zurückgehaltenen Stände (v1.25 … v1.30) werden auf Wunsch vom 24.11.2026
 **ohne Phase 3** als v1.30 ausgeliefert, damit auf dem Server der aktuelle Teststand läuft. Phase 3 folgt als eigenes Update.
@@ -901,6 +901,14 @@ Detailseiten), nicht nur mit frisch angelegten Testdaten.
   Anmeldeseite und Dokumentation zeigen „KlarCRM v… · eingespielt am TT.MM.JJJJ, hh:mm“. Das Datum merkt sich das CRM
   beim ersten Start einer neuen Version (= Zeitpunkt des Einspielens, nicht des Bauens); ein Neustart ändert es nicht.
   Klick zeigt die Auslieferungen (Kap. 13.0). Wirkt auf keinen anderen Bereich.
+- **Vorgemerkt fürs nächste Update – REV04-02 Prüfseite je Update** (freigegeben 27.11.2026, GF: „sehr wichtig“):
+  Die Änderungswünsche-Liste ist zum Prüfen ungeeignet (alte und neue Punkte gemischt, keine Reihenfolge, Stelle im CRM
+  muss gesucht werden). Neue Seite „Prüfen“: nur die Punkte des aktuellen Updates (Zähler „x von y geprüft“), eine Karte
+  je Punkt in Prüfreihenfolge mit „Was tun“ und „Was herauskommen muss“, Knopf „Hinspringen“ zur richtigen Stelle
+  (erledigt WUN-0003), große Knöpfe „✓ passt“ / „✗ passt nicht“ (dann Text Pflicht), danach nächster Punkt; am Ende
+  „v1.xx abgenommen“. Ersetzte Altpunkte erhalten beim Update den Status **„überholt“** mit Verweis auf den neuen Punkt
+  und verschwinden aus „Nachbessern“. Vor dem Bau: Vorschau als Bild zur Freigabe.
+- Übergangsweise je Update eine einseitige Prüfliste (PDF) mit Reihenfolge und Erwartung.
 - Offen (nächste Blöcke): WUN-0003 „direkt zur geänderten Stelle springen“; Zukaufteile mit Freitext → Stammdaten
   (Block 1, Phase 3); Preisliste-Punkte (Umsatz Vorjahr automatisch, Teilgewicht aus Materialien, Pflege großer
   Datenmengen) → Block 5.
