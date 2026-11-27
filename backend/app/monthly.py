@@ -85,8 +85,22 @@ def goal_status(db: Session, today: date | None = None) -> dict | None:
     ann = _sum(rows, "annual")
     days = (date(today.year, 12, 31) - date(today.year, 1, 1)).days + 1
     exp = t.revenue_target * today.timetuple().tm_yday / days
+    frac = today.timetuple().tm_yday / days
+    users = {u.id: u.name for u in db.scalars(select(User)).all()}
+    tg = db.scalars(select(SalesTarget).where(SalesTarget.year == today.year, SalesTarget.user_id.is_not(None))).all()
+    owners = []
+    for uid in sorted({r["owner_id"] for r in rows if r["owner_id"]} | {x.user_id for x in tg}):
+        ut = next((x for x in tg if x.user_id == uid), None)
+        a = _sum([r for r in rows if r["owner_id"] == uid], "annual")
+        tv = ut.revenue_target if ut and ut.revenue_target else None
+        owners.append({"user_id": uid, "name": users.get(uid, "?"), "achieved": a, "target": tv,
+                       "pct": round(100 * a / tv, 1) if tv else None,
+                       "light": target_light(a, tv * frac) if tv else None})
+    owners.sort(key=lambda o: -o["achieved"])
     return {"year": today.year, "target": t.revenue_target, "achieved": ann, "count": len(rows),
-            "pct": round(100 * ann / t.revenue_target, 1), "expected": round(exp, 2), "light": target_light(ann, exp)}
+            "pct": round(100 * ann / t.revenue_target, 1), "expected": round(exp, 2), "light": target_light(ann, exp),
+            "expected_pct": round(100 * frac, 1), "gap": round(max(t.revenue_target - ann, 0), 2),
+            "summed": bool(getattr(t, "summed", False)), "owners": owners}
 
 
 def compute(db: Session, year: int, month: int) -> dict:

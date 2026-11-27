@@ -4,9 +4,9 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.31 |
-| **Stand** | 25.11.2026 |
-| **Status** | Testphase auf internem Server F&R; ausgeliefert v1.24; Preisliste (Kap. 14) und Monatsbericht (Kap. 15) vorgemerkt für das nächste große Update (Kap. 13.0) |
+| **Dokumentversion** | 1.32 |
+| **Stand** | 27.11.2026 |
+| **Status** | Testphase auf internem Server F&R; aktuelle Auslieferung v1.32 (Kap. 13.0) |
 
 > Dieses Lastenheft wird bei **jeder** Änderung am System mitgezogen. Neue Anforderungen, geänderte Regeln und
 > umgesetzte Punkte werden in der Änderungshistorie (Kapitel 12) dokumentiert. Anforderungen tragen eine feste ID
@@ -661,6 +661,7 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.29 | 24.11.2026 | **REV02-07 … 09:** Protokoll nur für den SuperUser mit erneuter Passworteingabe; Uhrzeit (Zeitzone Europe/Berlin, Zeitfelder mit Zeitzone); Listen in voller Breite, keine Browser-Vorschläge in Formularen, Kalkulationsauswahl in der Beschaffung. |
 | 1.30 | 24.11.2026 | **REV02-10:** Protokoll-Anzeige in diesem Update für alle Benutzer ausgeblendet (Aufzeichnung läuft weiter, Schalter im Code). **Auslieferung v1.30** (Kap. 13.0) ohne Phase 3, Update-Anleitung `docs/UPDATE_v1.30.md`. |
 | 1.31 | 25.11.2026 | **Testrunde 3 – Korrekturen REV03** (Kap. 13.5): Hotfix Fehler 500 (v1.30.1); Angebot ohne Entscheidungssperre; Freigabe-Workflow per Parameter abgeschaltet; Speicherleiste Artikelanalyse; Vertriebsziel als Summe der Einzelziele; Filter bleiben in Änderungswünschen; Auswahllisten mit eigener Eingabe; SuperUser zurückgenommen; Schließkraft 0,55 t/cm²; Wahrscheinlichkeit als Einschätzung am Angebot. Tests auf dem Update-Weg. |
+| 1.32 | 27.11.2026 | **REV04** (Kap. 13.6): Prüfseite je Update mit Status „überholt“ (REV04-02), Softwarestand mit Einspieldatum (REV04-01), Pipeline mit allen 7 Phasen in einer Reihe (REV04-03), Vertriebsziel-Block auf der Startseite (REV04-04, ersetzt REV03-05), Freigabe-Schalter als Häkchen (REV04-05), Schrittleiste „Kalkulation“ (REV04-06); Menü scrollt bei niedrigen Bildschirmen. Getestet auf dem Update-Weg v1.24 → v1.30 → v1.30.1 → v1.31 → v1.32. |
 
 ## 13. Testrückmeldung REV01 (Nov. 2026) – Anforderungen und Umsetzung
 
@@ -683,8 +684,9 @@ Umsetzung erfolgt in vier Phasen:
 | v1.24 | 19.11.2026 | REV01 Phase 2 (Anfrage → Angebot → Pipeline) | ausgeliefert |
 | v1.30 | 24.11.2026 | Preisliste (Kap. 14, PRL-01) · Monatsbericht mit Vertriebsziel (Kap. 15, MB-01, REV01-D05, REV01-R01) · Teilbeauftragung (Kap. 15.4, MB-02) · Korrekturen Testrunde Phase 2 (Kap. 13.4, REV02-01 … 10, WUN-0001) | ausgeliefert – Fehler 500 in Pipeline/Anfragen nach dem Update (behoben in v1.30.1) |
 | v1.30.1 | 25.11.2026 | Hotfix REV03-01: Fehler 500 in Pipeline und Anfragen (leere Ja/Nein-Spalten in Altdaten) | ausgeliefert – Git-Zweig `release-v1.30.1` |
-| **v1.31** | 25.11.2026 | Korrekturen Testrunde 3 (Kap. 13.5, REV03-01 … 09) | **aktuelle Auslieferung** – Git-Zweig `release-v1.31`, Anleitung `docs/UPDATE_v1.31.md` |
-| nächstes Update | offen | REV04-02 Prüfseite je Update (wichtig) · REV04-01 Softwarestand anzeigen · danach Block 1 Kalkulation (Phase 3) nach Bewertung durch die GF | vorgemerkt |
+| v1.31 | 25.11.2026 | Korrekturen Testrunde 3 (Kap. 13.5, REV03-01 … 09) | ausgeliefert, geprüft und abgenommen 27.11.2026 |
+| **v1.32** | 27.11.2026 | Prüfseite je Update, Softwarestand, Vertriebsziel auf der Startseite, Pipeline mit allen Phasen, Kleinigkeiten (Kap. 13.6, REV04-01 … 06) | **aktuelle Auslieferung** – Git-Zweig `release-v1.32`, Anleitung `docs/UPDATE_v1.32.md` |
+| nächstes Update | offen | Block 1 Kalkulation (Phase 3: REV01-C01 … C10, Varianten als verknüpfte Kalkulationen, Zukaufteile mit Freitext) nach Abnahme v1.32 | vorgemerkt |
 
 Die zunächst für ein gemeinsames großes Update zurückgehaltenen Stände (v1.25 … v1.30) werden auf Wunsch vom 24.11.2026
 **ohne Phase 3** als v1.30 ausgeliefert, damit auf dem Server der aktuelle Teststand läuft. Phase 3 folgt als eigenes Update.
@@ -912,6 +914,38 @@ Detailseiten), nicht nur mit frisch angelegten Testdaten.
 - Offen (nächste Blöcke): WUN-0003 „direkt zur geänderten Stelle springen“; Zukaufteile mit Freitext → Stammdaten
   (Block 1, Phase 3); Preisliste-Punkte (Umsatz Vorjahr automatisch, Teilgewicht aus Materialien, Pflege großer
   Datenmengen) → Block 5.
+
+### 13.6 Update v1.32 – Prüfseite, Softwarestand, Vertriebsziel (REV04, 27.11.2026)
+
+Freigegeben durch die GF am 26./27.11.2026 nach Abnahme von v1.31. Wirkt nur auf Startseite, Pipeline-Ansicht,
+Änderungswünsche/Prüfen und Anzeige – keine Änderung an Kalkulation, Anfrage-Logik oder Preisliste.
+
+- REV04-01 **Softwarestand:** unten in der Seitenleiste, in der Fußzeile jeder Seite, auf der Anmeldeseite und unter
+  Dokumentation steht „KlarCRM v1.32 · eingespielt am TT.MM.JJJJ, hh:mm“. Das Datum merkt sich das CRM beim **ersten
+  Start** einer neuen Version (= Einspielen durch die IT); ein Neustart ändert es nicht. Klick zeigt die Auslieferungen
+  (Tabelle wie 13.0). Schnittstelle `GET /api/version` (ohne Anmeldung).
+- REV04-02 **Prüfseite je Update** (Menü System › Prüfen, mit Zahl der offenen Punkte): nur die Punkte des aktuellen
+  Updates in Prüfreihenfolge; je Punkt „Was geändert wurde“, „Was tun“, „Was herauskommen muss“, Knopf **Hinspringen**
+  (öffnet die Stelle im CRM; oben erscheint ein Hinweis „Prüfung läuft … ← zurück zur Prüfseite“ – erledigt WUN-0003),
+  große Knöpfe **✓ passt** / **✗ passt nicht** (Text Pflicht), Prüfer und Datum automatisch, „Ergebnis zurücksetzen“
+  bei Fehlklick. Zähler „x von y geprüft“. Sind alle Punkte „passt“, erklärt ein **Administrator** „v1.xx abgenommen“
+  (Name und Zeitpunkt werden gespeichert). Frühere Updates über Auswahl „Update“ einsehbar.
+  Neue Felder am Änderungswunsch: Was herauskommen muss, Prüfen mit Update, Prüfreihenfolge, Hinspringen, Überholt durch.
+  Neuer Status **„überholt“**: ersetzte Altpunkte werden beim Update einmalig umgestellt (nur wenn nicht schon geprüft
+  oder abgelehnt) und verweisen auf den neuen Punkt: REV01-P01 → REV03-01; REV01-F01, REV02-02 → REV03-03;
+  REV01-P03 → REV03-04; REV02-04 → REV03-08; REV01-D05 → REV03-05; REV01-P09, REV02-05 → REV03-09;
+  REV01-S01 → REV03-06; REV02-07 → REV03-07; REV03-05 → REV04-04. REV01-P05 (Verloren mit Pflichtgrund) wird nach
+  REV04-03 in v1.32 nachgeprüft.
+- REV04-03 **Pipeline:** alle 7 Phasen in einer Reihe (vorher fest 6 Spalten → „Verloren“ rutschte in Reihe 2);
+  bei schmalem Bildschirm seitlich scrollbar.
+- REV04-04 **Vertriebsziel auf der Startseite** (Nachbesserung REV03-05): breiter Block ganz oben – Erfüllungsgrad in %,
+  gewonnen seit 1.1., Jahresziel, Soll heute (anteilig nach Kalendertagen), Rest bis zum Ziel, Ampel mit Text,
+  Balken mit Soll-Marke, Zeile je Vertriebler (eigenes Ziel und Ampel, falls hinterlegt). Klick → Monatsbericht.
+  Ohne Ziel: Hinweis auf Monatsbericht › Vertriebsziele. Die frühere Ziel-Kachel entfällt („Gewonnen lfd. Jahr“ bleibt).
+- REV04-05 **Freigabe-Schalter als Häkchen** (Stammdaten › Parameter › Großprojekte und Freigabe), Wirkung unverändert.
+- REV04-06 **Schrittleiste der Anfrage:** „Kalkulation“ ist erledigt, sobald jeder angebotene Artikel eine berechnete
+  Kalkulation hat (Teilgewicht eingetragen oder schon eine 2. Version) – nicht erst ab Version 2.
+- Nebenbei: Das Menü scrollt bei niedrigen Bildschirmen selbst; Benutzer, Abmelden und Softwarestand bleiben sichtbar.
 
 ## 14. Preisliste (lebende VK-Preisliste)
 

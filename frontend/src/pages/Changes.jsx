@@ -15,6 +15,7 @@ export const CR_STATUS = [
   { value: 'nachbessern', label: 'Nachbessern', tone: 'critical' },
   { value: 'zurueckgestellt', label: 'Zurückgestellt', tone: 'neutral' },
   { value: 'abgelehnt', label: 'Abgelehnt', tone: 'neutral' },
+  { value: 'ueberholt', label: 'Überholt (ersetzt)', tone: 'neutral' },
 ]
 const KIND = [{ value: 'fehler', label: 'Fehler' }, { value: 'wunsch', label: 'Wunsch' }, { value: 'doku', label: 'Dokumentation' }]
 const kindLabel = (v) => KIND.find((k) => k.value === v)?.label || v || '–'
@@ -42,7 +43,11 @@ const fields = [
   { name: 'status', label: 'Status', type: 'select', required: true, options: CR_STATUS },
   { name: 'requested_by', label: 'Gemeldet von', hint: 'wird beim Anlegen automatisch mit dem angemeldeten Benutzer gefüllt' },
   { name: 'solution', label: 'Umsetzung (was wurde gelöst)', type: 'textarea', rows: 4, span: true },
-  { name: 'test_steps', label: 'Prüfanweisung', type: 'textarea', rows: 3, span: true },
+  { name: 'test_steps', label: 'Prüfanweisung (Was tun)', type: 'textarea', rows: 3, span: true },
+  { name: 'expected', label: 'Was herauskommen muss', type: 'textarea', rows: 3, span: true },
+  { name: 'check_version', label: 'Prüfen mit Update', hint: 'z. B. 1.32 – erscheint dann auf der Seite „Prüfen“' },
+  { name: 'check_link', label: 'Hinspringen (Seite im CRM)', hint: 'z. B. /pipeline' },
+  { name: 'superseded_by', label: 'Überholt durch' },
   { name: 'test_result', label: 'Prüfergebnis / Anmerkung', type: 'textarea', rows: 3, span: true, hint: 'Bei Status „Nachbessern“ bitte beschreiben, was noch nicht passt' },
   { name: 'tested_by', label: 'Geprüft von', hint: 'wird beim Prüfergebnis automatisch gesetzt' },
   { name: 'tested_at', label: 'Geprüft am', type: 'date' },
@@ -118,7 +123,7 @@ export default function Changes() {
       path="/changes" entityLabel="Änderungswunsch" fields={fields} defaultSort="code" limit={200}
       newDefaults={{ kind: 'Wunsch', priority: 'mittel', status: 'eingereicht' }}
       toForm={(r) => ({ ...r, kind: kindLabel(r.kind), phase: r.phase ? String(r.phase) : '' })}
-      top={(n) => <Summary key={n} />}
+      top={(n) => <><div className="info-box">Zum Prüfen eines Updates bitte die Seite <a href="/pruefen"><strong>Prüfen</strong></a> verwenden – dort stehen nur die Punkte des aktuellen Updates in der richtigen Reihenfolge.</div><Summary key={n} /></>}
       rowClass={(r) => (r.status === 'nachbessern' ? 'row-big' : '')}
       filters={[{ name: 'status', label: 'Status', options: CR_STATUS }, { name: 'phase', label: 'Phase', options: PHASES },
         { name: 'kind', label: 'Art', options: KIND }, { name: 'priority', label: 'Priorität', options: PRIO }]}
@@ -127,7 +132,7 @@ export default function Changes() {
         { key: 'title', label: 'Punkt', sort: 'title', render: (r) => <>{r.title}<br /><small className="muted">{r.area || '–'} · {kindLabel(r.kind)}</small></> },
         { key: 'priority', label: 'Prio', sort: 'priority', render: (r) => <Badge tone={r.priority === 'hoch' ? 'critical' : r.priority === 'mittel' ? 'warning' : 'neutral'}>{r.priority}</Badge> },
         { key: 'phase', label: 'Phase', sort: 'phase', className: 'num', render: (r) => r.phase || '–' },
-        { key: 'status', label: 'Status', sort: 'status', render: (r) => <Badge tone={st(r.status).tone}>{st(r.status).label}</Badge> },
+        { key: 'status', label: 'Status', sort: 'status', render: (r) => <><Badge tone={st(r.status).tone}>{st(r.status).label}</Badge>{r.superseded_by && <><br /><small className="muted">→ {r.superseded_by}</small></>}</> },
         { key: 'solution', label: 'Umsetzung', render: (r) => <small className="clamp-3">{r.solution || '–'}</small> },
         { key: 'tested_at', label: 'Geprüft', render: (r) => (r.tested_at ? <small>{new Date(r.tested_at).toLocaleDateString('de-DE')}<br />{r.tested_by}</small> : '–') },
         { key: 'act', label: '', render: (r, reload) => <QuickActions r={r} onDone={reload} /> },

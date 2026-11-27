@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { marked } from 'marked'
 import { api, downloadFile } from '../api'
 import { ErrorBox } from '../components/ui'
+import Version from '../components/Version'
 
 // Dokumentation im Programm (REV01-X02): Lastenheft und Benutzerbeschreibung lesen, Inhaltsverzeichnis, Suche, Word-Download
 const slug = (t) => t.toLowerCase().replace(/<[^>]+>/g, '').replace(/[^a-z0-9äöüß]+/g, '-').replace(/^-|-$/g, '')
@@ -35,7 +36,7 @@ export default function Docs() {
   return (
     <div className="page page-wide">
       <header className="page-head">
-        <div><h1>Dokumentation</h1><p className="muted">Benutzerbeschreibung und Lastenheft – immer auf dem Stand der installierten Version</p></div>
+        <div><h1>Dokumentation</h1><p className="muted">Benutzerbeschreibung und Lastenheft – immer auf dem Stand der installierten Version · Softwarestand <Version /></p></div>
         <div className="toolbar">
           <div className="seg">{list.map((d) => <button key={d.key} className={key === d.key ? 'on' : ''} onClick={() => setKey(d.key)}>{d.title}</button>)}</div>
           <input className="search" type="search" placeholder="Im Dokument suchen…" value={q} onChange={(e) => setQ(e.target.value)} />

@@ -81,7 +81,7 @@ const PARAMS = [
     ['co2_masterbatch_kg_kg', 'Masterbatch', 'kg CO₂e/kg'], ['co2_transport_kg_tkm', 'Lkw-Transport', 'kg CO₂e/tkm']]],
   ['Stundensatz & Preisgleitung', [['space_cost_m2_year', 'Raumkosten', '€/m² · Jahr'], ['energy_price_kwh', 'Strompreis', '€/kWh'], ['machine_rate_pct', 'Faktor Maschinenstundensatz (Standort ohne eigene Maschine)', '%'], ['escalation_threshold_pct', 'Preisgleitklausel ab Änderung', '± %']]],
   ['Großprojekte und Freigabe', [['big_revenue_threshold', 'Großprojekt ab Jahresumsatz', '€'], ['big_invest_threshold', 'Großprojekt ab Invest (Einmalkosten)', '€'],
-    ['approval_enabled', 'Freigabe-Workflow aktiv (0 = aus, 1 = an) – bei „an“ brauchen Großprojekte eine Freigabe', '0/1']]],
+    ['approval_enabled', 'Freigabe-Workflow eingeschaltet – Großprojekte brauchen dann eine Freigabe', 'check']]],
   ['Artikelanalyse', [['clamp_t_per_cm2', 'Schließkraft je cm² projizierter Fläche (F&R-Standard)', 't/cm²']]],
   ['Nachkalkulation (Ampel)', [['nk_green_pct', 'Grün bis Abweichung Selbstkosten', '%'], ['nk_red_pct', 'Rot ab Abweichung Selbstkosten', '%']]],
 ]
@@ -177,7 +177,7 @@ function Sites({ tabs, onChange }) {
 
 export default function MasterData() {
   const { user } = useAuth()
-  const [tab, setTab] = useState('machines')
+  const [tab, setTab] = useState(() => new URLSearchParams(window.location.search).get('tab') || 'machines')
   const [sites, setSites] = useState([])
   const [rev, setRev] = useState(0)
   const bump = () => setRev((x) => x + 1)
@@ -290,8 +290,10 @@ function Params({ tabs }) {
             <div key={title} className="card">
               <h3>{title}</h3>
               <div className="form-grid">
-                {fields.map(([k, l, u, sc = 1]) => (
-                  <div key={k} className="field"><label>{l} <span className="unit">{u}</span></label>
+                {fields.map(([k, l, u, sc = 1]) => (u === 'check'
+                  ? <label key={k} className="field check-field"><input type="checkbox" checked={!!Number(vals[k])}
+                      onChange={(e) => { setMsg(null); setVals({ ...vals, [k]: e.target.checked ? 1 : 0 }) }} /> {l}</label>
+                  : <div key={k} className="field"><label>{l} <span className="unit">{u}</span></label>
                     <NumInput type="number" step="any" className="num" value={vals[k] === '' || vals[k] == null ? '' : Math.round(vals[k] * sc * 1e6) / 1e6}
                       onChange={(e) => { setMsg(null); setVals({ ...vals, [k]: e.target.value === '' ? '' : Number(e.target.value) / sc }) }} /></div>
                 ))}

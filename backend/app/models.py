@@ -455,6 +455,24 @@ def _invest(self):
 Calculation.invest = property(_invest)
 
 
+def _is_calculated(self) -> bool:
+    """REV04-06: Artikel ist kalkuliert, sobald die aktuelle Version ein Teilgewicht hat (oder es schon eine 2. Version gibt).
+    Die beim Anlegen automatisch erzeugte leere Erstkalkulation zählt nicht."""
+    if (self.current_version or 0) > 1:
+        return True
+    v = next((x for x in reversed(self.versions) if x.version_no == self.current_version), None)
+    if not v:
+        return False
+    i = v.inputs or {}
+    try:
+        return float(i.get("part_weight_g") or 0) > 0 or any(float(c.get("part_weight_g") or 0) > 0 for c in (i.get("components") or []))
+    except (TypeError, ValueError, AttributeError):
+        return False
+
+
+Calculation.is_calculated = property(_is_calculated)
+
+
 def _last_light(self):
     return self.post_calcs[-1].traffic_light if self.post_calcs else None
 
@@ -749,7 +767,7 @@ class ChangeRequest(TimestampMixin, Base):
     description: Mapped[str | None] = mapped_column(Text)                   # Wortlaut der Anforderung
     priority: Mapped[str] = mapped_column(String(10), default="mittel")      # hoch | mittel | niedrig
     phase: Mapped[int | None] = mapped_column(Integer)                      # Umsetzungsphase 1–4
-    status: Mapped[str] = mapped_column(String(20), default="offen")        # offen | in_arbeit | umgesetzt | geprueft | nachbessern | abgelehnt | zurueckgestellt
+    status: Mapped[str] = mapped_column(String(20), default="offen")        # … | ueberholt (REV04-02)
     solution: Mapped[str | None] = mapped_column(Text)                      # Umsetzung (was wurde wie gelöst)
     req_ids: Mapped[str | None] = mapped_column(String(200))                # Lastenheft-IDs
     version: Mapped[str | None] = mapped_column(String(20))                 # umgesetzt in Lastenheft-Version
@@ -758,6 +776,12 @@ class ChangeRequest(TimestampMixin, Base):
     tested_by: Mapped[str | None] = mapped_column(String(120))
     tested_at: Mapped[date | None] = mapped_column(Date)
     requested_by: Mapped[str | None] = mapped_column(String(120))
+    # REV04-02 Prüfseite je Update
+    expected: Mapped[str | None] = mapped_column(Text)                      # Was herauskommen muss
+    check_version: Mapped[str | None] = mapped_column(String(20), index=True)  # zu prüfen mit Update v…
+    check_order: Mapped[int | None] = mapped_column(Integer)                # Prüfreihenfolge
+    check_link: Mapped[str | None] = mapped_column(String(200))             # Hinspringen: Seite im CRM
+    superseded_by: Mapped[str | None] = mapped_column(String(30))           # überholt durch …
 
 
 

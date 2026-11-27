@@ -331,18 +331,37 @@ ITEMS = [
      "Feld im Angebot (10–90 % oder nicht eingeschätzt), Spalte und Filter in der Angebotsliste; keine Summen, keine Gewichtung.",
      "Angebot öffnen → 75 % wählen → Angebotsliste zeigt 75 %, Filter 75 % findet es.", "Kap. 13.5"),
     ("REV04-01", "Allgemein", "wunsch", "mittel", 3, "Softwarestand anzeigen: Version und wann eingespielt",
-     "Auf die Seite muss, wann zuletzt aktualisiert wurde (Softwarestand).", "freigegeben",
-     "Vorgemerkt fürs nächste Update: „KlarCRM v… · eingespielt am …“ unten in der Seitenleiste, auf der Anmeldeseite und unter "
-     "Dokumentation; Datum = erster Start der neuen Version.", "Nach dem Update: neue Versionsnummer mit heutigem Datum; Server-Neustart ändert das Datum nicht.", "Kap. 13.5"),
+     "Auf die Seite muss, wann zuletzt aktualisiert wurde (Softwarestand).", U,
+     "Unten in der Seitenleiste (über © SB/Thinkworks), auf der Anmeldeseite und unter Dokumentation steht „KlarCRM v1.32 · "
+     "eingespielt am TT.MM.JJJJ, hh:mm“. Das Datum merkt sich das CRM beim ersten Start einer neuen Version; ein Neustart ändert es nicht. "
+     "Klick auf den Softwarestand zeigt alle Auslieferungen.",
+     "Seitenleiste unten ansehen, dann darauf klicken; abmelden und die Anmeldeseite ansehen.", "Kap. 13.6"),
     ("REV04-02", "Änderungswünsche", "wunsch", "hoch", 3, "Prüfseite je Update: nur aktuelle Punkte, Reihenfolge, Hinspringen, abhaken",
-     "Abhaken ist verwirrend: alte und neue Punkte durcheinander, Nachbessern gemischt; eins nach dem anderen prüfen können.", "freigegeben",
-     "Vorgemerkt fürs nächste Update: Seite „Prüfen“ mit den Punkten des aktuellen Updates in Prüfreihenfolge, „Hinspringen“, "
-     "✓ passt / ✗ passt nicht; ersetzte Altpunkte automatisch „überholt“. Vorher Vorschau zur Freigabe.", "", "Kap. 13.5"),
+     "Abhaken ist verwirrend: alte und neue Punkte durcheinander, Nachbessern gemischt; eins nach dem anderen prüfen können.", U,
+     "Neue Seite „Prüfen“ (Menü Verwaltung): nur die Punkte des aktuellen Updates in Prüfreihenfolge, Zähler „x von y geprüft“, "
+     "je Punkt „Was tun“ und „Was herauskommen muss“, Knopf „Hinspringen“ öffnet die Stelle im CRM, große Knöpfe „✓ passt“ / "
+     "„✗ passt nicht“ (dann Text Pflicht). Sind alle Punkte geprüft, erklärt der Administrator „v1.xx abgenommen“. "
+     "Ersetzte Altpunkte stehen jetzt auf „überholt“ mit Verweis auf den neuen Punkt.",
+     "Menü „Prüfen“ öffnen und diese Liste von oben nach unten abarbeiten; unter Änderungswünsche Filter Status „überholt“.", "Kap. 13.6"),
     ("REV04-03", "Pipeline", "fehler", "hoch", 2, "Pipeline: Spalte „Verloren“ fehlt",
-     "Die Pipeline hat den Reiter „Verloren“ nicht mehr (Test REV01-P05).", "in_arbeit",
+     "Die Pipeline hat den Reiter „Verloren“ nicht mehr (Test REV01-P05).", U,
      "Ursache: Board fest auf 6 Spalten, seit Phase 2 (v1.24) gibt es 7 Phasen → „Verloren“ rutschte in eine zweite Reihe unter „Lead“. "
-     "Jetzt alle Phasen in einer Reihe (bei schmalem Bildschirm seitlich scrollbar). Kommt mit v1.32.",
-     "Pipeline öffnen → rechts außen Spalte „Verloren“; Karte hineinziehen → Dialog mit Pflichtgrund (REV01-P05).", "Kap. 13.5"),
+     "Jetzt alle Phasen in einer Reihe (bei schmalem Bildschirm seitlich scrollbar).",
+     "Pipeline öffnen → rechts außen Spalte „Verloren“.", "Kap. 13.6"),
+    ("REV04-04", "Startseite", "wunsch", "hoch", 3, "Vertriebsziel groß auf der Startseite mit Erfüllungsgrad",
+     "Nachbesserung REV03-05: Vertriebsziel ist da, aber auf der Startseite zu klein – Erfüllungsgrad muss auf einen Blick sichtbar sein.", U,
+     "Oben auf der Startseite ein breiter Block „Vertriebsziel 2026“: gewonnen seit 1.1. gegen Jahresziel, Erfüllungsgrad in %, Ampel, "
+     "Balken mit Soll-Marke (wo wir heute stehen müssten), Rest bis zum Ziel und eine Zeile je Vertriebler (mit eigenem Ziel, falls vorhanden). "
+     "Klick öffnet den Monatsbericht. Ohne Ziel: Hinweis, wo es eingetragen wird.",
+     "Startseite öffnen; danach im Monatsbericht ein Ziel ändern und die Startseite neu laden.", "Kap. 13.6"),
+    ("REV04-05", "Stammdaten", "wunsch", "niedrig", 3, "Freigabe-Schalter als Häkchen statt 0/1",
+     "Parameter „Freigabe-Workflow“ wird als Zahl 0/1 eingegeben – unverständlich.", U,
+     "Stammdaten → Parameter → „Großprojekte und Freigabe“: Häkchen „Freigabe-Workflow eingeschaltet“. Wirkung unverändert (aus = keine Freigabe nötig).",
+     "Häkchen ansehen (nicht gesetzt), nicht verändern.", "Kap. 13.6"),
+    ("REV04-06", "Anfrage", "fehler", "mittel", 3, "Schrittleiste: „Kalkulation“ erst nach zweiter Version erledigt",
+     "In der Anfrage wurde „Kalkulation“ erst grün, wenn eine zweite Kalkulationsversion existierte.", U,
+     "„Kalkulation“ gilt als erledigt, sobald jeder angebotene Artikel eine berechnete Kalkulation hat (oder „nicht anbieten“ ist).",
+     "Anfrage mit kalkulierten Artikeln öffnen → Schritt „Kalkulation“ ist erledigt.", "Kap. 13.6"),
     ("WUN-0004", "Freigabe", "wunsch", "hoch", 2, "Freigabeprozess",
      "Freigabe zunächst einmal wieder rausnehmen, bis alles funktioniert – Sperrung durch fehlende Freigabe raus.", U,
      "Umgesetzt mit REV03-03: Freigabe-Workflow per Parameter abgeschaltet.", "siehe REV03-03", "Kap. 13.5"),
@@ -357,6 +376,8 @@ ITEMS = [
 
 
 def _ver(code: str, phase) -> str:
+    if code.startswith("REV04"):
+        return "1.32"
     if code.startswith("REV03") or code == "WUN-0004":
         return "1.31"
     if code.startswith("REV02") or code == "WUN-0001":
@@ -374,7 +395,7 @@ def seed_rev01(db) -> int:
     for code, area, kind, prio, phase, title, desc, status, solution, test, req in ITEMS:
         if code in have and status == U:
             cr = db.query(ChangeRequest).filter(ChangeRequest.code == code).first()
-            if cr and cr.status in ("offen", "eingereicht", "freigegeben") and not (cr.test_result or "").strip():
+            if cr and cr.status in ("offen", "eingereicht", "freigegeben", "in_arbeit") and not (cr.test_result or "").strip():
                 cr.status, cr.solution, cr.test_steps = U, solution, test
                 cr.version = _ver(code, phase)
     for code, area, kind, prio, phase, title, desc, status, solution, test, req in ITEMS:
@@ -388,4 +409,66 @@ def seed_rev01(db) -> int:
                              requested_by=f"Sandro ({rev})" if rev != "Wunsch" else "Sandro"))
         n += 1
     db.commit()
+    seed_checks(db)
     return n
+
+
+# ------------------------------------------------------------------ REV04-02 Prüfseite: Prüfpunkte je Update
+# code: (Update, Reihenfolge, Hinspringen, Was tun, Was herauskommen muss)
+CHECKS = {
+    "REV04-01": ("1.32", 1, "/", "Unten links in der Seitenleiste über „© SB/Thinkworks“ nachsehen, dann darauf klicken. "
+                 "Zum Schluss abmelden und die Anmeldeseite ansehen.",
+                 "Dort steht „KlarCRM v1.32 · eingespielt am …“ mit dem Datum und der Uhrzeit, an dem die IT das Update eingespielt hat. "
+                 "Der Klick zeigt die Liste der Auslieferungen. Auf der Anmeldeseite steht ebenfalls v1.32."),
+    "REV04-04": ("1.32", 2, "/", "Startseite ansehen.",
+                 "Ganz oben ein breiter Block „Vertriebsziel 2026“: gewonnen seit 1.1. gegen das Jahresziel, Erfüllungsgrad in %, Ampel, "
+                 "Balken mit Soll-Marke und darunter je Vertriebler eine Zeile. Klick auf den Block öffnet den Monatsbericht."),
+    "REV04-03": ("1.32", 3, "/pipeline", "Pipeline öffnen und nach rechts schauen (bei schmalem Bildschirm seitlich scrollen).",
+                 "Alle 7 Spalten stehen nebeneinander in einer Reihe, rechts außen „Verloren“."),
+    "REV01-P05": ("1.32", 4, "/pipeline", "Nachprüfung aus v1.31: eine Karte auf „Verloren“ ziehen. Grund zuerst leer lassen und speichern, dann „Sonstiges“ ohne Text.",
+                  "Ohne Grund lässt sich nicht speichern; bei „Sonstiges“ ist der Freitext Pflicht. Danach Dialog abbrechen "
+                  "(oder eine Test-Anfrage verwenden), damit keine echte Anfrage verloren gesetzt wird."),
+    "REV04-06": ("1.32", 5, "/anfragen", "Eine Anfrage öffnen, deren Artikel schon kalkuliert sind (Teilgewicht eingetragen), aber nur eine Version haben.",
+                 "In der Schrittleiste oben ist „Kalkulation“ erledigt (grün). Bei einer Anfrage mit noch leeren Artikeln ist er offen."),
+    "REV04-05": ("1.32", 6, "/stammdaten?tab=params", "Stammdaten → Parameter → Karte „Großprojekte und Freigabe“ ansehen. Nichts ändern.",
+                 "Statt der Zahl 0/1 steht ein Häkchen „Freigabe-Workflow eingeschaltet“ – es ist nicht gesetzt (Freigabe bleibt aus)."),
+    "REV04-02": ("1.32", 7, "/aenderungen?status=ueberholt", "Diese Seite selbst: Punkte der Reihe nach mit „✓ passt“ / „✗ passt nicht“ prüfen. "
+                 "Dann unter Änderungswünsche den Status „überholt“ ansehen (Hinspringen).",
+                 "Der Zähler oben zählt mit; „✗ passt nicht“ verlangt einen Text. Unter „überholt“ stehen die ersetzten Altpunkte "
+                 "(z. B. REV03-05 → REV04-04), sie tauchen nicht mehr bei „Nachbessern“ auf."),
+}
+
+# Altpunkt → ersetzt durch (REV04-02): erhält den Status „überholt“ mit Verweis
+SUPERSEDED = {
+    "REV01-P01": "REV03-01", "REV01-F01": "REV03-03", "REV02-02": "REV03-03", "REV01-P03": "REV03-04",
+    "REV02-04": "REV03-08", "REV01-D05": "REV03-05", "REV01-P09": "REV03-09", "REV02-05": "REV03-09",
+    "REV01-S01": "REV03-06", "REV02-07": "REV03-07", "REV03-05": "REV04-04",
+}
+
+
+def seed_checks(db) -> None:
+    from .models import CalcSettings, ChangeRequest  # noqa: PLC0415
+    for code, (ver, order, link, todo, expected) in CHECKS.items():
+        cr = db.query(ChangeRequest).filter(ChangeRequest.code == code).first()
+        if not cr or cr.check_version:
+            continue          # schon eingeplant – Prüfstand aus der Oberfläche bleibt
+        cr.check_version, cr.check_order, cr.check_link, cr.test_steps, cr.expected = ver, order, link, todo, expected
+        if cr.status not in ("geprueft", "abgelehnt", "ueberholt"):
+            cr.status = U
+            cr.version = ver
+    # WUN-0003 „direkt zur geänderten Stelle springen“ (aus der Oberfläche) ist mit „Hinspringen“ erledigt
+    w = db.query(ChangeRequest).filter(ChangeRequest.code == "WUN-0003").first()
+    if w and not w.check_version and "spring" in f"{w.title} {w.description}".lower():
+        w.status, w.version, w.check_version, w.check_order, w.check_link = U, "1.32", "1.32", 8, "/pruefen"
+        w.solution = "Umgesetzt mit REV04-02: Knopf „Hinspringen“ auf der Prüfseite öffnet die geänderte Stelle im CRM."
+        w.test_steps = "Auf dieser Seite bei einem Punkt „Hinspringen“ klicken."
+        w.expected = "Die passende Seite im CRM öffnet sich; mit „Zurück“ im Browser geht es wieder auf die Prüfseite."
+    cs = db.get(CalcSettings, 1)
+    if cs is not None and not (cs.data or {}).get("_rev04_ueberholt"):
+        for old, new in SUPERSEDED.items():
+            cr = db.query(ChangeRequest).filter(ChangeRequest.code == old).first()
+            if cr and cr.status not in ("geprueft", "abgelehnt"):
+                cr.status, cr.superseded_by = "ueberholt", new
+                cr.test_result = ((cr.test_result or "").strip() + f"\n→ überholt durch {new}").strip()
+        cs.data = {**(cs.data or {}), "_rev04_ueberholt": True}
+    db.commit()

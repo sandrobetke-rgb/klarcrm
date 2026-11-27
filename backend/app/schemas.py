@@ -576,7 +576,7 @@ class ChangeRequestBase(BaseModel):
     description: str | None = None
     priority: Literal["hoch", "mittel", "niedrig"] = "mittel"
     phase: int | None = None
-    status: Literal["eingereicht", "freigegeben", "offen", "in_arbeit", "umgesetzt", "geprueft", "nachbessern", "abgelehnt", "zurueckgestellt"] = "offen"
+    status: Literal["eingereicht", "freigegeben", "offen", "in_arbeit", "umgesetzt", "geprueft", "nachbessern", "abgelehnt", "zurueckgestellt", "ueberholt"] = "offen"
     solution: str | None = None
     req_ids: str | None = None
     version: str | None = None
@@ -585,13 +585,18 @@ class ChangeRequestBase(BaseModel):
     tested_by: str | None = None
     tested_at: date | None = None
     requested_by: str | None = None
+    expected: str | None = None
+    check_version: str | None = None
+    check_order: int | None = None
+    check_link: str | None = None
+    superseded_by: str | None = None
 
 
 class ChangeRequestUpdate(ChangeRequestBase):
     title: str | None = None
     kind: str | None = Field(default=None, max_length=40)
     priority: Literal["hoch", "mittel", "niedrig"] | None = None
-    status: Literal["eingereicht", "freigegeben", "offen", "in_arbeit", "umgesetzt", "geprueft", "nachbessern", "abgelehnt", "zurueckgestellt"] | None = None
+    status: Literal["eingereicht", "freigegeben", "offen", "in_arbeit", "umgesetzt", "geprueft", "nachbessern", "abgelehnt", "zurueckgestellt", "ueberholt"] | None = None
 
 
 class ChangeRequestOut(ORM, ChangeRequestBase):

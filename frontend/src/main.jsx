@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter, Navigate, NavLink, Outlet, Route, Routes } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { BrowserRouter, Link, Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth'
 import './styles.css'
 import Login from './pages/Login'
@@ -31,9 +32,34 @@ import Inquiries, { InquiryDetail } from './pages/Inquiries'
 import PriceList, { PriceChangeDetail } from './pages/PriceList'
 import Docs from './pages/Docs'
 import MonthlyReport from './pages/MonthlyReport'
+import Pruefen, { getChecking, setChecking } from './pages/Pruefen'
+import Version from './components/Version'
+import { api } from './api'
+
+// REV04-02: offene Prüfpunkte des aktuellen Updates im Menü; nach „Hinspringen“ Rückweg zur Prüfseite
+function useCheckCount() {
+  const loc = useLocation()
+  const [n, setN] = useState(null)
+  useEffect(() => { api.get('/checks').then((d) => setN(d.total - d.done)).catch(() => {}) }, [loc.pathname])
+  return n
+}
+function CheckingPill() {
+  const loc = useLocation()
+  const [, setHide] = useState(0)
+  const c = getChecking()
+  if (!c || loc.pathname === '/pruefen') return null
+  return (
+    <div className="checking-pill">
+      <span>Prüfung läuft: <strong>{c.code}</strong> {c.title}</span>
+      <Link className="btn btn-primary btn-sm" to="/pruefen">← zurück zur Prüfseite</Link>
+      <button className="icon-btn" title="Ausblenden" onClick={() => { setChecking(null); setHide((x) => x + 1) }}>×</button>
+    </div>
+  )
+}
 
 function Layout() {
   const { user, logout, isAdmin } = useAuth()
+  const openChecks = useCheckCount()
   if (!user) return <Navigate to="/login" replace />
   // Menü in Arbeitsreihenfolge (Anfrage → Kalkulation → Angebot → Verfolgung), Gruppen als Zwischenüberschrift
   const nav = [
@@ -54,6 +80,7 @@ function Layout() {
     ['/monatsbericht', 'Monatsbericht', '▦'],
     ['/beschaffung', 'Beschaffung', '⚒'],
     ['#', 'System'],
+    ['/pruefen', 'Prüfen', '☑', openChecks],
     ['/stammdaten', 'Stammdaten', '≡'],
     ['/aenderungen', 'Änderungswünsche', '✎'],
     ['/dokumentation', 'Dokumentation', '📖'],
@@ -65,9 +92,9 @@ function Layout() {
       <aside className="sidebar">
         <div className="brand"><span className="logo">K</span> KlarCRM</div>
         <nav>
-          {nav.map(([to, label, icon], i) => to === '#' ? <div key={`g${i}`} className="nav-group">{label}</div> : (
+          {nav.map(([to, label, icon, badge], i) => to === '#' ? <div key={`g${i}`} className="nav-group">{label}</div> : (
             <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => (isActive ? 'active' : '')}>
-              <span className="nav-icon" aria-hidden>{icon}</span>{label}
+              <span className="nav-icon" aria-hidden>{icon}</span>{label}{badge > 0 && <span className="nav-badge" title="noch zu prüfen">{badge}</span>}
             </NavLink>
           ))}
         </nav>
@@ -81,10 +108,12 @@ function Layout() {
             </span>
           </NavLink>
           <button className="btn btn-ghost btn-sm logout" onClick={logout}>Abmelden</button>
+          <Version className="sidebar-version" />
         </div>
       </aside>
       <main className="content">
         <PageHelp />
+        <CheckingPill />
         <Outlet />
         <Footer />
       </main>
@@ -121,6 +150,7 @@ function App() {
             <Route path="/beschaffung/:id" element={<ProcurementDetail />} />
             <Route path="/protokoll" element={<AuditLog />} />
             <Route path="/aenderungen" element={<Changes />} />
+            <Route path="/pruefen" element={<Pruefen />} />
             <Route path="/dokumentation" element={<Docs />} />
             <Route path="/einstellungen" element={<CompanySettings />} />
             <Route path="/benutzer" element={<Users />} />

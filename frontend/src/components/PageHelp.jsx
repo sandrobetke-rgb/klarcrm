@@ -88,9 +88,15 @@ const HELP = [
   ]],
   ['/protokoll', 'Systemprotokoll (Audit-Trail)', 'Wer hat wann was an Daten geändert (IATF/ISO-Nachweis). Für Änderungswünsche am Programm: Menü „Änderungswünsche“.', ['Nach Objekt, Benutzer oder Zeitraum filtern. Einträge sind nicht änderbar.']],
   ['/aenderungen', 'Änderungswünsche & Prüfprotokoll', 'Alle Testrückmeldungen (z. B. REV01) und neuen Wünsche an das Programm – mit Status, Umsetzung und Prüfung.', [
-    '„+ Änderungswunsch“ erfasst einen neuen Punkt (Nummer WUN-0001 … automatisch).',
+    'Ein Update prüfen Sie am besten auf der Seite „Prüfen“ – dort stehen nur die Punkte des aktuellen Updates in der richtigen Reihenfolge.',
+    '„+ Änderungswunsch“ erfasst einen neuen Punkt (Nummer WUN-0001 … automatisch). „Überholt“ = durch einen neueren Punkt ersetzt.',
     'Umgesetzte Punkte stehen auf „Umgesetzt – bitte prüfen“: Zeile öffnen, Prüfanweisung durchgehen, Prüfergebnis eintragen und „✓ i. O.“ oder „✗ n. i. O.“ (mit Beschreibung) klicken – Prüfer und Datum werden automatisch eingetragen. Neue Wünsche sind „eingereicht“ und werden vom Administrator freigegeben.',
     'Phasen: 1 Fehler & Sofortmaßnahmen · 2 Anfrage → Angebot → Pipeline · 3 Kalkulationsblätter · 4 Beschaffung, Dashboard, Berichte. Export als CSV für Excel.',
+  ]],
+  ['/pruefen', 'Update prüfen', 'Die Punkte des aktuellen Updates – eins nach dem anderen prüfen und abhaken.', [
+    'Oben beginnen: „Was tun“ lesen, „Hinspringen“ öffnet die Stelle im CRM, oben führt „← zurück zur Prüfseite“ wieder hierher.',
+    'Dann „✓ passt“ oder „✗ passt nicht“ (kurz beschreiben, was nicht passt). Fehlklick: „Ergebnis zurücksetzen“.',
+    'Wenn alle Punkte passen, erklärt ein Administrator „v… abgenommen“ – das ist der Abnahmenachweis.',
   ]],
   ['/dokumentation', 'Dokumentation', 'Benutzerbeschreibung und Lastenheft der installierten Version.', [
     'Links das Inhaltsverzeichnis, oben die Suche. „Als Word herunterladen“ erzeugt die aktuelle Fassung als .docx.',
@@ -104,6 +110,7 @@ const HELP = [
   ]],
   ['/profil', 'Profil', 'Eigenes Konto.', ['Passwort ändern und Outlook-Kalender abonnieren.']],
   ['/', 'Dashboard', 'Tagesüberblick für Vertrieb und Geschäftsführung.', [
+    'Oben das Vertriebsziel: Erfüllungsgrad, Soll heute (Strich im Balken) und je Vertriebler – Klick öffnet den Monatsbericht.',
     'Kennzahlen anklicken führt zur passenden Liste. Fällige Aufgaben und Hinweise (Glocke) zuerst abarbeiten.',
     'Für Berichte nach Kunde, Maschinengröße oder Absagegründen: Menü „Auswertungen“.',
   ]],

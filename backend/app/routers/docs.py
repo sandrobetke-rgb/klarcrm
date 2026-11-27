@@ -6,11 +6,11 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .. import schemas as s
-from ..auth import can_read
+from ..auth import can_read, can_write
 from ..crud import make_crud_router
 from ..database import get_db
 from ..models import ChangeRequest, User
@@ -55,7 +55,7 @@ def _cr_before_save(values: dict, obj, user=None):
 
 changes = make_crud_router(
     model=ChangeRequest, create_schema=s.ChangeRequestBase, update_schema=s.ChangeRequestUpdate, out_schema=s.ChangeRequestOut,
-    search_fields=["code", "title", "description", "area", "solution"], filter_fields=["status", "priority", "phase", "revision", "kind", "area"],
+    search_fields=["code", "title", "description", "area", "solution"], filter_fields=["status", "priority", "phase", "revision", "kind", "area", "check_version"],
     default_sort="code", before_save=_cr_before_save, after_create=lambda db, obj: number_new_requests(db),
 )
 
@@ -125,3 +125,75 @@ def get_doc_docx(name: str, _: User = Depends(can_read)):
     fn = f"KlarCRM_{title}_{date.today():%Y-%m-%d}.docx"
     return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                              headers={"Content-Disposition": f'attachment; filename="{fn}"'})
+
+
+# ------------------------------------------------------------------ REV04-02 Prüfseite je Update
+checks = APIRouter()
+CHECK_FIELDS = ("id", "code", "area", "kind", "title", "description", "solution", "test_steps", "expected", "check_link",
+                "check_order", "status", "test_result", "tested_by", "tested_at", "superseded_by")
+
+
+def _accepted(db: Session) -> dict:
+    from ..models import CalcSettings  # noqa: PLC0415
+    cs = db.get(CalcSettings, 1)
+    return dict((cs.data or {}).get("_accepted") or {}) if cs else {}
+
+
+@checks.get("")
+def check_list(version: str | None = None, db: Session = Depends(get_db), _: User = Depends(can_read)):
+    """Punkte eines Updates in Prüfreihenfolge, Zähler und Abnahme."""
+    from ..version import APP_VERSION  # noqa: PLC0415
+    v = version or APP_VERSION
+    rows = db.scalars(select(ChangeRequest).where(ChangeRequest.check_version == v,
+                                                  ChangeRequest.status.not_in(("ueberholt", "abgelehnt")))
+                      .order_by(ChangeRequest.check_order, ChangeRequest.code)).all()
+    items = [{k: getattr(r, k) for k in CHECK_FIELDS} for r in rows]
+    versions = sorted({x for (x,) in db.query(ChangeRequest.check_version).filter(ChangeRequest.check_version.is_not(None)).all()},
+                      key=lambda x: [int(p) for p in x.split(".") if p.isdigit()], reverse=True)
+    older = db.scalar(select(func.count()).select_from(ChangeRequest).where(
+        ChangeRequest.status.in_(("umgesetzt", "nachbessern")),
+        (ChangeRequest.check_version.is_(None)) | (ChangeRequest.check_version != v))) or 0
+    return {"version": v, "current": APP_VERSION, "versions": versions or [v], "items": items, "total": len(items),
+            "done": sum(1 for i in items if i["status"] == "geprueft"),
+            "failed": sum(1 for i in items if i["status"] == "nachbessern"),
+            "accepted": _accepted(db).get(v), "older_open": older}
+
+
+@checks.post("/accept")
+def check_accept(payload: dict, db: Session = Depends(get_db), user: User = Depends(can_read)):
+    """„v1.xx abgenommen“ – nur Administrator, nur wenn alle Punkte „passt“."""
+    from ..models import CalcSettings  # noqa: PLC0415
+    if user.role != "admin":
+        raise HTTPException(403, "Die Abnahme eines Updates erklärt ein Administrator")
+    v = str(payload.get("version") or "")
+    data = check_list(v, db, user)
+    if not data["total"] or data["done"] < data["total"]:
+        raise HTTPException(400, "Erst alle Punkte mit „✓ passt“ prüfen")
+    cs = db.get(CalcSettings, 1)
+    acc = _accepted(db)
+    from datetime import datetime, timezone  # noqa: PLC0415
+    acc[v] = {"by": user.name, "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+    cs.data = {**(cs.data or {}), "_accepted": acc}
+    db.commit()
+    return acc[v]
+
+
+@checks.post("/{item_id}")
+def check_item(item_id: int, payload: dict, db: Session = Depends(get_db), user: User = Depends(can_write)):
+    """✓ passt / ✗ passt nicht (dann Text Pflicht) / ok = null: zurücksetzen. Prüfer und Datum werden gesetzt."""
+    cr = db.get(ChangeRequest, item_id)
+    if not cr:
+        raise HTTPException(404, "Punkt nicht gefunden")
+    ok, note = payload.get("ok"), (payload.get("note") or "").strip()
+    if ok is None:
+        cr.status, cr.tested_by, cr.tested_at = "umgesetzt", None, None
+    elif ok:
+        cr.status, cr.test_result = "geprueft", note or "passt"
+        cr.tested_by, cr.tested_at = user.name, date.today()
+    else:
+        if not note:
+            raise HTTPException(400, "„Passt nicht“: bitte kurz beschreiben, was nicht passt")
+        cr.status, cr.test_result = "nachbessern", note
+        cr.tested_by, cr.tested_at = user.name, date.today()
+    db.commit()
+    return {k: getattr(cr, k) for k in CHECK_FIELDS}

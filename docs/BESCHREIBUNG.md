@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Programm** | KlarCRM – Vertrieb, Kalkulation Spritzguss, Angebote |
-| **Version** | 1.31 (Stand 25.11.2026) |
+| **Version** | 1.32 (Stand 27.11.2026) |
 | **Für** | Vertrieb, Kalkulation, Einkauf, Geschäftsführung, Gesellschafter |
 
 > Diese Beschreibung erklärt, **wie man mit KlarCRM arbeitet**. Die genauen Regeln und Rechenwege stehen im
@@ -40,7 +40,7 @@ dran ist.
 
 | Menüpunkt | Wofür |
 |---|---|
-| Dashboard | Kennzahlen, Angebotsverfolgung mit Ampel (für alle sichtbar), Anfragen in Bearbeitung, Großprojekte, Auslastung |
+| Dashboard | Vertriebsziel mit Erfüllungsgrad (oben), Kennzahlen, Angebotsverfolgung mit Ampel (für alle sichtbar), Anfragen in Bearbeitung, Großprojekte, Auslastung |
 | **Vertrieb** · Anfragen | Alle Anfragen und Leads – Einstieg in die tägliche Arbeit |
 | Pipeline | Eine Karte je Anfrage nach Phase (Board oder Liste) |
 | Kalkulationen | Alle Artikel-Kalkulationen über alle Anfragen |
@@ -51,10 +51,11 @@ dran ist.
 | **Planung & Analyse** · Auslastung | Maschinenstunden der kommenden Jahre gegen die Kapazität |
 | Auswertungen | Berichte nach Kunde, Maschinengröße, Verlustgründen, Vertrieb … |
 | Beschaffung | Anfragen an Werkzeugmacher und Lieferanten, Angebotsvergleich |
-| **System** · Stammdaten | Maschinen, Standorte, Materialien, Zukaufteile, Parameter, Vorlagen |
+| **System** · Prüfen | Punkte des aktuellen Updates nacheinander prüfen und abhaken (Zahl = noch offen) |
+| Stammdaten | Maschinen, Standorte, Materialien, Zukaufteile, Parameter, Vorlagen |
 | Änderungswünsche | Testrückmeldungen und Wünsche ans Programm mit Prüfprotokoll |
 | Dokumentation | Diese Beschreibung und das Lastenheft, Download als Word |
-| Protokoll | Systemprotokoll: wer hat wann welche Daten geändert (Admin/Freigabe/Gesellschafter) |
+| Protokoll | Systemprotokoll: wer hat wann welche Daten geändert – derzeit ausgeblendet (Aufzeichnung läuft weiter) |
 
 ## 2a. Pipeline-Phasen
 
@@ -148,7 +149,8 @@ Die **Wahrscheinlichkeit** gilt für den ganzen Auftrag. Summen werden nicht meh
   (überfällige Nachfassungen, fehlende Entscheidungen, Freigaben), Auslastung im Folgejahr je Maschine, Preisliste.
 - Kommentar schreiben → **Stand speichern** (Zahlen werden eingefroren) → **Freigeben** → **Drucken / PDF** und selbst versenden.
 - **Vertriebsziele** (Administrator): je Jahr Ziel gesamt und je Vertriebler, optional Werkzeug/Einmal.
-- Die Startseite zeigt die Zielerreichung als Kachel.
+- Die Startseite zeigt das Vertriebsziel groß ganz oben: Erfüllungsgrad in %, gewonnen seit 1.1., Soll heute, Rest bis
+  zum Ziel, Ampel und je Vertriebler eine Zeile. Klick öffnet den Monatsbericht.
 
 ## 3c. Auftrag erhalten – auch nur für einen Teil der Artikel
 
@@ -175,12 +177,17 @@ Die **Wahrscheinlichkeit** gilt für den ganzen Auftrag. Summen werden nicht meh
 - Ampel: unter 60 % frei · 60–85 % gut ausgelastet · 85–100 % knapp · ab 100 % überlastet.
 
 ## 6. Änderungswünsche und Prüfung
-- Menü *Änderungswünsche*: alle Punkte aus Testrückmeldungen (z. B. REV01) mit Status.
-- Status „Umgesetzt – bitte prüfen“: Zeile öffnen, **Prüfanweisung** durchgehen, **Prüfergebnis** eintragen, Status
-  **Geprüft ✓** oder **Nachbessern** setzen. So entsteht ein lückenloser Nachweis (IATF 16949 / ISO 14001).
-- Neue Wünsche mit „+ Änderungswunsch“ erfassen; sie bekommen automatisch eine Nummer WUN-0001 … und eine Bestätigung
-  erscheint. Art und Bereich können aus der Liste gewählt oder frei eingegeben werden.
+- **Ein Update prüfen:** Menü *Prüfen*. Dort stehen nur die Punkte des aktuellen Updates, in der Reihenfolge, in der
+  man sie prüfen soll. Je Punkt: „Was tun“ lesen → **Hinspringen** (öffnet die richtige Stelle; oben steht „Prüfung
+  läuft … ← zurück zur Prüfseite“) → ansehen → **✓ passt** oder **✗ passt nicht** (dann kurz beschreiben, was nicht
+  passt). Prüfer und Datum setzt das CRM. Fehlklick: „Ergebnis zurücksetzen“. Sind alle Punkte „passt“, erklärt ein
+  Administrator **„v1.xx abgenommen“** – das ist der Nachweis für die Abnahme (IATF 16949 / ISO 14001).
+- Menü *Änderungswünsche*: alle Punkte aus Testrückmeldungen (z. B. REV01) mit Status – zum Nachschlagen und für neue
+  Wünsche. Status **„überholt“** heißt: der Punkt wurde durch einen neueren ersetzt (Spalte Status zeigt „→ neuer Punkt“).
+- Neue Wünsche mit „+ Änderungswunsch“ erfassen; sie bekommen automatisch eine Nummer WUN-0001 … und sind „eingereicht“,
+  bis ein Administrator sie freigibt. Art und Bereich können aus der Liste gewählt oder frei eingegeben werden.
 - Export als CSV für Excel.
+- **Softwarestand:** unten links und in der Fußzeile steht „KlarCRM v… · eingespielt am …“ – Klick zeigt alle Auslieferungen.
 
 ## 7. Nummern
 | Vorgang | Format | Beispiel |

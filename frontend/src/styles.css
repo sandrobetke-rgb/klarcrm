@@ -765,3 +765,88 @@ tr.row-won td { background: #eef7f0; }
 .combo-select { display: flex; gap: 6px; }
 .combo-select > * { flex: 1; }
 .prob-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+
+/* ---------- v1.32 REV04-04 Vertriebsziel-Block (Startseite) */
+.goal-block { margin-bottom: 16px; cursor: pointer; padding: 20px 22px; }
+.goal-block:hover { border-color: var(--brand); }
+.goal-block:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.goal-empty { cursor: default; }
+.goal-empty:hover { border-color: var(--border); }
+.goal-block h2 { margin: 0; font-size: 17px; }
+.goal-block p { margin: 2px 0 0; }
+.goal-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.goal-light { font-weight: 600; font-size: 13px; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+.goal-light-sm { font-size: 12px; font-weight: 550; }
+.goal-good { color: var(--good); } .goal-light.goal-good { background: var(--good-bg); }
+.goal-warning { color: var(--warning); } .goal-light.goal-warning { background: #fff6e0; }
+.goal-critical { color: var(--critical); } .goal-light.goal-critical { background: var(--critical-bg); }
+.goal-main { display: flex; align-items: center; gap: 28px; margin: 14px 0 12px; flex-wrap: wrap; }
+.goal-pct { font-size: 44px; font-weight: 700; line-height: 1; color: var(--text); font-variant-numeric: tabular-nums; }
+.goal-figs { display: grid; grid-template-columns: repeat(4, minmax(130px, auto)); gap: 4px 28px; }
+.goal-figs > div { display: flex; flex-direction: column; }
+.goal-figs strong { font-size: 16px; font-variant-numeric: tabular-nums; }
+.goal-k { font-size: 12px; color: var(--muted); }
+.goal-bar { position: relative; height: 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; margin-top: 22px; }
+.goal-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--brand); border-radius: 3px; }
+.goal-soll { position: absolute; top: -6px; bottom: -6px; width: 2px; background: var(--text); transform: translateX(-1px); }
+.goal-soll em { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); font-style: normal; font-size: 11px; color: var(--text-2); white-space: nowrap; margin-bottom: 1px; }
+.goal-scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 4px; }
+.goal-owners { margin-top: 12px; }
+.goal-more { text-align: right; font-size: 12px; color: var(--brand); margin-top: 6px !important; }
+@media (max-width: 1100px) { .goal-figs { grid-template-columns: repeat(2, minmax(130px, auto)); } }
+
+/* ---------- v1.32 REV04-02 Prüfseite */
+.page-narrow { max-width: 980px; }
+.nav-badge { margin-left: auto; background: #f59e0b; color: #111; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 0 7px; line-height: 18px; }
+.check-progress { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; padding: 14px 18px; }
+.check-count { white-space: nowrap; font-size: 15px; }
+.check-bar { flex: 1; height: 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.check-bar span { display: block; height: 100%; background: var(--good); }
+.check-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; box-shadow: var(--shadow); }
+.check-card.is-current { border: 2px solid var(--brand); }
+.check-card.is-done { background: #fbfdfc; }
+.check-card.is-failed { border-color: #f1c4c6; }
+.check-head { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; }
+.check-no { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; background: var(--brand-50); color: var(--brand); flex: none; }
+.is-done .check-no { background: var(--good-bg); color: var(--good); }
+.is-failed .check-no { background: var(--critical-bg); color: var(--critical); }
+.check-title { display: flex; flex-direction: column; flex: 1; }
+.check-state { font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.is-current .check-state { color: var(--brand); }
+.check-state.ok { color: var(--good); } .check-state.bad { color: var(--critical); }
+.check-body { padding: 0 16px 14px 58px; }
+.check-label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
+.check-what { color: var(--text-2); font-size: 13px; margin: 0 0 10px; }
+.check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.check-grid > div { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.check-grid p { margin: 0; }
+.check-note { margin: 10px 0 0; font-size: 13px; white-space: pre-line; }
+.check-actions { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.check-actions .spacer, .toolbar .spacer { flex: 1; }
+.btn-lg { padding: 10px 20px; font-size: 15px; font-weight: 600; }
+.btn-ok-solid { background: var(--good); color: #fff; border-color: var(--good); }
+.btn-ok-solid:hover { filter: brightness(.95); }
+.btn-bad-solid { background: var(--surface); color: var(--critical); border: 1px solid var(--critical); }
+.check-bad { margin-top: 10px; }
+.check-bad textarea { width: 100%; margin-bottom: 8px; }
+.check-final { text-align: center; margin-top: 14px; }
+.checking-pill { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 12px; background: #fff6e0; border: 1px solid #f0d58a;
+  border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+.checking-pill > span { flex: 1; }
+.info-box { background: var(--info-bg); color: var(--info); padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; }
+@media (max-width: 800px) { .check-grid { grid-template-columns: 1fr; } .check-body { padding-left: 16px; } }
+
+/* ---------- v1.32 REV04-01 Softwarestand */
+.version-chip { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+.version-chip:hover { color: var(--brand); }
+.sidebar-version { display: block; margin-top: 10px; font-size: 11px; color: #9ca3af; text-align: left; line-height: 1.35; }
+.sidebar-version:hover { color: #fff; }
+.row-current td { background: var(--brand-50); }
+/* REV04-05 Häkchen in Parametern */
+.check-field { display: flex !important; flex-direction: row !important; align-items: center; gap: 8px; grid-column: 1 / -1; font-weight: 500; }
+/* v1.32: Menü scrollt bei niedrigen Bildschirmen selbst – unten (Benutzer, Abmelden, Softwarestand) bleibt immer sichtbar */
+.sidebar nav { overflow-y: auto; min-height: 0; scrollbar-width: thin; scrollbar-color: #374151 transparent; }
+.sidebar nav a { padding: 7px 10px; }
+.sidebar .brand { padding: 16px 18px; }
+.version-modal { color: var(--text); font-size: 14px; text-align: left; }
+.version-body { padding: 4px 20px 18px; }

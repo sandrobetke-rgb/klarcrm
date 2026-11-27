@@ -93,7 +93,7 @@ function Steps({ o }) {
     ['Anfrage', true],
     ['Entscheidung', calcs.length > 0 && o.undecided === 0],
     ['Artikelanalyse', live.length > 0 && live.every((c) => c.analysis_complete || c.decision === 'nicht_anbieten'), true],
-    ['Kalkulation', live.length > 0 && live.every((c) => c.current_version > 1 || c.decision === 'nicht_anbieten')],
+    ['Kalkulation', live.length > 0 && live.every((c) => c.calculated || c.decision === 'nicht_anbieten')],
     // REV03-03: Schritt „Freigabe“ nur, wenn eine Freigabe nötig ist (Workflow derzeit abgeschaltet)
     ...(live.some((c) => c.approval_reasons.length || c.approval_status) ? [['Freigabe', live.every((c) => !c.approval_reasons.length || c.is_approved)]] : []),
     ['Angebot', !!q],

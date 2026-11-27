@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { qs } from '../api'
 import { useAuth } from '../auth'
 import { BarList, ColumnChart } from '../components/charts'
@@ -19,6 +19,56 @@ function Kpi({ label, value, sub, to }) {
   )
   if (to?.startsWith('#')) return <a href={to} className="kpi kpi-link">{body}</a>
   return to ? <Link to={to} className="kpi kpi-link">{body}</Link> : <div className="kpi">{body}</div>
+}
+
+// REV04-04: Vertriebsziel groß oben – Erfüllungsgrad auf einen Blick, Soll-Marke = wo wir heute stehen müssten
+const LIGHT = { gruen: ['im Plan', 'good'], gelb: ['knapp hinter Plan', 'warning'], rot: ['deutlich hinter Plan', 'critical'] }
+function GoalBlock({ g }) {
+  const nav = useNavigate()
+  const { isAdmin } = useAuth()
+  const yr = new Date().getFullYear()
+  if (!g) return (
+    <section className="card goal-block goal-empty">
+      <h2>Vertriebsziel {yr}</h2>
+      <p className="muted">Für {yr} ist noch kein Vertriebsziel hinterlegt.{isAdmin ? ' Eintragen unter ' : ' Das Ziel trägt ein Administrator ein unter '}
+        <Link to="/monatsbericht">Monatsbericht → Vertriebsziele</Link></p>
+    </section>)
+  const [lt, tone] = LIGHT[g.light] || ['–', 'neutral']
+  const pctW = Math.min(100, g.pct)
+  return (
+    <section className="card goal-block" role="link" tabIndex={0} onClick={() => nav('/monatsbericht')} onKeyDown={(e) => e.key === 'Enter' && nav('/monatsbericht')}
+      title="Monatsbericht öffnen">
+      <div className="goal-top">
+        <div>
+          <h2>Vertriebsziel {g.year} · Neuumsatz</h2>
+          <p className="muted">gewonnen seit 1.1. (Umsatz im stärksten Lieferjahr){g.summed ? ' · Ziel = Summe der Ziele je Vertriebler' : ''}</p>
+        </div>
+        <span className={`goal-light goal-${tone}`}><span aria-hidden>●</span> {lt}</span>
+      </div>
+      <div className="goal-main">
+        <div className="goal-pct">{g.pct.toLocaleString('de-DE', { maximumFractionDigits: 1 })} %</div>
+        <div className="goal-figs">
+          <div><span className="goal-k">Gewonnen</span><strong>{eur(g.achieved)}</strong><small className="muted">{g.count} Abschlüsse</small></div>
+          <div><span className="goal-k">Jahresziel</span><strong>{eur(g.target)}</strong></div>
+          <div><span className="goal-k">Soll heute</span><strong>{eur(g.expected)}</strong><small className="muted">{g.expected_pct.toLocaleString('de-DE')} % des Jahres</small></div>
+          <div><span className="goal-k">Noch bis zum Ziel</span><strong>{eur(g.gap)}</strong></div>
+        </div>
+      </div>
+      <div className="goal-bar" aria-label={`Erfüllungsgrad ${g.pct} %, Soll heute ${g.expected_pct} %`}>
+        <span className="goal-fill" style={{ width: `${pctW}%` }} />
+        <span className="goal-soll" style={{ left: `${Math.min(100, g.expected_pct)}%` }} title={`Soll heute: ${g.expected_pct} %`}><em>Soll heute</em></span>
+      </div>
+      <div className="goal-scale"><span>0 %</span><span>100 % = {eur(g.target)}</span></div>
+      {g.owners?.length > 0 && <table className="table table-compact goal-owners">
+        <thead><tr><th>Vertrieb</th><th className="num">Gewonnen</th><th className="num">Eigenes Ziel</th><th className="num">Erfüllt</th><th>Stand</th></tr></thead>
+        <tbody>{g.owners.map((o) => <tr key={o.user_id}>
+          <td>{o.name}</td><td className="num">{eur(o.achieved)}</td><td className="num">{o.target ? eur(o.target) : '–'}</td>
+          <td className="num">{o.pct != null ? `${o.pct.toLocaleString('de-DE')} %` : '–'}</td>
+          <td>{o.light ? <span className={`goal-light-sm goal-${LIGHT[o.light][1]}`}>● {LIGHT[o.light][0]}</span> : <small className="muted">ohne eigenes Ziel</small>}</td></tr>)}</tbody>
+      </table>}
+      <p className="goal-more">Details im Monatsbericht ›</p>
+    </section>
+  )
 }
 
 export default function Dashboard() {
@@ -45,13 +95,12 @@ export default function Dashboard() {
         </div>
       </header>
 
+      <GoalBlock g={k.sales_goal} />
+
       <section className="kpi-grid">
         <Kpi label="Offene Pipeline" value={eur(k.open_pipeline.amount)} sub={`${k.open_pipeline.count} Anfragen · davon ≥ 50 % Wahrsch. ${eur(k.open_pipeline.likely)}`} to="/pipeline" />
         <Kpi label={`Entscheidung ${k.quarter}`} value={eur(k.forecast_quarter.amount)} sub={`${k.forecast_quarter.count} Anfragen · bereits gewonnen ${eur(k.won_quarter.amount)}`} to="/anfragen" />
-        {k.sales_goal
-          ? <Kpi label={`Vertriebsziel ${k.sales_goal.year} (Neuumsatz)`} value={<>{k.sales_goal.pct.toLocaleString('de-DE')} % <span className={`l-${k.sales_goal.light}`}>●</span></>}
-              sub={`${eur(k.sales_goal.achieved)} von ${eur(k.sales_goal.target)} gewonnen · Monatsbericht ›`} to="/monatsbericht" />
-          : <Kpi label="Gewonnen (lfd. Jahr)" value={eur(k.won_ytd.amount)} sub={`${k.won_ytd.count} Abschlüsse · Ø ${eur(k.avg_deal_won)}`} />}
+        <Kpi label="Gewonnen (lfd. Jahr)" value={eur(k.won_ytd.amount)} sub={`${k.won_ytd.count} Abschlüsse · Ø ${eur(k.avg_deal_won)}`} />
         <Kpi label="Gewinnquote" value={k.win_rate != null ? `${k.win_rate.toLocaleString('de-DE')} %` : '–'} sub={`${k.won_ytd.count} gewonnen / ${k.lost_ytd.count} verloren · Übersicht ›`} to="/auswertungen" />
         <Kpi label="Offene Angebote" value={eur(k.open_quotes.amount)} sub={`${k.open_quotes.count} versendet`} to="/angebote" />
         <Kpi label="Aufgaben" value={k.activities_overdue} sub={`überfällig · ${k.activities_today} heute fällig`} to="/aktivitaeten" />

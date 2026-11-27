@@ -88,6 +88,9 @@ def init_db():
         # Änderungsprotokoll REV01 übernehmen (nur fehlende Punkte, Status aus der Oberfläche bleibt)
         from .rev01 import seed_rev01  # noqa: PLC0415
         seed_rev01(db)
+        # REV04-01: Zeitpunkt des Einspielens dieser Version merken
+        from .version import remember_install  # noqa: PLC0415
+        remember_install(db)
         if not db.scalar(select(func.count()).select_from(User)):
             db.add(User(
                 email=settings.ADMIN_EMAIL.lower(), name="Administrator",
@@ -102,7 +105,9 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="KlarCRM API", version="1.0.0", lifespan=lifespan)
+from .version import APP_VERSION, version_info  # noqa: E402
+
+app = FastAPI(title="KlarCRM API", version=APP_VERSION, lifespan=lifespan)
 @app.middleware("http")
 async def user_context(request, call_next):
     """Angemeldeten Benutzer für Protokolle setzen (gilt für die ganze Anfrage, auch in Threads)."""
@@ -153,8 +158,17 @@ app.include_router(monthly.targets, prefix="/api/sales-targets", tags=["Monatsbe
 app.include_router(inquiries.decisions, prefix="/api/calculations", tags=["Anfragen"])
 app.include_router(inquiries.followups, prefix="/api/followups", tags=["Angebotsverfolgung"])
 app.include_router(docs.router, prefix="/api/docs", tags=["Dokumentation"])
+app.include_router(docs.checks, prefix="/api/checks", tags=["Prüfen"])
 
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "version": APP_VERSION}
+
+
+@app.get("/api/version")
+def version():
+    """REV04-01 Softwarestand – ohne Anmeldung (auch auf der Anmeldeseite sichtbar)."""
+    from .database import SessionLocal  # noqa: PLC0415
+    with SessionLocal() as db:
+        return version_info(db)
