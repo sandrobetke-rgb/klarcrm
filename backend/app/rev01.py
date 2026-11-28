@@ -362,6 +362,11 @@ ITEMS = [
      "In der Anfrage wurde „Kalkulation“ erst grün, wenn eine zweite Kalkulationsversion existierte.", U,
      "„Kalkulation“ gilt als erledigt, sobald jeder angebotene Artikel eine berechnete Kalkulation hat (oder „nicht anbieten“ ist).",
      "Anfrage mit kalkulierten Artikeln öffnen → Schritt „Kalkulation“ ist erledigt.", "Kap. 13.6"),
+    ("REV05-01", "Pipeline", "wunsch", "mittel", 2, "Verlust: Hauptgrund plus weitere Gründe",
+     "Aus Prüfung REV01-P05 (v1.32, 28.11.2026): Man sollte mehr als einen Grund angeben können, warum etwas verloren ging.", "freigegeben",
+     "Vorgemerkt für Block 3 Pipeline/Berichte: ein Hauptgrund bleibt Pflicht und zählt allein in der Auswertung der Absagegründe "
+     "(sonst mehr Gründe als Verluste); zusätzlich optional „weitere Gründe“ zum Ankreuzen, sichtbar in Anfrage/Angebot und als eigene Spalte im Bericht.",
+     "", "Kap. 13.7"),
     ("WUN-0004", "Freigabe", "wunsch", "hoch", 2, "Freigabeprozess",
      "Freigabe zunächst einmal wieder rausnehmen, bis alles funktioniert – Sperrung durch fehlende Freigabe raus.", U,
      "Umgesetzt mit REV03-03: Freigabe-Workflow per Parameter abgeschaltet.", "siehe REV03-03", "Kap. 13.5"),

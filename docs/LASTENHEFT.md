@@ -947,6 +947,16 @@ Freigegeben durch die GF am 26./27.11.2026 nach Abnahme von v1.31. Wirkt nur auf
   Kalkulation hat (Teilgewicht eingetragen oder schon eine 2. Version) – nicht erst ab Version 2.
 - Nebenbei: Das Menü scrollt bei niedrigen Bildschirmen selbst; Benutzer, Abmelden und Softwarestand bleiben sichtbar.
 
+### 13.7 Vorgemerkt aus der Prüfung v1.32 (28.11.2026)
+
+- REV01-P05 Verlust mit Pflichtgrund: geprüft „passt“ (Grundfunktion in Ordnung).
+- **REV05-01** (Block 3 Pipeline/Berichte, freigegeben durch GF 28.11.2026): **ein Hauptgrund** bleibt Pflicht und zählt
+  allein in der Auswertung der Absagegründe; zusätzlich optional **weitere Gründe** zum Ankreuzen, sichtbar in Anfrage
+  und Angebot und als eigene Spalte im Bericht. Begründung: Würde jeder Grund gezählt, ergäben sich mehr Gründe als
+  Verluste und die Anteile in % wären nicht mehr aussagekräftig.
+- REV04-04 Vertriebsziel-Block: „passt nicht“ – Zahlen und Balken etwa doppelt so groß; Nachbesserung mit v1.33.
+- REV04-06 Schrittleiste: keine Programmänderung, Prüfanweisung war unklar; wird mit verständlicher Anweisung nachgeprüft.
+
 ## 14. Preisliste (lebende VK-Preisliste)
 
 Quelle: Wunsch vom 19.11.2026 (Änderungswunsch PRL-01) und F&R-Vorlage „Annual Price Inquiry List Year 2027“.
