@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api, qs } from '../api'
 import { useAuth } from '../auth'
 import { ErrorBox, useFetch } from '../components/ui'
-import { fmtInstalled } from '../components/Version'
+import { fmtInstalled, useVersion } from '../components/Version'
 
 // REV04-02 Prüfseite je Update: nur die Punkte des Updates, in Prüfreihenfolge, eins nach dem anderen
 export const CHECK_KEY = 'crm_check'
@@ -63,6 +63,42 @@ function CheckCard({ it, n, current, onSaved }) {
   )
 }
 
+const ST = { geprueft: 'passt', nachbessern: 'passt nicht', umgesetzt: 'offen' }
+const dDE = (d) => (d ? new Date(d).toLocaleDateString('de-DE') : '')
+
+// v1.33 REV05-03: Prüfbericht als CSV (Excel) und zum Drucken / „Als PDF speichern“
+function csvDownload(data) {
+  const esc = (v) => `"${String(v ?? '').replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`
+  const head = ['Nr', 'Punkt', 'Bereich', 'Titel', 'Was tun', 'Was herauskommen muss', 'Ergebnis', 'Status', 'Prüfer', 'Datum']
+  const lines = data.items.map((it, n) => [n + 1, it.code, it.area, it.title, it.test_steps, it.expected, it.test_result, ST[it.status] || it.status, it.tested_by, dDE(it.tested_at)])
+  const meta = [[`Prüfbericht KlarCRM v${data.version}`], [`${data.done} von ${data.total} geprüft`, data.accepted ? `abgenommen von ${data.accepted.by} am ${fmtInstalled(data.accepted.at)}` : 'noch nicht abgenommen'], []]
+  const txt = '\ufeff' + [...meta, head, ...lines].map((r) => r.map(esc).join(';')).join('\r\n')
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(new Blob([txt], { type: 'text/csv;charset=utf-8' }))
+  a.download = `KlarCRM_Pruefbericht_v${data.version}.csv`
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+}
+
+function Report({ data }) {
+  const v = useVersion()
+  const inst = v?.releases?.find((r) => r.version === data.version)?.installed_at
+  return (
+    <div className="check-report">
+      <h1>Prüfbericht KlarCRM v{data.version}</h1>
+      <p>Eingespielt am {fmtInstalled(inst) || '–'} · {data.done} von {data.total} Punkten „passt“{data.failed ? ` · ${data.failed} „passt nicht“` : ''} ·
+        {' '}{data.accepted ? <>abgenommen von <b>{data.accepted.by}</b> am <b>{fmtInstalled(data.accepted.at)}</b></> : 'noch nicht abgenommen'} · Stand {new Date().toLocaleString('de-DE')}</p>
+      <table>
+        <thead><tr><th>Nr</th><th>Punkt</th><th>Titel</th><th>Was herauskommen muss</th><th>Ergebnis</th><th>Status</th><th>Prüfer / Datum</th></tr></thead>
+        <tbody>{data.items.map((it, n) => (
+          <tr key={it.id}><td>{n + 1}</td><td>{it.code}</td><td>{it.title}</td><td>{it.expected}</td><td>{it.test_result}</td>
+            <td><b>{ST[it.status] || it.status}</b></td><td>{it.tested_by}<br />{dDE(it.tested_at)}</td></tr>))}</tbody>
+      </table>
+      <p className="report-sign">Nachweis der Abnahme eines Software-Updates (IATF 16949 / ISO 14001) · KlarCRM · © SB/Thinkworks</p>
+    </div>
+  )
+}
+
 export default function Pruefen() {
   const { isAdmin } = useAuth()
   const [sp, setSp] = useSearchParams()
@@ -83,9 +119,15 @@ export default function Pruefen() {
   }
   return (
     <div className="page page-narrow">
+      <Report data={data} />
+      <div className="pruefen-screen">
       <header className="page-head">
         <div><h1>Prüfen · Update v{data.version}</h1>
           <p className="muted">Punkte von oben nach unten abarbeiten: „Was tun“ lesen, „Hinspringen“, ansehen, dann „✓ passt“ oder „✗ passt nicht“.</p></div>
+        <div className="toolbar no-print">
+          <button className="btn btn-ghost" onClick={() => window.print()} title="Im Druckdialog „Als PDF speichern“ wählen">🖨 Prüfbericht drucken / PDF</button>
+          <button className="btn btn-ghost" onClick={() => csvDownload(data)}>⬇ Prüfbericht CSV</button>
+        </div>
         {data.versions.length > 1 && <div className="toolbar"><label className="inline-label">Update
           <select value={data.version} onChange={(e) => setSp({ version: e.target.value })}>
             {data.versions.map((v) => <option key={v} value={v}>v{v}{v === data.current ? ' (aktuell)' : ''}</option>)}</select></label></div>}
@@ -114,6 +156,7 @@ export default function Pruefen() {
 
       {data.older_open > 0 && <p className="muted small">Hinweis: {data.older_open} Punkt(e) aus früheren Updates sind noch nicht geprüft –
         siehe <a href="/aenderungen?status=umgesetzt">Änderungswünsche</a>.</p>}
+      </div>
     </div>
   )
 }

@@ -180,7 +180,8 @@ export function InquiryDetail() {
             <tbody>{o.calculations.map((c) => (
               <tr key={c.id}>
                 <td><Link to={`/kalkulationen/${c.id}`}><strong>{c.number}</strong></Link><br /><small className="muted">V{c.current_version}</small></td>
-                <td>{c.article_name}{c.customer_article_no && <><br /><small className="muted">{c.customer_article_no}</small></>}</td>
+                <td>{c.variant_of_id ? <span className="muted" title="Variante (andere Fachzahl)">↳ </span> : null}{c.article_name}{c.customer_article_no && <><br /><small className="muted">{c.customer_article_no}</small></>}
+                  {c.variant_of_id ? <><br /><small className="badge badge-info">Variante von {o.calculations.find((x) => x.id === c.variant_of_id)?.number || 'Kalkulation'}</small></> : null}</td>
                 <td><DecisionBox calc={c} onDone={reload} compact canWrite={canWrite && !closed} /></td>
                 <td>{c.analysis_complete ? <Badge tone="good">✓ vollständig</Badge> : <Link to={`/kalkulationen/${c.id}?tab=analyse`}><Badge tone="critical">unvollständig</Badge></Link>}
                   {!c.analysis_complete && c.analysis_missing?.length > 0 && <><br /><small className="txt-crit">{c.analysis_missing.join(' · ')}</small></>}

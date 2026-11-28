@@ -298,6 +298,7 @@ class Material(TimestampMixin, Base):
     price_index: Mapped[str | None] = mapped_column(String(120))  # Bezugsindex Preisgleitung (z. B. Marktbericht)
     price_valid_from: Mapped[date | None] = mapped_column(Date)    # Stand des aktuellen Preises
     notes: Mapped[str | None] = mapped_column(Text)
+    price_tiers: Mapped[list | None] = mapped_column(JSON)          # v1.33 C03: Staffelpreise [{kg, price}]
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
@@ -356,6 +357,7 @@ class Calculation(TimestampMixin, Base):
     approval_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     approval_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     approval_to_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))   # REV02-02: an wen
+    variant_of_id: Mapped[int | None] = mapped_column(Integer, index=True)   # v1.33 C07: Variante von (Kalkulation)
     # Kennzahlen der aktuellen Version (für Listen/Sortierung)
     current_version: Mapped[int] = mapped_column(Integer, default=0)
     unit_price: Mapped[float] = mapped_column(Float, default=0)
@@ -686,6 +688,7 @@ class PurchasedPart(TimestampMixin, Base):
     moq: Mapped[float | None] = mapped_column(Float)                # Mindestbestellmenge
     lead_time_days: Mapped[int | None] = mapped_column(Integer)
     co2_kg_per_piece: Mapped[float | None] = mapped_column(Float)   # kg CO₂e je Stück (Lieferantenangabe)
+    price_tiers: Mapped[list | None] = mapped_column(JSON)          # v1.33 C01: Staffelpreise [{qty, price}] je Stück
     price_valid_from: Mapped[date | None] = mapped_column(Date)
     notes: Mapped[str | None] = mapped_column(Text)
     active: Mapped[bool] = mapped_column(Boolean, default=True)

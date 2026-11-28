@@ -134,6 +134,12 @@ DEFAULT_INPUTS = {
     "preseries_setup_h": None, "preseries_surcharge_pct": 0.0,
     "preseries_price_manual": None,     # fester Vorserienpreis €/Stk (kalkulierter Wert bleibt als Orientierung)
     "purchased_items": [],  # je Position optional "side": true = Nebenkalkulation statt voller Kalkulation
+                            # v1.33 (C01): je Position "supplier" und "tiers": [{qty, price}] = Staffelpreise nach Jahresbedarf
+    # v1.33 C03: Material mit Lieferant, Angebotsnummer, Staffelpreisen nach Jahresbedarf kg; Masterbatch mit Bezeichnung
+    "material_supplier": "", "material_offer_no": "", "material_tiers": [],   # [{kg, price}]
+    "masterbatch_name": "", "masterbatch_supplier": "",
+    # v1.33 C02/C04: Mengen und Losgrößen je Lieferjahr (leer = Jahresmenge bzw. Losgröße oben); Angebot: Preise je Jahr zeigen
+    "year_volumes": [], "year_lots": [], "quote_show_years": False,
     # Eigener MGK-Satz auf Zukaufteile (None = wie MGK)
     "purchased_mgk_pct": None,
     # Nebenkalkulation teurer Zukaufteile: nur MGK, Qualität, Ausschuss, Aufschlag – keine FGK/VwGK/VtGK/PM/Gewinn
@@ -178,7 +184,33 @@ def normalize(inputs: dict) -> dict:
     out["purchased_items"] = [e for e in (out.get("purchased_items") or []) if isinstance(e, dict)]
     out["price_reductions"] = [e for e in (out.get("price_reductions") or []) if e not in (None, "")]
     out["side_price_reductions"] = [e for e in (out.get("side_price_reductions") or []) if e not in (None, "")]
+    out["material_tiers"] = [e for e in (out.get("material_tiers") or []) if isinstance(e, dict)]
+    out["year_volumes"] = list(out.get("year_volumes") or [])
+    out["year_lots"] = list(out.get("year_lots") or [])
     return out
+
+
+def _tier_price(base: float, tiers: list, need: float, key: str) -> dict:
+    """Staffelpreis nach Jahresbedarf (v1.33 C01/C03). Gilt die höchste Staffel, deren Menge erreicht ist; unter der
+    kleinsten Staffel gilt deren Preis. Liegt eine günstigere Staffel knapp darüber, wird geprüft, ob sich die größere
+    Einkaufsmenge rechnet (Mehrmenge kostet weniger als der Bedarf zum aktuellen Preis)."""
+    rows = sorted((_f(t.get(key)), _f(t.get("price"))) for t in tiers or [] if _f(t.get(key)) > 0 and _f(t.get("price")) > 0)
+    if not rows:
+        return {"price": base, "tier": None, "hint": None}
+    applied = rows[0]
+    for q, p in rows:
+        if need >= q:
+            applied = (q, p)
+    price = applied[1]
+    hint = None
+    for q, p in rows:
+        if q > need and p < price:
+            now, alt = need * price, q * p
+            if alt < now:
+                hint = {"qty": q, "price": p, "cost_now": round(now, 2), "cost_alt": round(alt, 2),
+                        "saves": round(now - alt, 2), "extra": round(q - need, 2)}
+            break
+    return {"price": price, "tier": applied[0], "hint": hint}
 
 
 def compute(raw: dict) -> dict:
@@ -216,6 +248,8 @@ def compute(raw: dict) -> dict:
     res["base_calculated_price"] = base
     res["preseries"] = _preseries(i, res)
     res.update(_price_years(i, res))
+    res["years"] = _years(i, res)
+    res["project_revenue_years"] = round(sum(y["revenue"] for y in res["years"]), 2)
     return res
 
 
@@ -279,9 +313,47 @@ def _preload(f: list, idx: list, mode: str) -> float:
 
 
 def peak_revenue(res: dict) -> float:
-    """Neuumsatz = Umsatz des stärksten Lieferjahres (Vertriebsziel). Ohne Jahrespreise = Jahresumsatz."""
-    years = [y.get("revenue") or 0 for y in res.get("price_years") or []]
+    """Seit v1.33: aus der Tabelle der Lieferjahre (Menge je Jahr), sonst wie bisher. Neuumsatz = Umsatz des stärksten Lieferjahres (Vertriebsziel). Ohne Jahrespreise = Jahresumsatz."""
+    years = [y.get("revenue") or 0 for y in (res.get("years") or res.get("price_years") or [])]
     return round(max(years + [0]) if years else float(res.get("annual_revenue") or 0), 2)
+
+
+def _years_count(i: dict) -> int:
+    return min(max(int(math.ceil(_f(i["project_years"], 1))), 1), 15)
+
+
+def _year_volumes(i: dict) -> list:
+    """Menge je Lieferjahr (C02) – leere Felder = Jahresmenge."""
+    yv = i.get("year_volumes") or []
+    return [(_f(yv[y]) if y < len(yv) and yv[y] not in (None, "") and _f(yv[y]) > 0 else _f(i["annual_volume"]))
+            for y in range(_years_count(i))]
+
+
+def _years(i: dict, res: dict) -> list:
+    """Lieferjahre (v1.33 C02/C04/C05): Menge, Losgröße, Preis, Umsatz, Selbstkosten, Marge, Stunden, Material, Zukaufteile.
+    Weicht Menge oder Losgröße eines Jahres von der Kalkulationsmenge ab, wird das Jahr mit diesen Werten nachgerechnet
+    (Rüstanteil, Amortisation, Stunden); der Preis kommt aus der Kalkulation (inkl. Abschläge je Jahr)."""
+    vols, yl = _year_volumes(i), i.get("year_lots") or []
+    annual, lot = _f(i["annual_volume"]), _f(i["lot_size"])
+    py = {r["year"]: r for r in res.get("price_years") or []}
+    pcs_piece = sum(x["qty"] for x in res.get("purchased_items") or [])
+    out = []
+    for y, q in enumerate(vols):
+        l_in = yl[y] if y < len(yl) else None
+        lot_y = _f(l_in) if l_in not in (None, "") and _f(l_in) > 0 else lot
+        same = abs(q - annual) < 1e-9 and abs(lot_y - lot) < 1e-9
+        sub = res if same else _compute({**i, "annual_volume": q, "lot_size": lot_y, "price_override": None,
+                                         "lot_tiers": [], "volume_tiers": []})
+        # ohne Jahrespreise: exakter Preis wie im Jahresumsatz (nicht der auf 4 Stellen gerundete Stückpreis)
+        price = py[y + 1]["price"] if y + 1 in py else (res["annual_revenue"] / annual if annual > 0 else res["unit_price"])
+        sk = _f(sub.get("self_cost"))
+        out.append({"year": y + 1, "qty": q, "lot": lot_y, "lot_manual": l_in not in (None, "") and _f(l_in) > 0,
+                    "lot_suggestion": round(q / 12) if y > 0 and q > 0 else None,
+                    "price": round(price, 4), "revenue": round(price * q, 2), "self_cost": round(sk, 4),
+                    "margin_pct": round((price - sk) / price * 100, 2) if price else 0, "profit": round((price - sk) * q, 2),
+                    "machine_hours": _f(sub.get("machine_hours_year")), "material_kg": _f(sub.get("material_kg_year")),
+                    "purchased_pcs": round(pcs_piece * q, 0), "lots": round(q / lot_y, 1) if lot_y > 0 else 0})
+    return out
 
 
 def _price_years(i: dict, res: dict) -> dict:
@@ -367,7 +439,13 @@ def _compute(raw: dict) -> dict:
     sprue_share_g = (_f(i["sprue_weight_g"]) / cavities if cavities else 0) * (1 - _f(i["regrind_pct"]) / 100)
     kg_piece = (_f(i["part_weight_g"]) + sprue_share_g) / 1000
     mb = _f(i["masterbatch_pct"]) / 100
-    price_kg = _f(i["material_price_kg"]) * (1 - mb) + _f(i["masterbatch_price_kg"]) * mb
+    scrap_pre = min(_f(i["scrap_pct"]) / 100, 0.95)
+    need_kg = kg_piece * annual / (1 - scrap_pre)            # Jahresbedarf Material inkl. Anguss und Ausschuss
+    mtier = _tier_price(_f(i["material_price_kg"]), i.get("material_tiers"), need_kg * (1 - mb), "kg")
+    price_kg = mtier["price"] * (1 - mb) + _f(i["masterbatch_price_kg"]) * mb
+    purchase = {"need_kg": round(need_kg * (1 - mb), 1), "price_kg": round(mtier["price"], 4), "tier_kg": mtier["tier"],
+                "hint": mtier["hint"], "supplier": i.get("material_supplier") or "", "offer_no": i.get("material_offer_no") or "",
+                "masterbatch_kg": round(need_kg * mb, 1), "masterbatch_name": i.get("masterbatch_name") or ""}
     mek_material = kg_piece * price_kg
     comps = []
     for c in i.get("components") or []:
@@ -384,10 +462,14 @@ def _compute(raw: dict) -> dict:
     for p_ in i.get("purchased_items") or []:
         if not isinstance(p_, dict):
             continue
-        qty, pr = _f(p_.get("qty"), 1), _f(p_.get("price_per_piece"))
+        qty = _f(p_.get("qty"), 1)
+        pneed = qty * annual                                   # Jahresbedarf Stück (C01)
+        pt = _tier_price(_f(p_.get("price_per_piece")), p_.get("tiers"), pneed, "qty")
+        pr = pt["price"]
         pitems.append({"name": p_.get("name") or p_.get("part_no") or "Zukaufteil", "part_no": p_.get("part_no") or "",
                        "qty": qty, "price_per_piece": pr, "cost": qty * pr, "side": bool(p_.get("side")),
-                       "co2": qty * _f(p_.get("co2_kg_per_piece"))})
+                       "co2": qty * _f(p_.get("co2_kg_per_piece")), "need_year": round(pneed, 0), "tier_qty": pt["tier"],
+                       "hint": pt["hint"], "supplier": p_.get("supplier") or ""})
     purchased = _f(i["purchased_parts"]) + sum(x["cost"] for x in pitems if not x["side"])
     mek = mek_material + mek_components + purchased
     own_pmgk = i.get("purchased_mgk_pct") not in (None, "")
@@ -516,7 +598,9 @@ def _compute(raw: dict) -> dict:
     sk = sk_main + side_sk
 
     # --- Werkzeugamortisation (Einmalkosten mit amortize=true, ohne Gewinnaufschlag umgelegt)
-    amort_qty = _f(i.get("amort_quantity")) or annual * max(_f(i["project_years"], 1), 1)
+    yv = _year_volumes(i)
+    amort_qty = _f(i.get("amort_quantity")) or (sum(yv) if any(_f(v) > 0 for v in i.get("year_volumes") or []) else
+                                                 annual * max(_f(i["project_years"], 1), 1))
     amort_total = sum(_f(o.get("price")) or _f(o.get("cost")) for o in i["one_time"] if o.get("amortize"))
     amortization = amort_total / amort_qty if amort_qty > 0 else 0.0
     if amort_total and amort_qty <= 0:
@@ -623,6 +707,8 @@ def _compute(raw: dict) -> dict:
                            "mgk_pct": _f(i["side_mgk_pct"]), "quality_pct": _f(i["side_quality_pct"]),
                            "scrap_pct": _f(i["side_scrap_pct"]), "markup_pct": _f(i["side_markup_pct"])},
         "purchased_items": [{k: (round(v, 6) if isinstance(v, float) else v) for k, v in x.items()} for x in pitems],
+        "material_purchase": purchase,
+        "lot_suggestion": round(annual / 12) if annual > 0 else 0,
         "amortization_per_piece": round(amortization, 6),
         "amortization_total": round(amort_total, 2),
         "amortization_quantity": round(amort_qty, 0),

@@ -351,6 +351,46 @@ def next_calc_number(db: Session) -> str:
     return f"{prefix}{(int(last.split('-')[-1]) + 1 if last else 1):04d}"
 
 
+def register_freetext(db: Session, inputs: dict, calc_number: str) -> dict:
+    """v1.33 C01/C03: Material, Masterbatch und Zukaufteile, die in der Kalkulation als Freitext stehen, automatisch in
+    die Stammdaten übernehmen (mit Lieferant und Staffelpreisen) und verknüpfen. Vorhandene Einträge gleichen Namens
+    werden nur verknüpft, nicht überschrieben."""
+    note = f"aus Kalkulation {calc_number} ({date.today():%d.%m.%Y})"
+
+    def find_mat(name):
+        return db.scalar(select(Material).where(func.lower(Material.name) == name.strip().lower()).limit(1))
+
+    name = (inputs.get("material_name") or "").strip()
+    if name and not inputs.get("material_id"):
+        m = find_mat(name)
+        if not m:
+            m = Material(name=name, supplier=inputs.get("material_supplier") or None,
+                         price_per_kg=float(inputs.get("material_price_kg") or 0), price_tiers=inputs.get("material_tiers") or None,
+                         co2_kg_per_kg=float(inputs.get("co2_material_kg_kg") or 0) or None,
+                         price_valid_from=date.today(), notes=note + (f", Angebot {inputs['material_offer_no']}" if inputs.get("material_offer_no") else ""))
+            db.add(m)
+            db.flush()
+        inputs["material_id"] = m.id
+    mb = (inputs.get("masterbatch_name") or "").strip()
+    if mb and float(inputs.get("masterbatch_pct") or 0) > 0 and not find_mat(mb):
+        db.add(Material(name=mb, family="Masterbatch", supplier=inputs.get("masterbatch_supplier") or None,
+                        price_per_kg=float(inputs.get("masterbatch_price_kg") or 0), price_valid_from=date.today(), notes=note))
+        db.flush()
+    for p in inputs.get("purchased_items") or []:
+        pname = (p.get("name") or "").strip()
+        if not pname or p.get("part_id"):
+            continue
+        part = db.scalar(select(PurchasedPart).where(func.lower(PurchasedPart.name) == pname.lower()).limit(1))
+        if not part:
+            part = PurchasedPart(name=pname, part_no=p.get("part_no") or None, supplier=p.get("supplier") or None,
+                                 price=float(p.get("price_per_piece") or 0), price_basis=1, price_tiers=p.get("tiers") or None,
+                                 co2_kg_per_piece=float(p.get("co2_kg_per_piece") or 0) or None, price_valid_from=date.today(), notes=note)
+            db.add(part)
+            db.flush()
+        p["part_id"] = part.id
+    return inputs
+
+
 def apply_results(calc: Calculation, res: dict, inputs: dict | None = None):
     if inputs is not None and inputs.get("site_id"):
         calc.site_id = inputs.get("site_id")
@@ -519,6 +559,7 @@ def create_calc(data: s.CalcCreate, db: Session = Depends(get_db), user: User = 
     calc = Calculation(number=next_calc_number(db), **meta)
     inputs = normalize({**default_inputs(db, (data.inputs or {}).get("site_id") or default_site_id(db, user)),
                         **(data.inputs or {})})
+    inputs = register_freetext(db, inputs, calc.number)
     res = compute(inputs)
     calc.versions.append(CalculationVersion(version_no=1, inputs=inputs, results=res,
                                             change_note="Erstkalkulation", created_by_id=user.id))
@@ -582,7 +623,7 @@ def add_version(calc_id: int, data: s.CalcVersionIn, db: Session = Depends(get_d
     if not calc:
         raise HTTPException(404, "Kalkulation nicht gefunden")
     # REV02-03: Entscheidung blockiert das Speichern nicht mehr (nur rote Markierung, Pflicht erst beim Angebot)
-    inputs = normalize(data.inputs)
+    inputs = register_freetext(db, normalize(data.inputs), calc.number)
     res = compute(inputs)
     no = (calc.versions[-1].version_no if calc.versions else 0) + 1
     calc.versions.append(CalculationVersion(version_no=no, inputs=inputs, results=res,
@@ -696,11 +737,12 @@ def build_quote(db: Session, pairs: list, user: User, lang: str = "de", target: 
             f" · {t['calc']} {calc.number} V{ver.version_no}"
         p1000 = (r.get("price_year1") or r["unit_price"]) * 1000 if r.get("price_years") else r["price_per_1000"]
         art += f"\n{t['per1000']}: {nf(p1000)} € · {t['lot']} {nf(float(inp.get('lot_size') or 0), 0)} {t['pcs']}"
-        if r.get("price_years"):
-            vol = float(r.get("annual_volume") or 0)
+        if r.get("price_years") or (inp.get("quote_show_years") and r.get("years")):
+            # v1.33: Menge je Lieferjahr (C02); Häkchen „Preise je Lieferjahr im Angebot“ zeigt die Tabelle auch ohne Abschläge
             art += f"\n{t['years_col']}:" + "".join(
-                f"\n  {t['year']} {y['year']}: {nf(vol, 0)} {t['pcs']} × {nf(y['price'], 4)} € = {nf(vol * y['price'])} €"
-                for y in r["price_years"])
+                f"\n  {t['year']} {y['year']}: {nf(y['qty'], 0)} {t['pcs']} × {nf(y['price'], 4)} € = {nf(y['revenue'])} €"
+                for y in (r.get("years") or [{**y, 'qty': float(r.get('annual_volume') or 0),
+                                               'revenue': float(r.get('annual_volume') or 0) * y['price']} for y in r["price_years"]]))
         if float(inp.get("material_price_kg") or 0) > 0:
             st_ = get_settings(db)
             mat = db.get(Material, inp.get("material_id")) if inp.get("material_id") else None
@@ -1227,6 +1269,100 @@ def copy_calc(calc_id: int, data: dict, db: Session = Depends(get_db), user: Use
     db.commit()
     db.refresh(calc)
     return calc
+
+
+# ---------------- v1.33 C07: Varianten (z. B. 4-fach statt 2-fach) ----------------
+def _family_root(db: Session, c: Calculation) -> Calculation:
+    seen = set()
+    while c.variant_of_id and c.variant_of_id not in seen:
+        seen.add(c.id)
+        p = db.get(Calculation, c.variant_of_id)
+        if not p:
+            break
+        c = p
+    return c
+
+
+def _family(db: Session, c: Calculation) -> list[Calculation]:
+    root = _family_root(db, c)
+    out, todo = [root], [root.id]
+    while todo:
+        kids = db.scalars(select(Calculation).where(Calculation.variant_of_id.in_(todo)).order_by(Calculation.id)).unique().all()
+        kids = [k for k in kids if k not in out]
+        out += kids
+        todo = [k.id for k in kids]
+    return out
+
+
+@calcs.post("/{calc_id}/variant", response_model=s.CalcDetail, status_code=201)
+def make_variant(calc_id: int, data: dict, db: Session = Depends(get_db), user: User = Depends(can_write)):
+    """Variante anlegen: alles kopieren, Fachzahl ändern; Artikelanalyse wird mit der neuen Fachzahl neu gerechnet
+    (Schließkraft). Werkzeugkosten passt der Kalkulator selbst an. Gleiche Anfrage, gleicher Kunde."""
+    src = db.get(Calculation, calc_id)
+    if not src:
+        raise HTTPException(404, "Kalkulation nicht gefunden")
+    cav = data.get("cavities")
+    try:
+        cav = int(cav)
+    except (TypeError, ValueError):
+        raise HTTPException(400, "Bitte die Fachzahl der Variante angeben") from None
+    if cav < 1 or cav > 256:
+        raise HTTPException(400, "Fachzahl 1 … 256")
+    ver = next(v for v in src.versions if v.version_no == src.current_version)
+    inputs = normalize({**dict(ver.inputs), "cavities": cav})
+    label = (data.get("label") or "").strip() or f"{cav}-fach"
+    calc = Calculation(number=next_calc_number(db), article_name=f"{src.article_name} – Variante {label}",
+                       customer_article_no=src.customer_article_no, account_id=src.account_id, contact_id=src.contact_id,
+                       opportunity_id=src.opportunity_id, status="kalkulation" if src.status != "anfrage" else "anfrage",
+                       probability=src.probability, owner_id=user.id, inquiry_date=src.inquiry_date, due_date=src.due_date,
+                       sop_date=src.sop_date, decision=src.decision, decision_note=src.decision_note, decision_at=src.decision_at,
+                       decision_by_id=src.decision_by_id, feasibility=src.feasibility, variant_of_id=src.id,
+                       remark=f"Variante von {src.number} V{ver.version_no}: Fachzahl {inputs_cav(ver.inputs)} → {cav}. Werkzeugkosten prüfen.")
+    res = compute(inputs)
+    calc.versions.append(CalculationVersion(version_no=1, inputs=inputs, results=res, created_by_id=user.id,
+                                            change_note=f"Variante von {src.number} V{ver.version_no} ({label})"))
+    calc.current_version = 1
+    apply_results(calc, res, inputs)
+    if src.analysis:
+        calc.analysis = dict(src.analysis)
+        calc.analysis_results = analyze(calc.analysis, inputs, _machines(db), _clamp(db))
+    db.add(calc)
+    db.flush()
+    sync_opportunity(db, calc)
+    db.commit()
+    db.refresh(calc)
+    return calc
+
+
+def inputs_cav(i: dict) -> int:
+    try:
+        return int(float((i or {}).get("cavities") or 1))
+    except (TypeError, ValueError):
+        return 1
+
+
+@calcs.get("/{calc_id}/variants")
+def variants(calc_id: int, db: Session = Depends(get_db), _: User = Depends(can_read)):
+    """Varianten-Familie mit Vergleich: Fachzahl, Zyklus, Werkzeugkosten, Stückpreis, Invest, Schließkraft."""
+    c = db.get(Calculation, calc_id)
+    if not c:
+        raise HTTPException(404, "Kalkulation nicht gefunden")
+    fam = _family(db, c)
+    if len(fam) < 2:
+        return {"rows": []}
+    rows = []
+    for x in fam:
+        v = next((v for v in x.versions if v.version_no == x.current_version), None)
+        i, r = (v.inputs if v else {}) or {}, (v.results if v else {}) or {}
+        tools = sum(float(o.get("price") or o.get("cost") or 0) for o in i.get("one_time") or []
+                    if "werkzeug" in (o.get("label") or "").lower() or "tool" in (o.get("label") or "").lower())
+        rows.append({"id": x.id, "number": x.number, "article_name": x.article_name, "current": x.id == c.id,
+                     "variant_of_id": x.variant_of_id, "status": x.status, "cavities": inputs_cav(i),
+                     "cycle_time_s": float(i.get("cycle_time_s") or 0), "tool_cost": round(tools, 2),
+                     "invest": round(x.invest or 0, 2), "unit_price": x.unit_price, "price_per_1000": round((x.unit_price or 0) * 1000, 2),
+                     "margin_pct": x.margin_pct, "machine_hours_year": r.get("machine_hours_year"),
+                     "clamp_t": (x.analysis_results or {}).get("clamping_force_t")})
+    return {"rows": rows}
 
 
 @router.get("/templates")

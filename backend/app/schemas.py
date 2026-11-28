@@ -374,6 +374,7 @@ class MaterialBase(BaseModel):
     price_valid_from: date | None = None
     notes: str | None = None
     active: bool = True
+    price_tiers: list | None = None
 
 
 class MaterialUpdate(MaterialBase):
@@ -501,6 +502,7 @@ class CalcOut(ORM, CalcMeta):
     analysis_missing: list[str] = []
     warnings: list[str] = []
     approval_to: UserRef | None = None
+    variant_of_id: int | None = None
     decision: str | None = None
     decision_note: str | None = None
     decision_at: datetime | None = None
@@ -537,6 +539,7 @@ class PurchasedPartBase(BaseModel):
     price_valid_from: date | None = None
     notes: str | None = None
     active: bool = True
+    price_tiers: list | None = None
 
 
 class PurchasedPartUpdate(PurchasedPartBase):

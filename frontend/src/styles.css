@@ -850,3 +850,48 @@ tr.row-won td { background: #eef7f0; }
 .sidebar .brand { padding: 16px 18px; }
 .version-modal { color: var(--text); font-size: 14px; text-align: left; }
 .version-body { padding: 4px 20px 18px; }
+
+/* ---------- v1.33 Kalkulation rechnen */
+.tier-editor { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.tier-pair { display: inline-flex; align-items: center; gap: 4px; }
+.tier-pair input.num { width: 86px; }
+.purchased-extra { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 2px 0 6px; }
+.purchased-extra input { width: 150px; }
+.sub-row td { background: var(--surface-2); border-top: 0; }
+.years-v133 input.num { width: 92px; }
+.years-v133 .hint { display: block; font-size: 11px; }
+.info-line { font-size: 13px; color: var(--text-2); }
+.mt-4 { margin-top: 4px; }
+.check-inline { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 13px; }
+.link-btn { background: none; border: 0; padding: 0; color: var(--brand); cursor: pointer; font: inherit; text-decoration: underline; }
+.text-good { color: var(--good); }
+.variants-card .row-current td { background: var(--brand-50); }
+/* v1.33 REV05-02: Vertriebsziel-Block etwa doppelt so groß (Prüfung v1.32) */
+.goal-block { padding: 26px 30px; }
+.goal-block h2 { font-size: 22px; }
+.goal-main { gap: 40px; margin: 20px 0 16px; }
+.goal-pct { font-size: 80px; }
+.goal-figs { gap: 10px 44px; grid-template-columns: repeat(4, minmax(170px, auto)); }
+.goal-figs strong { font-size: 30px; line-height: 1.15; }
+.goal-k { font-size: 14px; }
+.goal-figs small { font-size: 13px; }
+.goal-bar { height: 26px; margin-top: 30px; border-radius: 6px; }
+.goal-fill { border-radius: 5px; }
+.goal-soll { top: -8px; bottom: -8px; width: 3px; }
+.goal-soll em { font-size: 13px; }
+.goal-scale { font-size: 13px; }
+.goal-light { font-size: 15px; padding: 6px 14px; }
+.goal-owners { font-size: 15px; }
+@media (max-width: 1300px) { .goal-figs { grid-template-columns: repeat(2, minmax(170px, auto)); } .goal-pct { font-size: 64px; } }
+/* v1.33 REV05-03 Prüfbericht (nur im Druck) */
+.check-report { display: none; }
+@media print {
+  .pruefen-screen { display: none !important; }
+  .check-report { display: block; font-size: 10pt; color: #000; }
+  .check-report h1 { font-size: 16pt; margin: 0 0 4pt; }
+  .check-report table { width: 100%; border-collapse: collapse; margin-top: 8pt; }
+  .check-report th, .check-report td { border: 0.5pt solid #999; padding: 3pt 4pt; vertical-align: top; text-align: left; }
+  .check-report th { background: #eee; }
+  .check-report tr { break-inside: avoid; }
+  .report-sign { margin-top: 10pt; font-size: 8pt; color: #555; }
+}

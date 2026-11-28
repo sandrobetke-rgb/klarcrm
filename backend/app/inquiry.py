@@ -91,7 +91,15 @@ def refresh_inquiry(db: Session, opp: Opportunity):
     if opp.kind != "anfrage":
         opp.kind = "anfrage"
     live = [c for c in calcs if c.status not in ("verloren", "kein_angebot")]
-    opp.amount = round(sum(c.annual_revenue + c.one_time_revenue for c in (live or calcs)), 2)
+    # v1.33 C07: Varianten desselben Artikels zählen nur einmal (die größte), sonst verdoppelt sich die Pipeline
+    fam: dict[int, float] = {}
+    by_id = {c.id: c for c in calcs}
+    for c in (live or calcs):
+        root = c
+        while root.variant_of_id and root.variant_of_id in by_id and root.variant_of_id != root.id:
+            root = by_id[root.variant_of_id]
+        fam[root.id] = max(fam.get(root.id, 0.0), (c.annual_revenue or 0) + (c.one_time_revenue or 0))
+    opp.amount = round(sum(fam.values()), 2)
     opp.tech_talk = any((c.analysis or {}).get("tech_talk") for c in calcs)
     if all(c.status in CALC_CLOSED for c in calcs):
         if any(c.status == "gewonnen" for c in calcs):

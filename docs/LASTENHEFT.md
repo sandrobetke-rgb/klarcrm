@@ -4,8 +4,8 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.32 |
-| **Stand** | 27.11.2026 |
+| **Dokumentversion** | 1.33 |
+| **Stand** | 28.11.2026 |
 | **Status** | Testphase auf internem Server F&R; aktuelle Auslieferung v1.32 (Kap. 13.0) |
 
 > Dieses Lastenheft wird bei **jeder** Änderung am System mitgezogen. Neue Anforderungen, geänderte Regeln und
@@ -289,6 +289,29 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 - KAL-24: Warnhinweise bei fehlender Ausbringung/Losgröße und wenn der Preis unter den Selbstkosten liegt.
 - KAL-25: Die Berechnung erfolgt **live** beim Eingeben (Server-Rechenkern, eine Quelle der Wahrheit).
 - KAL-26: Druckansicht der Kalkulation.
+
+**Erweiterungen v1.33 (Block 1 Teil 1 „Kalkulation rechnen“)**
+- KAL-40 (C02): **Mengen je Lieferjahr** (`year_volumes`, leer = Jahresmenge). Stückpreis weiter mit der Jahresmenge
+  (Kalkulationsmenge). Je Jahr: Menge, Losgröße, Lose = Menge ÷ Losgröße, Maschinenstunden, Material kg, Zukaufteile Stk
+  = Stück je Artikel × Menge, Preis (inkl. Abschläge KAL-28), Umsatz = Preis × Menge, Selbstkosten und Marge – weicht
+  Menge oder Losgröße ab, wird das Jahr mit diesen Werten nachgerechnet (Rüstanteil, Amortisation, Stunden). Projektsumme.
+- KAL-41 (C02): Werkzeugamortisation ohne eigene Stückzahl = **Summe der Jahresmengen** (bisher Jahresmenge × Laufzeit;
+  gleich, solange keine Jahresmengen eingetragen sind). **Neuumsatz** (Kap. 15) = Umsatz des stärksten Jahres der Tabelle.
+- KAL-42 (C04): Vorschlag Losgröße = Jahresmenge ÷ 12 (Knopf „übernehmen“); Jahrestabelle: Jahr 1 (Anlauf) von Hand,
+  ab Jahr 2 Vorschlag Menge ÷ 12. „Verpackungsimport?“ aus REV01-C04 entfällt (unklar, GF 28.11.2026).
+- KAL-43 (C05): Lieferjahre = Projektlaufzeit (Standard 5), „+ Jahr“ bis 15. Angebot: Zeile je Jahr „Menge × Preis =
+  Umsatz“, wenn Abschläge/Anlaufpreis vorhanden (wie bisher) oder Häkchen `quote_show_years` gesetzt.
+- KAL-44 (C01/C03): **Staffelpreise nach Jahresbedarf** für Material (kg, `material_tiers`) und je Zukaufteil (Stk,
+  `tiers`): es gilt die höchste erreichte Staffel, unter der kleinsten deren Preis. Jahresbedarf Material = kg je Stück
+  (inkl. Anguss) × Jahresmenge ÷ (1 − Ausschuss) ohne Masterbatch-Anteil; Zukaufteil = Stück je Artikel × Jahresmenge.
+  **Vorschlag Einkaufsmenge**: liegt eine günstigere Staffel darüber und kostet Staffelmenge × Staffelpreis weniger als
+  Bedarf × aktueller Preis, zeigt das CRM die Ersparnis und die Mehrmenge. Masterbatch: Dosierung in % (Mischpreis wie
+  bisher), mit Bezeichnung und Lieferant. Freitext-Material, -Masterbatch und -Zukaufteile werden beim Speichern in den
+  Stammdaten angelegt (Vermerk „aus Kalkulation K…“, mit Lieferant und Staffeln) und verknüpft; vorhandene Einträge
+  gleichen Namens werden nur verknüpft.
+- KAL-45 (C07): **Variante anlegen**: Kopie in derselben Anfrage mit neuer Fachzahl, `variant_of_id` verweist auf die
+  Ausgangskalkulation; Artikelanalyse (Schließkraft) wird mit der neuen Fachzahl neu gerechnet. Vergleichstabelle Fachzahl,
+  Zyklus, Schließkraft, Werkzeug, Invest, €/1.000, Marge. Anfragewert (Pipeline): je Artikel-Familie nur die größte Variante.
 
 ### 6.3 Versionen
 - KAL-30: Jede gespeicherte Änderung erzeugt eine **neue Version** (V1, V2, …) mit Änderungsnotiz, Benutzer, Zeitpunkt.
@@ -662,6 +685,7 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.30 | 24.11.2026 | **REV02-10:** Protokoll-Anzeige in diesem Update für alle Benutzer ausgeblendet (Aufzeichnung läuft weiter, Schalter im Code). **Auslieferung v1.30** (Kap. 13.0) ohne Phase 3, Update-Anleitung `docs/UPDATE_v1.30.md`. |
 | 1.31 | 25.11.2026 | **Testrunde 3 – Korrekturen REV03** (Kap. 13.5): Hotfix Fehler 500 (v1.30.1); Angebot ohne Entscheidungssperre; Freigabe-Workflow per Parameter abgeschaltet; Speicherleiste Artikelanalyse; Vertriebsziel als Summe der Einzelziele; Filter bleiben in Änderungswünschen; Auswahllisten mit eigener Eingabe; SuperUser zurückgenommen; Schließkraft 0,55 t/cm²; Wahrscheinlichkeit als Einschätzung am Angebot. Tests auf dem Update-Weg. |
 | 1.32 | 27.11.2026 | **REV04** (Kap. 13.6): Prüfseite je Update mit Status „überholt“ (REV04-02), Softwarestand mit Einspieldatum (REV04-01), Pipeline mit allen 7 Phasen in einer Reihe (REV04-03), Vertriebsziel-Block auf der Startseite (REV04-04, ersetzt REV03-05), Freigabe-Schalter als Häkchen (REV04-05), Schrittleiste „Kalkulation“ (REV04-06); Menü scrollt bei niedrigen Bildschirmen. Getestet auf dem Update-Weg v1.24 → v1.30 → v1.30.1 → v1.31 → v1.32. |
+| 1.33 | 28.11.2026 | **Block 1 Teil 1** (Kap. 13.8, 6.2 KAL-40 … 45): Mengen und Losgröße je Lieferjahr mit Stunden/Material/Zukaufteilen/Marge je Jahr (C02, C04), Lieferjahre immer sichtbar, Häkchen Preise je Jahr im Angebot (C05), Staffelpreise und Freitext → Stammdaten für Material und Zukaufteile, Masterbatch mit Bezeichnung (C01, C03), Varianten mit Vergleich (C07); Werkzeugamortisation über Summe der Jahresmengen; Neuumsatz aus Jahrestabelle; Pipeline zählt Varianten einmal. REV05-02 Vertriebsziel größer, REV05-03 Prüfbericht PDF/CSV. Neue Spalten: materials.price_tiers, purchased_parts.price_tiers, calculations.variant_of_id. Update-Weg v1.24 → … → v1.32 → v1.33 getestet; alle bestehenden Kalkulationen rechnen unverändert. |
 
 ## 13. Testrückmeldung REV01 (Nov. 2026) – Anforderungen und Umsetzung
 
@@ -685,8 +709,9 @@ Umsetzung erfolgt in vier Phasen:
 | v1.30 | 24.11.2026 | Preisliste (Kap. 14, PRL-01) · Monatsbericht mit Vertriebsziel (Kap. 15, MB-01, REV01-D05, REV01-R01) · Teilbeauftragung (Kap. 15.4, MB-02) · Korrekturen Testrunde Phase 2 (Kap. 13.4, REV02-01 … 10, WUN-0001) | ausgeliefert – Fehler 500 in Pipeline/Anfragen nach dem Update (behoben in v1.30.1) |
 | v1.30.1 | 25.11.2026 | Hotfix REV03-01: Fehler 500 in Pipeline und Anfragen (leere Ja/Nein-Spalten in Altdaten) | ausgeliefert – Git-Zweig `release-v1.30.1` |
 | v1.31 | 25.11.2026 | Korrekturen Testrunde 3 (Kap. 13.5, REV03-01 … 09) | ausgeliefert, geprüft und abgenommen 27.11.2026 |
-| **v1.32** | 27.11.2026 | Prüfseite je Update, Softwarestand, Vertriebsziel auf der Startseite, Pipeline mit allen Phasen, Kleinigkeiten (Kap. 13.6, REV04-01 … 06) | **aktuelle Auslieferung** – Git-Zweig `release-v1.32`, Anleitung `docs/UPDATE_v1.32.md` |
-| nächstes Update | offen | Block 1 Kalkulation (Phase 3: REV01-C01 … C10, Varianten als verknüpfte Kalkulationen, Zukaufteile mit Freitext) nach Abnahme v1.32 | vorgemerkt |
+| v1.32 | 27.11.2026 | Prüfseite je Update, Softwarestand, Vertriebsziel auf der Startseite, Pipeline mit allen Phasen, Kleinigkeiten (Kap. 13.6, REV04-01 … 06) | ausgeliefert, geprüft und abgenommen 28.11.2026 |
+| **v1.33** | 28.11.2026 | Block 1 Teil 1 „Kalkulation rechnen“: Mengen je Lieferjahr, Losgröße, Serienpreis je Jahr, Staffelpreise Material und Zukaufteile, Varianten; Vertriebsziel größer, Prüfbericht (Kap. 13.8) | **aktuelle Auslieferung** – Git-Zweig `release-v1.33`, Anleitung `docs/UPDATE_v1.33.md` |
+| nächstes Update | offen | Block 1 Teil 2 „Zusatzblätter“: REV01-C06 Werkzeugblatt (FOT/PPAP/SOP ins Angebot), C08 Risikoanalyse, C09 Stundensatz neue Anlagen, C10 Kickoff – nach Abnahme v1.33 | vorgemerkt |
 
 Die zunächst für ein gemeinsames großes Update zurückgehaltenen Stände (v1.25 … v1.30) werden auf Wunsch vom 24.11.2026
 **ohne Phase 3** als v1.30 ausgeliefert, damit auf dem Server der aktuelle Teststand läuft. Phase 3 folgt als eigenes Update.
@@ -956,6 +981,21 @@ Freigegeben durch die GF am 26./27.11.2026 nach Abnahme von v1.31. Wirkt nur auf
   Verluste und die Anteile in % wären nicht mehr aussagekräftig.
 - REV04-04 Vertriebsziel-Block: „passt nicht“ – Zahlen und Balken etwa doppelt so groß; Nachbesserung mit v1.33.
 - REV04-06 Schrittleiste: keine Programmänderung, Prüfanweisung war unklar; wird mit verständlicher Anweisung nachgeprüft.
+
+### 13.8 Update v1.33 – Block 1 Teil 1 „Kalkulation rechnen“ (28.11.2026)
+
+Freigegeben durch die GF am 28.11.2026 (Aufteilung Block 1 in zwei Updates, Masterbatch als Dosierung in %).
+Rechenweg in Kap. 6.2 (KAL-40 … 45). Wirkt auf andere Blöcke: Stammdaten (neue Einträge aus der Kalkulation),
+Angebot (Häkchen Preise je Lieferjahr), Vertriebsziel/Monatsbericht (Neuumsatz aus Jahresmengen), Pipeline (Varianten
+einmal). Die **Auslastung** rechnet bis Block 3 weiter mit der Jahresmenge.
+
+- REV01-C02 Mengen je Lieferjahr · REV01-C04 Losgröße-Vorschlag · REV01-C05 Serienpreis je Lieferjahr
+- REV01-C01 Zukaufteile (Freitext, Lieferant, Staffeln, Jahresbedarf) · REV01-C03 Material (Freitext, Lieferant,
+  Angebotsnummer, Staffeln, Einkaufsmenge; Masterbatch mit Bezeichnung – Dosierung in % gab es schon)
+- REV01-C07 Variante anlegen mit Vergleich
+- REV05-02 Vertriebsziel-Block etwa doppelt so groß (aus Prüfung REV04-04)
+- REV05-03 Prüfbericht je Update: Druckansicht („Als PDF speichern“) und CSV, mit Abnahme
+- Vorgemerkt für v1.34 (Block 1 Teil 2): REV01-C06, C08, C09, C10.
 
 ## 14. Preisliste (lebende VK-Preisliste)
 

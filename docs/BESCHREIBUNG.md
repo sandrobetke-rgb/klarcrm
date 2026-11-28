@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Programm** | KlarCRM – Vertrieb, Kalkulation Spritzguss, Angebote |
-| **Version** | 1.32 (Stand 27.11.2026) |
+| **Version** | 1.33 (Stand 28.11.2026) |
 | **Für** | Vertrieb, Kalkulation, Einkauf, Geschäftsführung, Gesellschafter |
 
 > Diese Beschreibung erklärt, **wie man mit KlarCRM arbeitet**. Die genauen Regeln und Rechenwege stehen im
@@ -94,7 +94,22 @@ Die **Wahrscheinlichkeit** gilt für den ganzen Auftrag. Summen werden nicht meh
   Maschinenstundensatz** des Standorts umgerechnet (Stammdaten → Standorte).
 - *Standortvergleich* rechnet dieselbe Kalkulation für alle Standorte nebeneinander.
 
-### 3.4 Angebot
+### 3.4 Mengen je Lieferjahr, Staffelpreise, Varianten (ab v1.33)
+- **Mengen je Lieferjahr** (Abschnitt Mengen): je Jahr eigene Menge und Losgröße eintragen, leere Felder = Jahresmenge bzw.
+  Losgröße oben. Die Tabelle zeigt je Jahr Lose, Maschinenstunden, Material, Zukaufteile, Preis, Umsatz und Marge.
+  „+ Jahr“ / „− Jahr“ ändern die Laufzeit. „Losgröße ab Jahr 2 = Menge ÷ 12“ füllt den Vorschlag ein; Jahr 1 (Anlauf)
+  von Hand. Der Stückpreis wird mit der Jahresmenge oben gerechnet. Häkchen „Preise und Mengen je Lieferjahr im Angebot
+  zeigen“ bringt die Tabelle ins Angebot.
+- **Material**: aus den Stammdaten wählen oder „Neues Material (Freitext)“. Lieferant, Angebotsnummer und bis zu 5
+  Staffelpreise je kg eintragen – das CRM nimmt die Staffel passend zum Jahresbedarf und zeigt, ob sich eine größere
+  Einkaufsmenge lohnt. Masterbatch als Anteil in % mit Bezeichnung und Lieferant.
+- **Zukaufteile**: aus den Stammdaten oder frei; je Teil Lieferant und Staffeln (Grau-Zeile unter dem Teil).
+- Neue Materialien und Zukaufteile werden beim **Speichern** automatisch in den Stammdaten angelegt.
+- **Variante anlegen** (oben in der Kalkulation): Kopie mit anderer Fachzahl in derselben Anfrage. Werkzeugkosten und
+  Zykluszeit in der Variante anpassen. Die Karte „Varianten im Vergleich“ stellt alle Varianten nebeneinander. In der
+  Pipeline zählt je Artikel nur die größte Variante.
+
+### 3.5 Angebot
 - Es gibt **ein** Angebot je Anfrage mit allen angebotenen Artikeln. „Angebot erstellen / aktualisieren“ in der Anfrage
   (oder in der Kalkulation) aktualisiert einen Entwurf; ein bereits versendetes Angebot bekommt eine **Revision**.
 - Positionen: 1 Artikel (mit Preisen je Lieferjahr: Jahresmenge × Stückpreis), 1.1 Werkzeug, 1.x Vorserie, 1.x Sonstiges,
@@ -104,7 +119,7 @@ Die **Wahrscheinlichkeit** gilt für den ganzen Auftrag. Summen werden nicht meh
 - Mehrere Artikel desselben Kunden aus der Kalkulationsliste: anhaken → „Sammelangebot“ (führt sie in einer Anfrage zusammen).
 - Angebote gehen nur an Kunden, Interessenten oder Partner – nie an Lieferanten.
 
-### 3.5 Verloren / Kein Angebot
+### 3.6 Verloren / Kein Angebot
 - Verloren nur mit Grund: Werkzeug zu teuer, Preis zu teuer, Projekt eingestellt, Kunde hat Projekt nicht erhalten,
   Vorrichtung zu teuer, Investition zu teuer, Lieferzeit/Kapazität, technisch nicht machbar oder Sonstiges (Freitext).
 - In der Pipeline öffnet das Ziehen auf „Verloren“ automatisch diesen Dialog.
@@ -177,7 +192,7 @@ Die **Wahrscheinlichkeit** gilt für den ganzen Auftrag. Summen werden nicht meh
 - Ampel: unter 60 % frei · 60–85 % gut ausgelastet · 85–100 % knapp · ab 100 % überlastet.
 
 ## 6. Änderungswünsche und Prüfung
-- **Ein Update prüfen:** Menü *Prüfen*. Dort stehen nur die Punkte des aktuellen Updates, in der Reihenfolge, in der
+- **Ein Update prüfen:** Menü *Prüfen*. Oben „🖨 Prüfbericht drucken / PDF“ und „⬇ Prüfbericht CSV“ für die Ablage. Dort stehen nur die Punkte des aktuellen Updates, in der Reihenfolge, in der
   man sie prüfen soll. Je Punkt: „Was tun“ lesen → **Hinspringen** (öffnet die richtige Stelle; oben steht „Prüfung
   läuft … ← zurück zur Prüfseite“) → ansehen → **✓ passt** oder **✗ passt nicht** (dann kurz beschreiben, was nicht
   passt). Prüfer und Datum setzt das CRM. Fehlklick: „Ergebnis zurücksetzen“. Sind alle Punkte „passt“, erklärt ein

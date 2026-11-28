@@ -20,6 +20,7 @@ import Attachments from '../components/Attachments'
 import CallPanel, { LastCall } from '../components/CallPanel'
 import { BigBadge } from '../components/BigProject'
 import NumInput from '../components/NumInput'
+import { MaterialBlock, PurchasedExtra, VariantButton, VariantsCard, YearVolumes } from '../components/CalcV133'
 
 export const calcMetaFields = [
   { name: 'article_name', label: 'Artikelbezeichnung', required: true, span: true },
@@ -213,6 +214,7 @@ function HeaderActions({ calc, setCalc, onDelete, onCall }) {
         try { setCalc(await api.post(`/calculations/${calc.id}/opportunity`)) } catch (e) { setErr(e) }
       }}>→ Anfrage anlegen</button>}
       {calc.opportunity_id && <Link className="btn btn-ghost" to={`/anfragen/${calc.opportunity_id}`}>→ zur Anfrage</Link>}
+      <VariantButton calc={calc} />
       <button className="btn btn-ghost" onClick={async () => {
         const name = window.prompt('Artikelbezeichnung der Kopie:', `${calc.article_name} (Kopie)`)
         if (name) { const c = await api.post(`/calculations/${calc.id}/copy`, { article_name: name }); nav(`/kalkulationen/${c.id}`) }
@@ -328,6 +330,7 @@ function CalcTab({ calc, setCalc, master }) {
     const m = master.materials.find((x) => x.id === Number(mid))
     if (!m) { set('material_id', null); return }
     setInputs((s) => ({ ...s, material_id: m.id, material_name: m.name, material_price_kg: m.price_per_kg,
+      material_supplier: m.supplier || '', material_tiers: m.price_tiers || [],
       co2_material_kg_kg: m.co2_kg_per_kg ?? s.co2_material_kg_kg }))
   }
   async function saveVersion() {
@@ -361,11 +364,14 @@ function CalcTab({ calc, setCalc, master }) {
           </>}
         </div>
         <ErrorBox error={error} />
+        <VariantsCard calc={calc} />
         <fieldset disabled={!canWrite} className="calc-fieldset">
           <Section title="Mengen">
             {F({ k: 'annual_volume', label: 'Jahresmenge', unit: 'Stk', step: 1000 })}
-            {F({ k: 'lot_size', label: 'Losgröße', unit: 'Stk', step: 500 })}
+            {F({ k: 'lot_size', label: 'Losgröße', unit: 'Stk', step: 500, hint: r.lot_suggestion ? <>Vorschlag {num(r.lot_suggestion)} (Jahresmenge ÷ 12){canWrite && Number(inputs.lot_size) !== r.lot_suggestion
+              ? <> · <button type="button" className="link-btn" onClick={() => set('lot_size', r.lot_suggestion)}>übernehmen</button></> : null}</> : undefined })}
             {F({ k: 'project_years', label: 'Projektlaufzeit', unit: 'Jahre', step: 1 })}
+            <YearVolumes inputs={inputs} setInputs={setInputs} r={r} />
             <div className="field span-3"><label>Staffelpreise – weitere Losgrößen <span className="unit">Stk (bis zu 3)</span></label>
               <div className="tier-inputs">
                 {[0, 1, 2].map((n) => (
@@ -405,17 +411,20 @@ function CalcTab({ calc, setCalc, master }) {
           </Section>
 
           <Section title="Material">
-            <div className="field span-2"><label>Material (Stammdaten)</label>
-              <select value={inputs.material_id ?? ''} onChange={(e) => pickMaterial(e.target.value)}>
-                <option value="">– frei / manuell –</option>
-                {master.materials.map((m) => <option key={m.id} value={m.id}>{m.name} · {num2(m.price_per_kg)} €/kg</option>)}
-              </select></div>
-            {F({ k: 'material_price_kg', label: 'Materialpreis', unit: '€/kg', step: 0.05 })}
+            <MaterialBlock inputs={inputs} set={set} setInputs={setInputs} materials={master.materials} pickMaterial={pickMaterial} r={r}
+              priceField={F({ k: 'material_price_kg', label: 'Materialpreis', unit: '€/kg', step: 0.05, hint: (inputs.material_tiers || []).length ? 'ohne Staffel; mit Staffeln gilt der Staffelpreis' : undefined })} />
             {F({ k: 'part_weight_g', label: 'Teilgewicht', unit: 'g', step: 0.1 })}
             {F({ k: 'sprue_weight_g', label: 'Anguss je Schuss', unit: 'g', step: 0.1, hint: '0 bei Heißkanal' })}
             {F({ k: 'regrind_pct', label: 'Mahlgut-Rückführung Anguss', unit: '%' })}
             {F({ k: 'masterbatch_pct', label: 'Masterbatch-Anteil', unit: '%', step: 0.5 })}
             {F({ k: 'masterbatch_price_kg', label: 'Masterbatch-Preis', unit: '€/kg', step: 0.1 })}
+            {Number(inputs.masterbatch_pct) > 0 && <>
+              <div className="field"><label>Masterbatch</label>
+                <input value={inputs.masterbatch_name || ''} placeholder="z. B. MB schwarz 40 % – neu → Stammdaten" onChange={(e) => set('masterbatch_name', e.target.value)} /></div>
+              <div className="field"><label>Lieferant Masterbatch</label>
+                <input value={inputs.masterbatch_supplier || ''} onChange={(e) => set('masterbatch_supplier', e.target.value)} /></div>
+              <Info>Masterbatch als Dosierung: {num(inputs.masterbatch_pct, 2)} % der Materialmenge = <b>{num(r.material_purchase?.masterbatch_kg, 1)} kg</b> im Jahr · Mischpreis {num2((Number(inputs.material_price_kg) || 0) * (1 - inputs.masterbatch_pct / 100) + (Number(inputs.masterbatch_price_kg) || 0) * inputs.masterbatch_pct / 100)} €/kg</Info>
+            </>}
             <ComponentsEditor rows={inputs.components || []} materials={master.materials} onChange={(v) => set('components', v)} result={r} />
             <PurchasedEditor rows={inputs.purchased_items || []} parts={master.parts} onChange={(v) => set('purchased_items', v)} result={r} />
             {(inputs.purchased_items || []).some((x) => !x.side) || Number(inputs.purchased_parts) ? (
@@ -757,19 +766,19 @@ function OperationsEditor({ rows, machines, labor, onChange, result }) {
 function PurchasedEditor({ rows, parts, onChange, result }) {
   const upd = (i, patch) => onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)))
   const fromPart = (p) => ({ part_id: p.id, part_no: p.part_no, name: p.name, price_per_piece: Number((p.price / (p.price_basis || 1)).toFixed(6)),
-    co2_kg_per_piece: p.co2_kg_per_piece ?? 0 })
+    co2_kg_per_piece: p.co2_kg_per_piece ?? 0, supplier: p.supplier || '', tiers: p.price_tiers || [] })
   const pick = (i, id) => {
     const p = parts.find((x) => x.id === Number(id))
     upd(i, p ? fromPart(p) : { part_id: null })
   }
   return (
     <div className="field span-3">
-      <div className="section-head"><label>Zukaufteile (Stammdaten)</label>
+      <div className="section-head"><label>Zukaufteile (Stammdaten oder frei – neue Teile werden beim Speichern angelegt)</label>
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => onChange([...rows, { qty: 1, price_per_piece: 0, co2_kg_per_piece: 0, ...(parts[0] ? fromPart(parts[0]) : { name: 'Zukaufteil' }) }])}>+ Zukaufteil</button></div>
       {rows.length > 0 ? (
         <table className="table items-table comp-table">
           <thead><tr><th>Zukaufteil</th><th>Bezeichnung</th><th className="num">Menge je Artikel</th><th className="num">€ je Einheit</th><th className="num">kg CO₂e je Einheit</th><th className="num">€/Stk</th><th title="Nebenkalkulation: nur MGK, Qualität, Ausschuss – nicht durch die volle Kalkulation">Nebenkalk.</th><th /></tr></thead>
-          <tbody>{rows.map((p, i) => (
+          <tbody>{rows.map((p, i) => [
             <tr key={i}>
               <td><select value={p.part_id ?? ''} onChange={(e) => pick(i, e.target.value)}>
                 <option value="">– frei –</option>{parts.map((x) => <option key={x.id} value={x.id}>{x.part_no ? `${x.part_no} · ` : ''}{x.name}</option>)}</select></td>
@@ -780,7 +789,8 @@ function PurchasedEditor({ rows, parts, onChange, result }) {
               <td className="num"><b>{fix4(result?.purchased_items?.[i]?.cost)}</b></td>
               <td className="center"><input type="checkbox" checked={!!p.side} title="Nebenkalkulation (für teure Zukaufteile)" onChange={(e) => upd(i, { side: e.target.checked })} /></td>
               <td><button type="button" className="icon-btn" title="Entfernen" onClick={() => onChange(rows.filter((_, j) => j !== i))}>×</button></td>
-            </tr>))}</tbody>
+            </tr>,
+            <tr key={`x${i}`} className="sub-row"><td colSpan={8}><PurchasedExtra p={p} res={result?.purchased_items?.[i]} onChange={(patch) => upd(i, patch)} /></td></tr>])}</tbody>
         </table>
       ) : <small className="hint">Einlegeteile, Buchsen, Dichtungen, Clips, Schrauben, Etiketten … aus den Stammdaten wählen; Preis je Einheit wird aus Preis ÷ Preiseinheit vorbelegt. MGK wirkt auf die Zukaufteile.</small>}
       {rows.length > 0 && <small className="hint">Haken „Nebenkalk.“ bei teuren Zukaufteilen: Sie werden nur mit eigenem MGK, Qualität und Ausschuss (optional Aufschlag) kalkuliert und nicht mit allen Zuschlägen der Hauptkalkulation belastet.</small>}
@@ -1006,7 +1016,7 @@ function Results({ r, inputs, set, canWrite, calc, versionNo, siteCompare }) {
           <div><span>Jahresumsatz</span><b>{eur(r.annual_revenue)}</b></div>
           <div><span>Gewinn p. a.</span><b className={r.annual_profit < 0 ? 'text-critical' : ''}>{eur(r.annual_profit)}</b></div>
           <div><span>Marge</span><b className={r.margin_pct < 0 ? 'text-critical' : ''}>{num(r.margin_pct, 1)} %</b></div>
-          <div><span>Projektumsatz</span><b>{eur(r.project_revenue)}</b></div>
+          <div><span>Projektumsatz</span><b>{eur(r.project_revenue_years ?? r.project_revenue)}</b></div>
           <div><span>Einmalumsatz</span><b>{eur(r.one_time_price)}</b></div>
           <div><span>1. Jahr gesamt</span><b>{eur(r.first_year_revenue)}</b></div>
         </div>

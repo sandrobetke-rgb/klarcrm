@@ -381,6 +381,8 @@ ITEMS = [
 
 
 def _ver(code: str, phase) -> str:
+    if code.startswith("REV05") or code in V133:
+        return "1.33"
     if code.startswith("REV04"):
         return "1.32"
     if code.startswith("REV03") or code == "WUN-0004":
@@ -477,3 +479,67 @@ def seed_checks(db) -> None:
                 cr.test_result = ((cr.test_result or "").strip() + f"\n→ überholt durch {new}").strip()
         cs.data = {**(cs.data or {}), "_rev04_ueberholt": True}
     db.commit()
+
+
+# ------------------------------------------------------------------ v1.33 Block 1 „Kalkulation rechnen“ (28.11.2026)
+V133 = {
+    "REV01-C02": ("Kalkulation → Mengen: Tabelle „Mengen je Lieferjahr“ mit Menge und Losgröße je Jahr (leer = Jahresmenge/Losgröße oben). "
+                  "Je Jahr: Lose, Maschinenstunden, Material kg, Zukaufteile Stk, Preis, Umsatz, Marge (mit Menge und Losgröße des Jahres "
+                  "nachgerechnet) und Projektsumme. Werkzeugamortisation über die Summe der Jahresmengen. Neuumsatz = stärkstes Jahr.",
+                  "Kalkulation öffnen → Mengen: Jahr 1 = 20.000, Jahr 2–5 = 60.000 eintragen."),
+    "REV01-C05": ("Lieferjahre standardmäßig 5 (Projektlaufzeit), „+ Jahr“ / „− Jahr“ bis 15. Preis je Jahr inkl. Abschläge wie bisher; "
+                  "Häkchen „Preise und Mengen je Lieferjahr im Angebot zeigen“ (ohne Häkchen Angebot wie bisher).",
+                  "In der Tabelle „+ Jahr“ klicken; Häkchen setzen, speichern, Angebot der Anfrage aktualisieren."),
+    "REV01-C04": ("Losgröße: Vorschlag Jahresmenge ÷ 12 mit „übernehmen“; in der Jahrestabelle Jahr 1 (Anlauf) von Hand, ab Jahr 2 Vorschlag "
+                  "Menge ÷ 12 (Knopf „Losgröße ab Jahr 2 = Menge ÷ 12“). „Verpackungsimport?“ entfällt (unklar, GF 28.11.2026).",
+                  "Bei Jahr 2 = 60.000 steht als Vorschlag 5.000."),
+    "REV01-C01": ("Zukaufteile: Name frei eingebbar (neu → beim Speichern in Stammdaten › Zukaufteile, Vermerk „aus Kalkulation“), "
+                  "Lieferant, bis zu 5 Staffelpreise; Jahresbedarf = Stück je Bauteil × Jahresmenge, es gilt die passende Staffel. "
+                  "Hinweis, wenn eine größere Einkaufsmenge günstiger ist.",
+                  "Zukaufteil „Buchse M5“ frei anlegen, 4 Stk je Bauteil, Staffeln ab 10.000 → 0,12 € und ab 50.000 → 0,09 €, Jahresmenge 15.000, speichern."),
+    "REV01-C03": ("Material: „Neues Material (Freitext)“ (beim Speichern → Stammdaten › Material), Lieferant, Angebotsnummer, bis zu 5 "
+                  "Staffelpreise je kg nach Jahresbedarf (inkl. Anguss und Ausschuss), Vorschlag Einkaufsmenge pro Jahr mit Hinweis, "
+                  "wenn die nächste Staffel günstiger ist. Masterbatch mit Bezeichnung und Lieferant, Anteil als Dosierung in %.",
+                  "Neues Material „PP schwarz Test“ mit Staffeln, Masterbatch 3 % eintragen, speichern, Stammdaten › Material ansehen."),
+    "REV01-C07": ("Knopf „⎘ Variante anlegen“: Kopie mit neuer Fachzahl in derselben Anfrage, verknüpft („Variante von“). Artikelanalyse "
+                  "(Schließkraft) rechnet mit der neuen Fachzahl; Werkzeugkosten/Zyklus passt der Kalkulator an. Karte „Varianten im "
+                  "Vergleich“. In der Pipeline zählt je Artikel nur die größte Variante.",
+                  "In einer 2-fach-Kalkulation „Variante anlegen“ mit Fachzahl 4."),
+}
+_new = [
+    ("REV05-02", "Startseite", "wunsch", "mittel", 3, "Vertriebsziel-Block etwa doppelt so groß",
+     "Aus Prüfung REV04-04 (v1.32): Block ist da, kann aber doppelt so groß sein – Zahlen gewonnen, Jahresziel usw.", U,
+     "Prozentwert, Zahlen (Gewonnen, Jahresziel, Soll heute, Noch bis zum Ziel), Ampel und Balken etwa doppelt so groß.",
+     "Startseite ansehen.", "Kap. 13.8"),
+    ("REV05-03", "Änderungswünsche", "wunsch", "mittel", 3, "Prüfbericht je Update als PDF und CSV",
+     "Aus Prüfung v1.32: Von der Prüfseite lässt sich nichts exportieren – Abnahmenachweis muss ablegbar sein.", U,
+     "Prüfseite: „🖨 Prüfbericht drucken / PDF“ (Druckansicht mit allen Punkten, Ergebnis, Prüfer, Datum, Abnahme – im Druckdialog "
+     "„Als PDF speichern“) und „⬇ Prüfbericht CSV“ (Excel).",
+     "Prüfseite → beide Knöpfe; Update-Auswahl v1.32 → Bericht mit Abnahme.", "Kap. 13.8"),
+]
+ITEMS = [(t[0], t[1], t[2], t[3], t[4], t[5], t[6], U, V133[t[0]][0], V133[t[0]][1], "Kap. 13.8") if t[0] in V133 else t
+         for t in ITEMS] + _new
+
+CHECKS.update({
+    "REV01-C02": ("1.33", 1, "/kalkulationen", "Eine Kalkulation öffnen (Reiter Kalkulation) → Abschnitt Mengen → Tabelle „Mengen je Lieferjahr“: "
+                  "Jahr 1 = 20.000, Jahr 2 bis 5 = 60.000 eintragen (noch nicht speichern).",
+                  "Je Jahr ändern sich Lose, Maschinenstunden, Material kg und Umsatz passend zur Menge; die Zeile „Projekt“ zeigt die Summe. "
+                  "Jahr 1 hat wegen der kleinen Menge eine schlechtere Marge."),
+    "REV01-C04": ("1.33", 2, "/kalkulationen", "In derselben Tabelle auf „Losgröße ab Jahr 2 = Menge ÷ 12“ klicken; oben beim Feld Losgröße den Vorschlag ansehen.",
+                  "Jahr 2–5 bekommen Losgröße 5.000 (60.000 ÷ 12), Jahr 1 bleibt von Hand. Beim Feld Losgröße steht „Vorschlag … (Jahresmenge ÷ 12) · übernehmen“."),
+    "REV01-C05": ("1.33", 3, "/kalkulationen", "„+ Jahr“ klicken. Dann Häkchen „Preise und Mengen je Lieferjahr im Angebot zeigen“ setzen und speichern.",
+                  "Es gibt ein Jahr 6 mit Preis, Umsatz und Marge. Nach „→ Angebot … aktualisieren“ stehen im Angebot Menge × Preis je Jahr."),
+    "REV01-C01": ("1.33", 4, "/kalkulationen", "Abschnitt Material → „+ Zukaufteil“, Auswahl „– frei –“, Name „Buchse M5 Test“, 4 Stück je Artikel, "
+                  "Lieferant eintragen, Staffeln ab 10.000 → 0,12 und ab 50.000 → 0,09. Jahresmenge 15.000. Speichern.",
+                  "Jahresbedarf 60.000 Stk, das CRM nimmt 0,09 €. Danach steht „Buchse M5 Test“ unter Stammdaten › Zukaufteile (mit Staffel)."),
+    "REV01-C03": ("1.33", 5, "/kalkulationen", "Material → „Neues Material (Freitext)“: „PP schwarz Test“, Lieferant, Angebotsnummer, Staffeln ab 1.000 kg → 2,00 und "
+                  "ab 5.000 kg → 1,80. Masterbatch 3 % mit Bezeichnung. Speichern.",
+                  "Unter den Feldern stehen Jahresbedarf kg, die gültige Staffel und die Einkaufsmenge; Masterbatch-kg = 3 % der Materialmenge. "
+                  "„PP schwarz Test“ und der Masterbatch stehen danach in Stammdaten › Material."),
+    "REV01-C07": ("1.33", 6, "/kalkulationen", "In einer Kalkulation oben „⎘ Variante anlegen“, Fachzahl z. B. doppelt so hoch.",
+                  "Eine neue Kalkulation „… – Variante 4-fach“ öffnet sich, rechts die Karte „Varianten im Vergleich“ (Fachzahl, Schließkraft, Preis). "
+                  "In der Anfrage steht sie als „↳ Variante von …“; der Anfragewert zählt nur die größere Variante."),
+    "REV05-02": ("1.33", 7, "/", "Startseite ansehen.", "Der Vertriebsziel-Block ist deutlich größer: Prozent, Zahlen, Ampel und Balken etwa doppelt so groß."),
+    "REV05-03": ("1.33", 8, "/pruefen", "Auf dieser Seite „🖨 Prüfbericht drucken / PDF“ und „⬇ Prüfbericht CSV“ klicken; oben Update v1.32 wählen und wiederholen.",
+                 "Die Druckansicht zeigt alle Punkte mit Ergebnis, Prüfer, Datum und die Abnahme (bei v1.32 mit Namen und Datum). Die CSV öffnet sich in Excel."),
+})
