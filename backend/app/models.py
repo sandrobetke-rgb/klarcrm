@@ -358,6 +358,11 @@ class Calculation(TimestampMixin, Base):
     approval_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     approval_to_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))   # REV02-02: an wen
     variant_of_id: Mapped[int | None] = mapped_column(Integer, index=True)   # v1.33 C07: Variante von (Kalkulation)
+    # v1.34 Block 1 Teil 2: Zusatzblätter je Artikel
+    tool_sheet: Mapped[dict | None] = mapped_column(JSON)   # C06 Werkzeugblatt
+    risk: Mapped[dict | None] = mapped_column(JSON)         # C08 Risikoanalyse {answers, notes, measures}
+    equipment: Mapped[dict | None] = mapped_column(JSON)    # C09 neue Anlagen {rows}
+    kickoff: Mapped[dict | None] = mapped_column(JSON)      # C10 Kickoff-Schnappschuss bei Auftrag
     # Kennzahlen der aktuellen Version (für Listen/Sortierung)
     current_version: Mapped[int] = mapped_column(Integer, default=0)
     unit_price: Mapped[float] = mapped_column(Float, default=0)
@@ -473,6 +478,19 @@ def _is_calculated(self) -> bool:
 
 
 Calculation.is_calculated = property(_is_calculated)
+
+
+def _risk_level(self) -> str | None:
+    """v1.34 C08: Einstufung der Risikoanalyse (nur wenn begonnen)."""
+    if not self.risk or not (self.risk.get("answers") or {}):
+        return None
+    from .sheets import eval_risk  # noqa: PLC0415
+    inv = (self.invest or 0) + sum(float(r.get("invest_fr") or 0) for r in ((self.equipment or {}).get("rows") or []) if isinstance(r, dict))
+    return eval_risk(self.risk, inv)["level"]
+
+
+Calculation.risk_level = property(_risk_level)
+Calculation.has_kickoff = property(lambda self: bool(self.kickoff))
 
 
 def _last_light(self):

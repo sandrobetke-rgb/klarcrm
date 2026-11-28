@@ -20,6 +20,7 @@ import Attachments from '../components/Attachments'
 import CallPanel, { LastCall } from '../components/CallPanel'
 import { BigBadge } from '../components/BigProject'
 import NumInput from '../components/NumInput'
+import { EquipmentTab, KickoffTab, RiskBadge, RiskTab, ToolTab } from '../components/Sheets'
 import { MaterialBlock, PurchasedExtra, VariantButton, VariantsCard, YearVolumes } from '../components/CalcV133'
 
 export const calcMetaFields = [
@@ -45,7 +46,7 @@ export const calcMetaFields = [
   { name: 'remark', label: 'Bemerkung', type: 'textarea', span: true, rows: 3 },
 ]
 
-const TABS = [['analysis', '1 · Artikelanalyse'], ['calc', '2 · Kalkulation'], ['lifecycle', 'Lebensweg'], ['docs', 'Dokumente'], ['procurement', 'Beschaffung'], ['calls', 'Anrufe'], ['meta', 'Anfrage & Status'], ['versions', 'Versionen'], ['post', 'Nachkalkulation'], ['audit', 'Protokoll', true]]
+const TABS = [['analysis', '1 · Artikelanalyse'], ['calc', '2 · Kalkulation'], ['tool', '3 · Werkzeug'], ['risk', '4 · Risiko'], ['equipment', 'Neue Anlagen'], ['kickoff', 'Kickoff'], ['lifecycle', 'Lebensweg'], ['docs', 'Dokumente'], ['procurement', 'Beschaffung'], ['calls', 'Anrufe'], ['meta', 'Anfrage & Status'], ['versions', 'Versionen'], ['post', 'Nachkalkulation'], ['audit', 'Protokoll', true]]
 
 export default function CalculationEditor() {
   const { id } = useParams()
@@ -83,7 +84,7 @@ export default function CalculationEditor() {
         <div>
           <h1>{calc.number} · {calc.article_name} <Badge tone={st.tone}>{st.label}</Badge>
             {calc.last_traffic_light && <Light value={calc.last_traffic_light} />}
-            <BigBadge revenue={calc.annual_revenue} invest={calc.invest} />
+            <BigBadge revenue={calc.annual_revenue} invest={calc.invest} /> <RiskBadge level={calc.risk_level} />{calc.has_kickoff && <span className="badge badge-good">Kickoff erstellt</span>}
             {feasibility(calc.feasibility) && <Badge tone={feasibility(calc.feasibility).tone}>⚙ {feasibility(calc.feasibility).label}</Badge>}</h1>
           <p className="muted">
             {calc.account ? <Link to={`/firmen/${calc.account.id}`}>{calc.account.name}</Link> : 'kein Kunde'}
@@ -123,6 +124,10 @@ export default function CalculationEditor() {
         ))}
       </div>
       {tab === 'calc' && <CalcTab calc={calc} setCalc={setCalc} master={master} />}
+      {tab === 'tool' && <ToolTab calc={calc} setCalc={setCalc} />}
+      {tab === 'risk' && <RiskTab calc={calc} setCalc={setCalc} />}
+      {tab === 'equipment' && <EquipmentTab calc={calc} setCalc={setCalc} />}
+      {tab === 'kickoff' && <KickoffTab calc={calc} setCalc={setCalc} />}
       {tab === 'meta' && (
         <div className="card card-flush" style={{ maxWidth: 820 }}>
           <EntityForm fields={calcMetaFields} initial={calc} submitLabel="Speichern"

@@ -1,7 +1,8 @@
 """REV04-01 Softwarestand: Version dieses Programmstands und die Auslieferungen (wie Lastenheft Kap. 13.0)."""
-APP_VERSION = "1.33"
+APP_VERSION = "1.34"
 
 RELEASES = [
+    ("1.34", "28.11.2026", "Zusatzblätter: Werkzeugblatt, Risikoanalyse, neue Anlagen, Kickoff bei Auftrag"),
     ("1.33", "28.11.2026", "Kalkulation rechnen: Mengen je Lieferjahr, Losgröße, Staffelpreise Material/Zukaufteile, Varianten; Prüfbericht"),
     ("1.32", "27.11.2026", "Prüfseite je Update, Softwarestand, Vertriebsziel auf der Startseite, Pipeline mit allen Phasen (REV04)"),
     ("1.31", "25.11.2026", "Korrekturen Testrunde 3 (REV03-01 … 09)"),

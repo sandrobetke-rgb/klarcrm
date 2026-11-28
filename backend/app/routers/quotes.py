@@ -215,6 +215,11 @@ def award(quote_id: int, data: dict, db: Session = Depends(get_db), user: User =
         if out not in OUTCOMES:
             raise HTTPException(400, f"Unbekanntes Ergebnis „{out}“")
         if out == "gewonnen":
+            if c.status != "gewonnen":
+                from .calc import create_kickoff  # noqa: PLC0415
+                c.status, c.probability = "gewonnen", 100
+                db.flush()
+                create_kickoff(db, c, user, f"Auftrag erhalten zu {quote.number}")
             c.status, c.probability = "gewonnen", 100
         elif out == "verloren":
             code = ln.get("reason") or "sonstiges"

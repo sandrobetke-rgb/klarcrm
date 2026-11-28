@@ -594,9 +594,12 @@ def update_calc(calc_id: int, data: s.CalcMeta, db: Session = Depends(get_db), _
         values.setdefault("close_note", None)
     if values.get("status") and values["status"] != "kein_angebot":
         values.setdefault("no_bid_reason", None)
+    was_won = calc.status == "gewonnen"
     for k, v in values.items():
         setattr(calc, k, v)
     db.flush()
+    if calc.status == "gewonnen" and not was_won:   # C10: Auftrag bestätigt → Kickoff
+        create_kickoff(db, calc, _, "Status „gewonnen“ gesetzt")
     sync_opportunity(db, calc)
     if old_opp and old_opp != calc.opportunity_id:  # alte Chance neu summieren
         other = db.scalar(select(Calculation).where(Calculation.opportunity_id == old_opp).limit(1))
@@ -681,7 +684,9 @@ L = {
            "years": "Serienpreis je 1.000 Stk nach Lieferjahr", "year": "Jahr", "pre": "Vorserienpreis",
            "pre_note": "gilt für Vorserienmengen bis", "pre_lot": "je Los",
            "years_col": "Serienpreis je Lieferjahr (Jahresmenge × Stückpreis)", "tool": "Werkzeug", "other": "Sonstiges",
-           "co2_pos": "CO₂-Fußabdruck", "co2_info": "Information, nicht preisrelevant"},
+           "co2_pos": "CO₂-Fußabdruck", "co2_info": "Information, nicht preisrelevant",
+           "dates": "Termine", "fot": "FOT", "sample": "Baumuster/EMPB", "ppap": "PPAP", "weeks": "Wochen nach Bestellung",
+           "sop": "SOP", "hot_runner": "Heißkanal", "life": "Werkzeugstandzeit", "shots": "Schuss"},
     "en": {"your_no": "Your part no.", "material": "Material", "calc": "Costing", "per1000": "Price per 1,000 pcs",
            "lot": "Lot size", "pcs": "pcs", "clause": "Price adjustment clause: material basis", "as_of": "as of", "index": "index",
            "adjust": "adjustment if changed by more than ±", "amort": "Incl. tool amortisation", "per1000s": "per 1,000 pcs",
@@ -693,7 +698,9 @@ L = {
            "years": "Series price per 1,000 pcs by delivery year", "year": "Year", "pre": "Pre-series price",
            "pre_note": "valid for pre-series quantities up to", "pre_lot": "per lot",
            "years_col": "Series price per delivery year (annual quantity × unit price)", "tool": "Tooling", "other": "Other",
-           "co2_pos": "Carbon footprint", "co2_info": "information only, not priced"},
+           "co2_pos": "Carbon footprint", "co2_info": "information only, not priced",
+           "dates": "Schedule", "fot": "FOT", "sample": "Samples/ISIR", "ppap": "PPAP", "weeks": "weeks after order",
+           "sop": "SOP", "hot_runner": "hot runner", "life": "tool life", "shots": "shots"},
 }
 
 
@@ -748,7 +755,8 @@ def build_quote(db: Session, pairs: list, user: User, lang: str = "de", target: 
             mat = db.get(Material, inp.get("material_id")) if inp.get("material_id") else None
             same = mat and mat.price_valid_from and abs(float(mat.price_per_kg) - float(inp["material_price_kg"])) < 1e-9
             stand = (mat.price_valid_from if same else ver.created_at.date()).strftime("%d.%m.%Y" if lang == "de" else "%d/%m/%Y")
-            art += (f"\n{t['clause']} {nf(float(inp['material_price_kg']))} €/kg ({t['as_of']} {stand}"
+            basis_kg = float((r.get("material_purchase") or {}).get("price_kg") or inp["material_price_kg"])   # v1.33: Staffelpreis
+            art += (f"\n{t['clause']} {nf(basis_kg)} €/kg ({t['as_of']} {stand}"
                     + (f", {t['index']} {mat.price_index}" if mat and mat.price_index else "")
                     + f"); {t['adjust']} {nf(st_['escalation_threshold_pct'], 0)} %")
         if r.get("amortization_per_piece"):
@@ -760,6 +768,15 @@ def build_quote(db: Session, pairs: list, user: User, lang: str = "de", target: 
         if r.get("lot_tiers"):
             art += f"\n{t['tiers']}: " + " · ".join(
                 f"{t['lotw']} {nf(v['lot_size'], 0)}: {nf(v['price_per_1000'])} €" for v in r["lot_tiers"])
+        ts = calc.tool_sheet or {}
+        wk = [(t[k], ts.get(f"weeks_{k}")) for k in ("fot", "sample", "ppap") if ts.get(f"weeks_{k}")]
+        if wk or calc.sop_date:   # v1.34 C06: Termine Werkzeug ins Angebot
+            art += f"\n{t['dates']}" + (f" ({t['weeks']})" if wk else "") + ": " + " · ".join(f"{lbl} {nf(float(w), 0)}" for lbl, w in wk) + \
+                ((" · " if wk else "") + f"{t['sop']} {calc.sop_date.strftime('%d.%m.%Y' if lang == 'de' else '%d/%m/%Y')}" if calc.sop_date else "")
+        if ts.get("hot_runner_yes") or ts.get("tool_life_shots"):
+            bits = ([t["hot_runner"]] if ts.get("hot_runner_yes") else []) + \
+                   ([f"{t['life']} {nf(float(ts['tool_life_shots']), 0)} {t['shots']}"] if ts.get("tool_life_shots") else [])
+            art += f"\n{t['tool']}: " + ", ".join(bits)
         if inp.get("pack_type") or inp.get("pack_parts_per_unit"):
             art += f"\n{t['pack']}: {inp.get('pack_type') or '–'}" + \
                 (f", {nf(float(inp['pack_parts_per_unit']), 0)} {t['perunit']}" if inp.get("pack_parts_per_unit") else "")
@@ -1363,6 +1380,121 @@ def variants(calc_id: int, db: Session = Depends(get_db), _: User = Depends(can_
                      "margin_pct": x.margin_pct, "machine_hours_year": r.get("machine_hours_year"),
                      "clamp_t": (x.analysis_results or {}).get("clamping_force_t")})
     return {"rows": rows}
+
+
+# ---------------- v1.34 Zusatzblätter: Werkzeug (C06), Risiko (C08), neue Anlagen (C09), Kickoff (C10) ----------------
+def _cur(calc: Calculation):
+    return next((v for v in calc.versions if v.version_no == calc.current_version), calc.versions[-1])
+
+
+def _sheets(db: Session, calc: Calculation) -> dict:
+    from ..sheets import CAPACITY_CHECKS, RISK_QUESTIONS, TOOL_COST_FIELDS, TOOL_WEEKS, eval_equipment, eval_risk, eval_tool  # noqa: PLC0415
+    ver = _cur(calc)
+    i, r = ver.inputs or {}, ver.results or {}
+    eq = eval_equipment((calc.equipment or {}).get("rows"), get_settings(db, calc.site_id), i, r)
+    return {"tool": {"data": calc.tool_sheet or {}, "eval": eval_tool(calc.tool_sheet, i, r)},
+            "risk": {"data": calc.risk or {}, "eval": eval_risk(calc.risk, (calc.invest or 0) + eq["invest_fr"])},
+            "equipment": {"data": calc.equipment or {"rows": []}, "eval": eq},
+            "kickoff": calc.kickoff, "status": calc.status,
+            "meta": {"risk_questions": RISK_QUESTIONS, "tool_costs": TOOL_COST_FIELDS, "tool_weeks": TOOL_WEEKS,
+                     "capacity_checks": CAPACITY_CHECKS}}
+
+
+@calcs.get("/{calc_id}/sheets")
+def get_sheets(calc_id: int, db: Session = Depends(get_db), _: User = Depends(can_read)):
+    calc = db.get(Calculation, calc_id)
+    if not calc:
+        raise HTTPException(404, "Kalkulation nicht gefunden")
+    return _sheets(db, calc)
+
+
+@calcs.put("/{calc_id}/sheets/{kind}")
+def save_sheet(calc_id: int, kind: str, data: dict, db: Session = Depends(get_db), _: User = Depends(can_write)):
+    calc = db.get(Calculation, calc_id)
+    if not calc:
+        raise HTTPException(404, "Kalkulation nicht gefunden")
+    col = {"tool": "tool_sheet", "risk": "risk", "equipment": "equipment"}.get(kind)
+    if not col:
+        raise HTTPException(404, "Blatt unbekannt")
+    setattr(calc, col, data.get("data") or {})
+    db.commit()
+    db.refresh(calc)
+    return _sheets(db, calc)
+
+
+def _sheet_version(db: Session, calc: Calculation, inputs: dict, note: str, user: User):
+    inputs = normalize(inputs)
+    res = compute(inputs)
+    no = calc.versions[-1].version_no + 1
+    calc.versions.append(CalculationVersion(version_no=no, inputs=inputs, results=res, change_note=note, created_by_id=user.id))
+    calc.current_version = no
+    apply_results(calc, res, inputs)
+    db.flush()
+    sync_opportunity(db, calc)
+
+
+@calcs.post("/{calc_id}/sheets/tool/apply")
+def apply_tool_sheet(calc_id: int, db: Session = Depends(get_db), user: User = Depends(can_write)):
+    """Werkzeugkosten und Angebotspreis aus dem Werkzeugblatt als Einmalkosten „Werkzeug“ übernehmen (neue Version)."""
+    from ..sheets import apply_tool  # noqa: PLC0415
+    calc = db.get(Calculation, calc_id)
+    if not calc or not calc.tool_sheet:
+        raise HTTPException(400, "Erst das Werkzeugblatt ausfüllen und speichern")
+    _sheet_version(db, calc, apply_tool(calc.tool_sheet, dict(_cur(calc).inputs)), "Werkzeugkosten aus Werkzeugblatt übernommen", user)
+    db.commit()
+    db.refresh(calc)
+    return _sheets(db, calc)
+
+
+@calcs.post("/{calc_id}/sheets/equipment/{row_no}/apply")
+def apply_equipment_row(calc_id: int, row_no: int, db: Session = Depends(get_db), user: User = Depends(can_write)):
+    """Neue Anlage als Arbeitsgang in die Kalkulation übernehmen (neue Version)."""
+    from ..sheets import apply_equipment  # noqa: PLC0415
+    calc = db.get(Calculation, calc_id)
+    rows = (calc.equipment or {}).get("rows") if calc else None
+    if not rows or row_no < 0 or row_no >= len(rows):
+        raise HTTPException(400, "Anlage nicht gefunden – erst speichern")
+    ev = _sheets(db, calc)["equipment"]["eval"]
+    _sheet_version(db, calc, apply_equipment(row_no, rows, ev, dict(_cur(calc).inputs)),
+                   f"Neue Anlage „{rows[row_no].get('name') or 'Anlage'}“ als Arbeitsgang übernommen", user)
+    db.commit()
+    db.refresh(calc)
+    return _sheets(db, calc)
+
+
+def create_kickoff(db: Session, calc: Calculation, user: User | None, reason: str, force: bool = False) -> dict | None:
+    """C10: Kickoff-Schnappschuss aus allen Daten; beim ersten Mal Aufgabe „Kickoff durchführen“ für den Verantwortlichen."""
+    from ..inquiry import add_workdays  # noqa: PLC0415
+    from ..sheets import build_kickoff  # noqa: PLC0415
+    if calc.kickoff and not force:
+        return calc.kickoff
+    first = not calc.kickoff
+    snap = build_kickoff(calc, _cur(calc), user.name if user else "System", get_settings(db, calc.site_id), reason)
+    if calc.kickoff:
+        snap["previous"] = [{k: calc.kickoff.get(k) for k in ("created_at", "created_by", "reason")}] + (calc.kickoff.get("previous") or [])
+    calc.kickoff = snap
+    if first:
+        due = add_workdays(date.today(), 5)
+        db.add(Activity(type="aufgabe", kind="kickoff", subject=f"Kickoff durchführen: {calc.number} {calc.article_name}"[:200],
+                        description="Kickoff-Unterlage: Kalkulation → Reiter „Kickoff“ (drucken). Offene Punkte: "
+                                    + ("; ".join(snap["open_points"]) or "keine"),
+                        due_at=datetime.combine(due, datetime.min.time(), tzinfo=timezone.utc).replace(hour=9),
+                        account_id=calc.account_id, opportunity_id=calc.opportunity_id,
+                        owner_id=calc.owner_id or (user.id if user else None)))
+    return snap
+
+
+@calcs.post("/{calc_id}/kickoff")
+def make_kickoff(calc_id: int, db: Session = Depends(get_db), user: User = Depends(can_write)):
+    calc = db.get(Calculation, calc_id)
+    if not calc:
+        raise HTTPException(404, "Kalkulation nicht gefunden")
+    if calc.status != "gewonnen":
+        raise HTTPException(400, "Kickoff gibt es erst, wenn der Artikel beauftragt ist (Status gewonnen)")
+    create_kickoff(db, calc, user, "von Hand neu erzeugt" if calc.kickoff else "von Hand erzeugt", force=True)
+    db.commit()
+    db.refresh(calc)
+    return _sheets(db, calc)
 
 
 @router.get("/templates")

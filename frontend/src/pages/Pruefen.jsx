@@ -139,6 +139,9 @@ export default function Pruefen() {
         <div className="check-bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${pct}%` }} /></div>
       </section>
 
+      {Object.keys(data.open_by_version || {}).length > 0 && <div className="warn-box">Noch zu prüfen aus anderen Updates:{' '}
+        {Object.entries(data.open_by_version).map(([v, n], i) => <span key={v}>{i ? ' · ' : ''}<a href={`/pruefen?version=${v}`} onClick={(e) => { e.preventDefault(); setSp({ version: v }) }}>v{v}: {n} Punkt{n > 1 ? 'e' : ''}</a></span>)}
+      </div>}
       {data.accepted && <div className="ok-box">✓ Update v{data.version} abgenommen von {data.accepted.by} am {fmtInstalled(data.accepted.at)}.</div>}
       {!data.total && <div className="warn-box">Für dieses Update sind keine Prüfpunkte hinterlegt.</div>}
 

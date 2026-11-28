@@ -22,7 +22,7 @@ followups = APIRouter()     # /api/followups
 def _calc_row(c: Calculation) -> dict:
     return {"id": c.id, "number": c.number, "article_name": c.article_name, "customer_article_no": c.customer_article_no,
             "status": c.status, "decision": c.decision, "decision_note": c.decision_note, "site_id": c.site_id,
-            "current_version": c.current_version, "calculated": c.is_calculated, "variant_of_id": c.variant_of_id, "unit_price": c.unit_price, "annual_volume": c.annual_volume,
+            "current_version": c.current_version, "calculated": c.is_calculated, "variant_of_id": c.variant_of_id, "risk_level": c.risk_level, "unit_price": c.unit_price, "annual_volume": c.annual_volume,
             "annual_revenue": c.annual_revenue, "one_time_revenue": c.one_time_revenue, "margin_pct": c.margin_pct,
             "feasibility": c.feasibility, "analysis_complete": c.analysis_complete,
             "tech_talk": bool((c.analysis or {}).get("tech_talk")),

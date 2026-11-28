@@ -895,3 +895,28 @@ tr.row-won td { background: #eef7f0; }
   .check-report tr { break-inside: avoid; }
   .report-sign { margin-top: 10pt; font-size: 8pt; color: #555; }
 }
+
+/* ---------- v1.34 Zusatzblätter */
+.sheet-page { display: flex; flex-direction: column; gap: 14px; max-width: 1200px; }
+.sheet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.sheet-sum { margin-top: 10px; }
+.sheet-sum input.num { width: 140px; }
+.risk-head { display: flex; gap: 40px; align-items: center; flex-wrap: wrap; }
+.risk-pct { font-size: 40px; font-weight: 700; line-height: 1.1; }
+.risk-pct-sm { font-size: 18px; font-weight: 600; }
+.risk-scale { flex: 1; min-width: 260px; }
+.risk-table input:not([type=radio]) { width: 100%; }
+.eq-name { font-size: 16px; font-weight: 600; min-width: 320px; }
+.eq-checks { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+.eq-result { display: flex; flex-wrap: wrap; gap: 8px 32px; margin-top: 12px; padding: 10px 12px; background: var(--surface-2); border-radius: 8px; }
+.eq-result > div { display: flex; flex-direction: column; }
+.eq-result b { font-size: 17px; }
+.eq-result .span-all { flex-basis: 100%; }
+.kick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 28px; }
+.kick-grid h3 { margin: 6px 0; font-size: 14px; text-transform: uppercase; letter-spacing: .03em; color: var(--text-2); }
+.kick-grid dl { display: grid; grid-template-columns: 150px 1fr; gap: 3px 10px; margin: 0; font-size: 13px; }
+.kick-grid dt { color: var(--muted); }
+.kick-grid dd { margin: 0; }
+.kickoff-sign { margin-top: 20px; }
+@media (max-width: 1000px) { .sheet-grid, .kick-grid { grid-template-columns: 1fr; } }
+@media print { .kickoff .kick-grid { grid-template-columns: 1fr 1fr; font-size: 9pt; } .kickoff-doc { box-shadow: none; border: 0; } }

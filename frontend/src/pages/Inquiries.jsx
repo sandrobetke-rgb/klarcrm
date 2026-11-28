@@ -181,6 +181,7 @@ export function InquiryDetail() {
               <tr key={c.id}>
                 <td><Link to={`/kalkulationen/${c.id}`}><strong>{c.number}</strong></Link><br /><small className="muted">V{c.current_version}</small></td>
                 <td>{c.variant_of_id ? <span className="muted" title="Variante (andere Fachzahl)">↳ </span> : null}{c.article_name}{c.customer_article_no && <><br /><small className="muted">{c.customer_article_no}</small></>}
+                  {c.risk_level ? <><br /><span className={`badge badge-${({ hoch: 'critical', mittel: 'warning', niedrig: 'good' })[c.risk_level]}`}>Risiko {c.risk_level}</span></> : null}
                   {c.variant_of_id ? <><br /><small className="badge badge-info">Variante von {o.calculations.find((x) => x.id === c.variant_of_id)?.number || 'Kalkulation'}</small></> : null}</td>
                 <td><DecisionBox calc={c} onDone={reload} compact canWrite={canWrite && !closed} /></td>
                 <td>{c.analysis_complete ? <Badge tone="good">✓ vollständig</Badge> : <Link to={`/kalkulationen/${c.id}?tab=analyse`}><Badge tone="critical">unvollständig</Badge></Link>}

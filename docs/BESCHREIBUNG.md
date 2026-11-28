@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Programm** | KlarCRM – Vertrieb, Kalkulation Spritzguss, Angebote |
-| **Version** | 1.33 (Stand 28.11.2026) |
+| **Version** | 1.34 (Stand 28.11.2026) |
 | **Für** | Vertrieb, Kalkulation, Einkauf, Geschäftsführung, Gesellschafter |
 
 > Diese Beschreibung erklärt, **wie man mit KlarCRM arbeitet**. Die genauen Regeln und Rechenwege stehen im
@@ -109,7 +109,18 @@ Die **Wahrscheinlichkeit** gilt für den ganzen Auftrag. Summen werden nicht meh
   Zykluszeit in der Variante anpassen. Die Karte „Varianten im Vergleich“ stellt alle Varianten nebeneinander. In der
   Pipeline zählt je Artikel nur die größte Variante.
 
-### 3.5 Angebot
+### 3.5 Werkzeug, Risiko, neue Anlagen, Kickoff (ab v1.34)
+- Reiter **3 · Werkzeug**: Werkzeugkosten, Heißkanal/Fühler, bis zu 4 Werkzeugangebote vergleichen (gewähltes zählt),
+  Angebotspreis an den Kunden, Termine FOT / Baumuster-EMPB / PPAP in Wochen, Standzeit. „→ in die Kalkulation übernehmen“
+  schreibt Kosten und Preis als Einmalkosten „Werkzeug“. Termine, Heißkanal und Standzeit stehen im Angebot.
+- Reiter **4 · Risiko**: 13 Fragen ja/nein; Einstufung hoch / mittel / niedrig (gesamt, Fertigungsprozess, Lieferkette) und
+  Maßnahmen. Die Einstufung steht oben in der Kalkulation und in der Anfrage.
+- Reiter **Neue Anlagen**: zusätzliche Anlage mit Invest, Laufzeit, Kosten → Stundensatz, Kosten je Stück, Auslastung,
+  Prüfung Liquidität/Fläche/Personal. „→ als Arbeitsgang in die Kalkulation“ übernimmt den Stundensatz.
+- Reiter **Kickoff**: entsteht automatisch beim Auftrag mit allen Daten und offenen Punkten; der Verantwortliche bekommt die
+  Aufgabe „Kickoff durchführen“. Drucken oder als PDF speichern.
+
+### 3.6 Angebot
 - Es gibt **ein** Angebot je Anfrage mit allen angebotenen Artikeln. „Angebot erstellen / aktualisieren“ in der Anfrage
   (oder in der Kalkulation) aktualisiert einen Entwurf; ein bereits versendetes Angebot bekommt eine **Revision**.
 - Positionen: 1 Artikel (mit Preisen je Lieferjahr: Jahresmenge × Stückpreis), 1.1 Werkzeug, 1.x Vorserie, 1.x Sonstiges,
@@ -119,7 +130,7 @@ Die **Wahrscheinlichkeit** gilt für den ganzen Auftrag. Summen werden nicht meh
 - Mehrere Artikel desselben Kunden aus der Kalkulationsliste: anhaken → „Sammelangebot“ (führt sie in einer Anfrage zusammen).
 - Angebote gehen nur an Kunden, Interessenten oder Partner – nie an Lieferanten.
 
-### 3.6 Verloren / Kein Angebot
+### 3.7 Verloren / Kein Angebot
 - Verloren nur mit Grund: Werkzeug zu teuer, Preis zu teuer, Projekt eingestellt, Kunde hat Projekt nicht erhalten,
   Vorrichtung zu teuer, Investition zu teuer, Lieferzeit/Kapazität, technisch nicht machbar oder Sonstiges (Freitext).
 - In der Pipeline öffnet das Ziehen auf „Verloren“ automatisch diesen Dialog.
@@ -192,7 +203,7 @@ Die **Wahrscheinlichkeit** gilt für den ganzen Auftrag. Summen werden nicht meh
 - Ampel: unter 60 % frei · 60–85 % gut ausgelastet · 85–100 % knapp · ab 100 % überlastet.
 
 ## 6. Änderungswünsche und Prüfung
-- **Ein Update prüfen:** Menü *Prüfen*. Oben „🖨 Prüfbericht drucken / PDF“ und „⬇ Prüfbericht CSV“ für die Ablage. Dort stehen nur die Punkte des aktuellen Updates, in der Reihenfolge, in der
+- **Ein Update prüfen:** Menü *Prüfen*. Oben „🖨 Prüfbericht drucken / PDF“ und „⬇ Prüfbericht CSV“ für die Ablage. Sind aus einem anderen Update noch Punkte offen, steht oben ein Hinweis mit Link. Dort stehen nur die Punkte des aktuellen Updates, in der Reihenfolge, in der
   man sie prüfen soll. Je Punkt: „Was tun“ lesen → **Hinspringen** (öffnet die richtige Stelle; oben steht „Prüfung
   läuft … ← zurück zur Prüfseite“) → ansehen → **✓ passt** oder **✗ passt nicht** (dann kurz beschreiben, was nicht
   passt). Prüfer und Datum setzt das CRM. Fehlklick: „Ergebnis zurücksetzen“. Sind alle Punkte „passt“, erklärt ein

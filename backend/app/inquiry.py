@@ -166,6 +166,9 @@ def cascade_stage(db: Session, opp: Opportunity, old_stage: str | None):
             continue
         if opp.stage == "gewonnen":
             c.status, c.probability = "gewonnen", 100
+            from .routers.calc import create_kickoff  # noqa: PLC0415
+            db.flush()
+            create_kickoff(db, c, None, f"Anfrage {opp.number or ''} gewonnen")
         elif opp.stage == "verloren":
             c.status, c.probability = "verloren", 0
             c.close_reason = opp.lost_code or "sonstiges"

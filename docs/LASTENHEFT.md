@@ -4,7 +4,7 @@
 |---|---|
 | **Projekt** | KlarCRM – schlankes CRM mit Spritzguss-Kalkulation |
 | **Auftraggeber** | Friedrichs & Rath (F&R), Geschäftsführung |
-| **Dokumentversion** | 1.33 |
+| **Dokumentversion** | 1.34 |
 | **Stand** | 28.11.2026 |
 | **Status** | Testphase auf internem Server F&R; aktuelle Auslieferung v1.32 (Kap. 13.0) |
 
@@ -320,6 +320,32 @@ und lassen sich per Klick auf den Standard zurücksetzen (KAL-20).
 - KAL-32: Jede ältere Version kann als Basis geladen und als neue Version weiterbearbeitet werden.
 - KAL-33: **Versionsvergleich** A/B: geänderte Eingaben und Auswirkung auf Preis, Selbstkosten, Marge, Stück/h,
   Umsatz, Gewinn, Einmalumsatz, Maschinenstunden (absolut und %).
+
+### 6.3b Zusatzblätter je Artikel (v1.34, Block 1 Teil 2)
+- KAL-46 (C06) **Werkzeugblatt** (Reiter „3 · Werkzeug“): Kosten Konstruktion/CNC, Abmustern/Prüfbericht, Druck-/Temperaturfühler,
+  Heißkanal (mit Düsenzahl), Werkzeugkosten extern; Werkzeugbau intern/extern; Angebotspreis an den Kunden, Marge = Preis −
+  Summe. Vergleich Werkzeugangebote WZB 1–4 (Werkzeugbauer, Preis, Lieferzeit, Bemerkung); das gewählte Angebot ersetzt
+  „Werkzeugkosten extern“, das günstigste wird angezeigt. Termine in Wochen nach Bestellung: FOT, Baumuster/EMPB, PPAP; SOP aus
+  der Anfrage. Standzeit (Schuss) gegen Schüsse über die Laufzeit = Summe Jahresmengen ÷ Fachzahl. „In die Kalkulation
+  übernehmen“ schreibt eine Einmalkosten-Zeile „Werkzeug (lt. Werkzeugblatt)“ (Kosten, Preis; Amortisation bleibt) als neue
+  Version. Im Angebot unter dem Artikel: Termine (FOT, Baumuster/EMPB, PPAP, SOP), Heißkanal, Standzeit.
+- KAL-47 (C08) **Risikoanalyse** (Reiter „4 · Risiko“): 13 Fragen ja/nein mit Bemerkung, gleich gewichtet; Anteil „ja“ →
+  **hoch > 60 %, mittel 35–60 %, niedrig < 35 %**, zusätzlich je Bereich Fertigungsprozess (8 Fragen) und Lieferkette (5 Fragen:
+  neuer Kunde, Lieferschwierigkeiten, neuer Lieferant Zukaufteile, Vertragsbasis, Source Change). „Invest > 10.000 €“ wird aus
+  Einmalkosten + Invest F&R neuer Anlagen vorbelegt, bis von Hand beantwortet. Maßnahmen als Freitext. Einstufung im Kopf der
+  Kalkulation, in der Anfrage und im Kickoff.
+- KAL-48 (C09) **Neue Anlagen** (Reiter „Neue Anlagen“): je Anlage Invest F&R (abgeschrieben) und extern (ohne Abschreibung),
+  Nutzungsdauer, Zins, Fläche, Leistung, Betriebskosten, Instandhaltung % vom Invest, Overhead-Zuschlag, verfügbare Stunden,
+  Verfügbarkeit, Zeit je Stück, Personalfaktor. Stundensatz = Herleitung wie Maschinenstundensatz (Kap. 6.1: Abschreibung,
+  Zins auf ½ Invest, Raum, Energie, Betriebskosten, Instandhaltung) + Overhead. Kostenbasis **„nur dieser Artikel“ (Standard)**:
+  Stunden = höchste Jahresmenge × Zeit je Stück (höchstens verfügbare Stunden) – sonst verfügbare Stunden × Verfügbarkeit.
+  Kosten je Stück, Auslastung. Kapazitätsprüfung Liquidität / Fläche / Personal (offen, vorhanden, nicht vorhanden).
+  „Als Arbeitsgang in die Kalkulation“ (neue Version, Stundensatz, Zeit je Stück, Personalfaktor).
+- KAL-49 (C10) **Kickoff**: beim Auftrag (Auftrag erhalten, Status „gewonnen“, Anfrage gewonnen) automatisch ein gespeicherter
+  Schnappschuss aller Daten (Kunde/Artikel, Preis und Mengen je Jahr, Fertigung, Material/Masterbatch/Zukaufteile mit
+  Lieferanten, Werkzeug, neue Anlagen, Risiko, Machbarkeit, CO₂) mit **offenen Punkten** (fehlendes Werkzeugblatt/Termine,
+  Standzeit zu knapp, SOP fehlt, Risiko unvollständig/hoch, Kapazitätsprüfung offen, Analyse fehlt) und Aufgabe „Kickoff
+  durchführen“ für den Verantwortlichen (5 Arbeitstage). Reiter „Kickoff“ zum Drucken; „Neu erzeugen“ vermerkt frühere Stände.
 
 ### 6.3a Artikelanalyse / Machbarkeit (eigener Reiter)
 - ANA-1: Eingaben: Werkstoffgruppe (PP, ABS, PC/ABS, PC, PA6, PA66, POM, PBT, TPE, sonstige), Länge/Breite/Höhe,
@@ -686,6 +712,7 @@ Verfahrensanweisungen (wer kalkuliert, wer freigibt, Aufbewahrungsfristen) sind 
 | 1.31 | 25.11.2026 | **Testrunde 3 – Korrekturen REV03** (Kap. 13.5): Hotfix Fehler 500 (v1.30.1); Angebot ohne Entscheidungssperre; Freigabe-Workflow per Parameter abgeschaltet; Speicherleiste Artikelanalyse; Vertriebsziel als Summe der Einzelziele; Filter bleiben in Änderungswünschen; Auswahllisten mit eigener Eingabe; SuperUser zurückgenommen; Schließkraft 0,55 t/cm²; Wahrscheinlichkeit als Einschätzung am Angebot. Tests auf dem Update-Weg. |
 | 1.32 | 27.11.2026 | **REV04** (Kap. 13.6): Prüfseite je Update mit Status „überholt“ (REV04-02), Softwarestand mit Einspieldatum (REV04-01), Pipeline mit allen 7 Phasen in einer Reihe (REV04-03), Vertriebsziel-Block auf der Startseite (REV04-04, ersetzt REV03-05), Freigabe-Schalter als Häkchen (REV04-05), Schrittleiste „Kalkulation“ (REV04-06); Menü scrollt bei niedrigen Bildschirmen. Getestet auf dem Update-Weg v1.24 → v1.30 → v1.30.1 → v1.31 → v1.32. |
 | 1.33 | 28.11.2026 | **Block 1 Teil 1** (Kap. 13.8, 6.2 KAL-40 … 45): Mengen und Losgröße je Lieferjahr mit Stunden/Material/Zukaufteilen/Marge je Jahr (C02, C04), Lieferjahre immer sichtbar, Häkchen Preise je Jahr im Angebot (C05), Staffelpreise und Freitext → Stammdaten für Material und Zukaufteile, Masterbatch mit Bezeichnung (C01, C03), Varianten mit Vergleich (C07); Werkzeugamortisation über Summe der Jahresmengen; Neuumsatz aus Jahrestabelle; Pipeline zählt Varianten einmal. REV05-02 Vertriebsziel größer, REV05-03 Prüfbericht PDF/CSV. Neue Spalten: materials.price_tiers, purchased_parts.price_tiers, calculations.variant_of_id. Update-Weg v1.24 → … → v1.32 → v1.33 getestet; alle bestehenden Kalkulationen rechnen unverändert. |
+| 1.34 | 28.11.2026 | **Block 1 Teil 2** (Kap. 13.9, 6.3b KAL-46 … 49): Werkzeugblatt mit Termine ins Angebot (C06), Risikoanalyse 13 Fragen (C08), Stundensatz neue Anlagen mit Kapazitätsprüfung (C09), Kickoff automatisch bei Auftrag (C10); Prüfseite zeigt offene Punkte anderer Updates; Korrektur: Preisgleitklausel im Angebot mit dem Staffelpreis (Fehler aus v1.33). Neue Spalten calculations.tool_sheet, risk, equipment, kickoff. Update-Weg v1.32 → v1.34 direkt und über v1.33 getestet. |
 
 ## 13. Testrückmeldung REV01 (Nov. 2026) – Anforderungen und Umsetzung
 
@@ -710,8 +737,9 @@ Umsetzung erfolgt in vier Phasen:
 | v1.30.1 | 25.11.2026 | Hotfix REV03-01: Fehler 500 in Pipeline und Anfragen (leere Ja/Nein-Spalten in Altdaten) | ausgeliefert – Git-Zweig `release-v1.30.1` |
 | v1.31 | 25.11.2026 | Korrekturen Testrunde 3 (Kap. 13.5, REV03-01 … 09) | ausgeliefert, geprüft und abgenommen 27.11.2026 |
 | v1.32 | 27.11.2026 | Prüfseite je Update, Softwarestand, Vertriebsziel auf der Startseite, Pipeline mit allen Phasen, Kleinigkeiten (Kap. 13.6, REV04-01 … 06) | ausgeliefert, geprüft und abgenommen 28.11.2026 |
-| **v1.33** | 28.11.2026 | Block 1 Teil 1 „Kalkulation rechnen“: Mengen je Lieferjahr, Losgröße, Serienpreis je Jahr, Staffelpreise Material und Zukaufteile, Varianten; Vertriebsziel größer, Prüfbericht (Kap. 13.8) | **aktuelle Auslieferung** – Git-Zweig `release-v1.33`, Anleitung `docs/UPDATE_v1.33.md` |
-| nächstes Update | offen | Block 1 Teil 2 „Zusatzblätter“: REV01-C06 Werkzeugblatt (FOT/PPAP/SOP ins Angebot), C08 Risikoanalyse, C09 Stundensatz neue Anlagen, C10 Kickoff – nach Abnahme v1.33 | vorgemerkt |
+| v1.33 | 28.11.2026 | Block 1 Teil 1 „Kalkulation rechnen“: Mengen je Lieferjahr, Losgröße, Serienpreis je Jahr, Staffelpreise Material und Zukaufteile, Varianten; Vertriebsziel größer, Prüfbericht (Kap. 13.8) | ausgeliefert 28.11.2026, nicht eingespielt – in v1.34 enthalten |
+| **v1.34** | 28.11.2026 | Block 1 Teil 2 „Zusatzblätter“: Werkzeugblatt, Risikoanalyse, neue Anlagen, Kickoff (Kap. 13.9) – enthält v1.33 | **aktuelle Auslieferung** – Git-Zweig `release-v1.34`, Anleitung `docs/UPDATE_v1.34.md` |
+| nächstes Update | offen | Block 2 Anfrage/Angebot nach Abnahme v1.33 + v1.34 | vorgemerkt |
 
 Die zunächst für ein gemeinsames großes Update zurückgehaltenen Stände (v1.25 … v1.30) werden auf Wunsch vom 24.11.2026
 **ohne Phase 3** als v1.30 ausgeliefert, damit auf dem Server der aktuelle Teststand läuft. Phase 3 folgt als eigenes Update.
@@ -996,6 +1024,15 @@ einmal). Die **Auslastung** rechnet bis Block 3 weiter mit der Jahresmenge.
 - REV05-02 Vertriebsziel-Block etwa doppelt so groß (aus Prüfung REV04-04)
 - REV05-03 Prüfbericht je Update: Druckansicht („Als PDF speichern“) und CSV, mit Abnahme
 - Vorgemerkt für v1.34 (Block 1 Teil 2): REV01-C06, C08, C09, C10.
+
+### 13.9 Update v1.34 – Block 1 Teil 2 „Zusatzblätter“ (28.11.2026)
+
+Auftrag der GF am 28.11.2026 („v1.34 schon mal fertig machen“), gebaut auf den Beschreibungen REV01-C06, C08, C09, C10;
+Annahmen (gleich gewichtete Fragen, Zuordnung Prozess/Lieferkette, Kostenbasis neue Anlage „nur dieser Artikel“) stehen in der
+Vorschau zur Bestätigung. Rechenweg Kap. 6.3b (KAL-46 … 49). Enthält v1.33 (nicht eingespielt) – die IT kann v1.34 direkt
+einspielen; die Prüfseite zeigt dann die offenen Punkte von v1.33 und v1.34. Korrektur aus v1.33: die Preisgleitklausel im
+Angebot nennt bei Staffelpreisen den Staffelpreis (vorher den Grundpreis). Wirkt auf andere Blöcke: Angebot (Termine,
+Heißkanal, Standzeit unter dem Artikel), Aufgaben (Kickoff), Anfrage (Risiko-Einstufung beim Artikel).
 
 ## 14. Preisliste (lebende VK-Preisliste)
 

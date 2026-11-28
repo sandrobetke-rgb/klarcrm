@@ -153,7 +153,13 @@ def check_list(version: str | None = None, db: Session = Depends(get_db), _: Use
     older = db.scalar(select(func.count()).select_from(ChangeRequest).where(
         ChangeRequest.status.in_(("umgesetzt", "nachbessern")),
         (ChangeRequest.check_version.is_(None)) | (ChangeRequest.check_version != v))) or 0
+    # v1.34: offene Prüfpunkte anderer Updates (z. B. wenn ein Update übersprungen und das nächste direkt eingespielt wurde)
+    open_by = {}
+    for (cv,) in db.query(ChangeRequest.check_version).filter(ChangeRequest.check_version.is_not(None), ChangeRequest.check_version != v,
+                                                             ChangeRequest.status.in_(("umgesetzt", "nachbessern"))).all():
+        open_by[cv] = open_by.get(cv, 0) + 1
     return {"version": v, "current": APP_VERSION, "versions": versions or [v], "items": items, "total": len(items),
+            "open_by_version": dict(sorted(open_by.items(), reverse=True)),
             "done": sum(1 for i in items if i["status"] == "geprueft"),
             "failed": sum(1 for i in items if i["status"] == "nachbessern"),
             "accepted": _accepted(db).get(v), "older_open": older}

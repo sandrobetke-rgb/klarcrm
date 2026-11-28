@@ -503,6 +503,8 @@ class CalcOut(ORM, CalcMeta):
     warnings: list[str] = []
     approval_to: UserRef | None = None
     variant_of_id: int | None = None
+    risk_level: str | None = None
+    has_kickoff: bool = False
     decision: str | None = None
     decision_note: str | None = None
     decision_at: datetime | None = None

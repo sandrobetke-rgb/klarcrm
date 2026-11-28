@@ -381,6 +381,8 @@ ITEMS = [
 
 
 def _ver(code: str, phase) -> str:
+    if code in V134:
+        return "1.34"
     if code.startswith("REV05") or code in V133:
         return "1.33"
     if code.startswith("REV04"):
@@ -542,4 +544,46 @@ CHECKS.update({
     "REV05-02": ("1.33", 7, "/", "Startseite ansehen.", "Der Vertriebsziel-Block ist deutlich größer: Prozent, Zahlen, Ampel und Balken etwa doppelt so groß."),
     "REV05-03": ("1.33", 8, "/pruefen", "Auf dieser Seite „🖨 Prüfbericht drucken / PDF“ und „⬇ Prüfbericht CSV“ klicken; oben Update v1.32 wählen und wiederholen.",
                  "Die Druckansicht zeigt alle Punkte mit Ergebnis, Prüfer, Datum und die Abnahme (bei v1.32 mit Namen und Datum). Die CSV öffnet sich in Excel."),
+})
+
+
+# ------------------------------------------------------------------ v1.34 Block 1 Teil 2 „Zusatzblätter“ (28.11.2026)
+V134 = {
+    "REV01-C06": ("Reiter „3 · Werkzeug“ (Werkzeugblatt je Artikel): Konstruktion/CNC, Abmustern/Prüfbericht, Fühler, Heißkanal (mit Düsen), "
+                  "Werkzeugkosten extern, Angebotspreis und Marge; Termine FOT, Baumuster/EMPB, PPAP in Wochen, SOP; Standzeit gegen Schüsse "
+                  "über die Laufzeit; Vergleich Werkzeugangebote WZB 1–4 (gewähltes ersetzt „extern“). „→ in die Kalkulation übernehmen“ "
+                  "schreibt Kosten/Preis als Einmalkosten „Werkzeug“ (neue Version). Termine, Heißkanal und Standzeit stehen im Angebot.",
+                  "Werkzeugblatt ausfüllen, speichern, übernehmen, Angebot aktualisieren."),
+    "REV01-C08": ("Reiter „4 · Risiko“: 13 Fragen ja/nein mit Bemerkung; Einstufung nach Anteil „ja“ hoch > 60 % / mittel 35–60 % / niedrig "
+                  "< 35 %, getrennt für Fertigungsprozess und Lieferkette; Invest > 10.000 € aus der Kalkulation vorbelegt; Maßnahmen. "
+                  "Einstufung im Kopf der Kalkulation, in der Anfrage und im Kickoff.",
+                  "Risikoanalyse ausfüllen und speichern."),
+    "REV01-C09": ("Reiter „Neue Anlagen“: je Anlage Invest F&R/extern, Nutzungsdauer, Zins, Fläche, Leistung, Betriebskosten, Instandhaltung, "
+                  "Overhead, verfügbare Stunden, Verfügbarkeit, Zeit je Stück → Stundensatz (Herleitung wie Maschinen, Kap. 6.1), Kosten je "
+                  "Stück, Auslastung; Kostenbasis „nur dieser Artikel“ (Standard) oder „auch andere Aufträge“; Kapazitätsprüfung Liquidität, "
+                  "Fläche, Personal. „→ als Arbeitsgang in die Kalkulation“ (neue Version).",
+                  "Neue Anlage anlegen, speichern, als Arbeitsgang übernehmen."),
+    "REV01-C10": ("Beim Auftrag (Auftrag erhalten, Status „gewonnen“ oder Anfrage gewonnen) entsteht automatisch der Kickoff: Schnappschuss "
+                  "aller Daten (Kunde, Preis/Mengen je Jahr, Fertigung, Material/Zukaufteile, Werkzeug, neue Anlagen, Risiko, Machbarkeit) "
+                  "mit offenen Punkten, Reiter „Kickoff“ zum Drucken, Aufgabe „Kickoff durchführen“ für den Verantwortlichen (5 Arbeitstage).",
+                  "Test-Artikel auf „gewonnen“ setzen, Reiter Kickoff und Aufgaben ansehen."),
+}
+ITEMS = [(t[0], t[1], t[2], t[3], t[4], t[5], t[6], U, V134[t[0]][0], V134[t[0]][1], "Kap. 13.9") if t[0] in V134 else t for t in ITEMS]
+CHECKS.update({
+    "REV01-C06": ("1.34", 1, "/kalkulationen", "Eine Kalkulation öffnen → Reiter „3 · Werkzeug“: Kosten eintragen, Heißkanal anhaken, zwei Werkzeugangebote "
+                  "erfassen und eines wählen, Angebotspreis, Wochen für FOT / Baumuster / PPAP und Standzeit eintragen. Speichern, dann "
+                  "„→ in die Kalkulation übernehmen“.",
+                  "Summe, Marge und Standzeit-Prüfung stimmen; das gewählte Angebot ersetzt „extern“. Im Reiter Kalkulation steht eine neue Version "
+                  "mit Einmalkosten „Werkzeug (lt. Werkzeugblatt)“. Nach „Angebot aktualisieren“ stehen Termine (FOT, PPAP, SOP) unter dem Artikel."),
+    "REV01-C08": ("1.34", 2, "/kalkulationen", "Reiter „4 · Risiko“: alle 13 Fragen beantworten, Maßnahme eintragen, speichern.",
+                  "Oben Gesamt-% mit Einstufung (hoch > 60 %, mittel 35–60 %, niedrig < 35 %) und je Fertigungsprozess / Lieferkette. Die Einstufung "
+                  "steht danach im Kopf der Kalkulation und in der Anfrage beim Artikel."),
+    "REV01-C09": ("1.34", 3, "/kalkulationen", "Reiter „Neue Anlagen“ → „+ Neue Anlage“ (z. B. Schweißanlage 120.000 €, 12 s je Stück), speichern; "
+                  "dann „→ als Arbeitsgang in die Kalkulation“.",
+                  "Stundensatz mit Herleitung, Kosten je Stück und Auslastung erscheinen; Kostenbasis umschaltbar. In der Kalkulation steht ein "
+                  "Arbeitsgang „Neue Anlage: …“ (neue Version)."),
+    "REV01-C10": ("1.34", 4, "/kalkulationen", "Einen Test-Artikel beauftragen (Angebot → Auftrag erhalten, oder Status „gewonnen“). Dann Reiter „Kickoff“ "
+                  "öffnen und „Kickoff drucken / PDF“.",
+                  "Der Kickoff ist da – mit Daten aus Kalkulation, Werkzeug, Risiko, neuen Anlagen und den offenen Punkten. Unter Aufgaben steht "
+                  "„Kickoff durchführen: …“ für den Verantwortlichen."),
 })
